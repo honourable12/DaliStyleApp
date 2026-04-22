@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# uv / Python environments
+.venv/
+uv.lock
+.python-version
+*.pyo
+
+# Node.js
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# Environments & Secrets
+.env
+*.env
+.env.*
+! .env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Database
+*.sqlite3
+/postgres_data/
+index.html
+plan.md
+frontend/package-lock.json

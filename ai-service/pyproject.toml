@@ -1,0 +1,22 @@
+[project]
+name = "daily-style-ai-service"
+version = "0.1.0"
+description = "AI Service for Daily Style Fashion"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "opencv-python-headless",
+    "numpy",
+    "scikit-learn",
+    "transformers",
+    "torch>=2.0.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
