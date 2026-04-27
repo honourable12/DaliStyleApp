@@ -44,3 +44,6 @@ yarn-debug.log*
 index.html
 plan.md
 frontend/package-lock.json
+backend/fix_db.py
+ai-service/yolov8n-seg.pt
+ai-service/models/

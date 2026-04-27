@@ -1,4 +1,7 @@
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+FROM python:3.11-slim
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
@@ -6,7 +9,7 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 
 # Copy project files
-COPY pyproject.toml /app/
+COPY pyproject.toml uv.lock* /app/
 
 # Install dependencies
 RUN uv sync --no-dev
