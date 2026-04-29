@@ -5,6 +5,7 @@ from datetime import timedelta
 from jose import JWTError
 from pydantic import BaseModel, EmailStr
 import time
+from uuid import UUID
 
 from app.database import get_db
 from app.wardrobe.models import User
@@ -39,7 +40,7 @@ class RefreshRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: UUID
     email: EmailStr
     is_active: bool
 
