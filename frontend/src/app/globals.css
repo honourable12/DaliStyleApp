@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 26, 26, 26;
+  --background-rgb: 249, 249, 249;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 rounded-xl shadow-sm;
+  }
+  
+  .nav-pill {
+    @apply px-5 py-2 rounded-full text-sm font-medium transition-all duration-300;
+  }
+
+  .nav-pill-active {
+    @apply bg-white text-fashion-charcoal shadow-sm;
+  }
+  
+  .nav-pill-inactive {
+    @apply text-fashion-muted hover:text-fashion-charcoal;
+  }
+}

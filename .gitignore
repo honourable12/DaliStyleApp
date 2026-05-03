@@ -15,6 +15,7 @@ dist/
 build/
 .npm
 .eslintcache
+.next/
 
 # Environments & Secrets
 .env
