@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1
+ENV UV_HTTP_TIMEOUT=120
+ENV UV_CONCURRENT_DOWNLOADS=1
 
 # Copy project files
 COPY pyproject.toml uv.lock* /app/

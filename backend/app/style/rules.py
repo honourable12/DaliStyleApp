@@ -2,9 +2,6 @@ import colorsys
 from typing import List, Tuple
 
 # ── Seasonal Color Mapping (Monk Scale to Palette) ───────────────────────────
-# MST 1-3: Cool/Light (Winter/Summer)
-# MST 4-7: Warm/Earthy (Autumn/Spring)
-# MST 8-10: Deep/Rich (Winter/Autumn)
 PALETTE_MAPPING = {
     "MST-1":  ["Cool", "Clear"],
     "MST-2":  ["Cool", "Clear"],
@@ -19,10 +16,14 @@ PALETTE_MAPPING = {
 }
 
 def hex_to_hsl(hex_str: str) -> Tuple[float, float, float]:
+    """Converts hex to HLS (Hue, Lightness, Saturation)"""
     hex_str = hex_str.lstrip('#')
+    if len(hex_str) != 6:
+        return (0.0, 0.0, 0.0)
     rgb = tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
-    # colorsys uses 0.0-1.0
-    return colorsys.rgb_to_hsl(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0)
+    # colorsys uses rgb_to_hls which returns (h, l, s)
+    h, l, s = colorsys.rgb_to_hls(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0)
+    return h, s, l # We return it as H, S, L for our internal logic consistency
 
 def calculate_harmony_score(color1_hex: str, color2_hex: str) -> float:
     """
@@ -85,7 +86,7 @@ def get_skin_compatibility(skin_hex: str, clothing_hex: str) -> float:
     # Contrast is key: Light skin looks good with darker colors, and vice versa
     contrast = abs(sl - cl)
     
-    # If skin is warm (hues around yellow/red 0.0-0.15), warm colors score higher
+    # If skin is warm (hues around yellow/red 0.0-0.18), warm colors score higher
     is_skin_warm = 0.0 <= sh <= 0.18
     is_color_warm = 0.0 <= ch <= 0.18 or 0.8 <= ch <= 1.0
     

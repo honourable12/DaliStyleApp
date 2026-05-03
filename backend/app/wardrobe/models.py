@@ -41,7 +41,7 @@ class Outfit(Base):
     # Updated to UUID foreign key
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     occasion = Column(String)
-    clothing_ids = Column(ARRAY(Integer))
+    clothing_ids = Column(JSON)
     llm_reason = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
