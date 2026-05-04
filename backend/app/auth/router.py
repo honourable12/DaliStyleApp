@@ -15,6 +15,7 @@ from app.auth.utils import (
     get_password_hash,
     create_access_token,
     create_refresh_token,
+    create_password_reset_token,
     decode_token,
     settings,
 )
@@ -38,6 +39,15 @@ class Token(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 
 class UserResponse(BaseModel):
@@ -203,3 +213,36 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email.lower()).first()
+
+    if user:
+        reset_token = create_password_reset_token(data={"sub": user.email})
+        # FOR TESTING
+        print("🔑 PASSWORD RESET REQUEST")
+        print(f"Link: http://localhost:3000/auth/reset-password?token={reset_token}")
+
+    return {"message": "If that email is registered, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        payload = decode_token(body.token, expected_type="reset")
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=400, detail="Invalid reset token")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Reset token has expired or is invalid")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.hashed_password = get_password_hash(body.new_password)
+    db.commit()
+
+    return {"message": "Password updated successfully. You can now sign in."}

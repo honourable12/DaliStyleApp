@@ -35,7 +35,7 @@ async def upload_item(
     current_user: User = Depends(get_current_user)
 ):
     file_content = await file.read()
-]
+
     color_primary = "unknown"
     detected_category = category
     try:

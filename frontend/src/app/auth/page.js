@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import client from "@/api/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -76,7 +77,14 @@ export default function Auth() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase ml-2">Password</label>
+            <div className="flex justify-between items-center ml-2">
+              <label className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase">Password</label>
+              {isLogin && (
+                <Link href="/auth/forgot-password" size={16} className="text-[10px] font-bold tracking-widest text-fashion-gold uppercase hover:text-fashion-charcoal transition-colors">
+                  Forgot?
+                </Link>
+              )}
+            </div>
             <div className="relative">
               <Lock size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-fashion-muted" />
               <input 
