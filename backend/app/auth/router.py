@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from jose import JWTError
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 import time
 from uuid import UUID
 
@@ -43,9 +44,12 @@ class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     is_active: bool
+    skin_type: Optional[str] = None
+    metadata_skin: Optional[dict] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 _login_attempts: dict[str, list[float]] = {}
 MAX_ATTEMPTS = 5
@@ -110,7 +114,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     new_user = User(
-        email=user_in.email,
+        email=user_in.email.lower(),
         hashed_password=get_password_hash(user_in.password),
     )
     db.add(new_user)
@@ -127,10 +131,19 @@ def login(
 ):
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
-    user = db.query(User).filter(User.email == form_data.username).first()
-    password_to_check = user.hashed_password
+    
+    email_to_check = form_data.username.lower()
+    
+    user = db.query(User).filter(User.email == email_to_check).first()
 
-    if not user or not verify_password(form_data.password, password_to_check):
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

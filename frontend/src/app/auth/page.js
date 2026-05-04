@@ -1,9 +1,47 @@
 "use client";
 import { useState } from "react";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import client from "@/api/client";
+import { useRouter } from "next/navigation";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      if (isLogin) {
+        const params = new URLSearchParams();
+        params.append('username', formData.email);
+        params.append('password', formData.password);
+
+        const res = await client.post("/auth/login", params, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        localStorage.setItem("token", res.data.access_token);
+        router.push("/wardrobe");
+      } else {
+        await client.post("/auth/register", formData);
+        setIsLogin(true);
+        alert("Registration successful! Please sign in.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center py-10">
@@ -15,17 +53,10 @@ export default function Auth() {
           </p>
         </div>
 
-        <form className="space-y-6 glass-card p-10 bg-white">
-          {!isLogin && (
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase ml-2">Full Name</label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  className="w-full bg-fashion-bg border-none rounded-full py-4 px-6 text-sm focus:ring-2 focus:ring-fashion-gold transition-all"
-                  placeholder="ALEXANDER MCQUEEN"
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6 glass-card p-10 bg-white">
+          {error && (
+            <div className="bg-red-50 text-red-500 text-xs p-4 rounded-xl font-bold tracking-widest uppercase">
+              {error}
             </div>
           )}
 
@@ -35,6 +66,9 @@ export default function Auth() {
               <Mail size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-fashion-muted" />
               <input 
                 type="email" 
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
                 className="w-full bg-fashion-bg border-none rounded-full py-4 px-6 text-sm focus:ring-2 focus:ring-fashion-gold transition-all"
                 placeholder="STYLE@VOGUE.COM"
               />
@@ -47,15 +81,21 @@ export default function Auth() {
               <Lock size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-fashion-muted" />
               <input 
                 type="password" 
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
                 className="w-full bg-fashion-bg border-none rounded-full py-4 px-6 text-sm focus:ring-2 focus:ring-fashion-gold transition-all"
                 placeholder="••••••••"
               />
             </div>
           </div>
 
-          <button className="w-full bg-fashion-charcoal text-white py-4 rounded-full font-bold text-xs tracking-[0.2em] hover:bg-black transition-all flex items-center justify-center gap-2 mt-4 group">
-            {isLogin ? "SIGN IN" : "CREATE ACCOUNT"}
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          <button 
+            disabled={loading}
+            className="w-full bg-fashion-charcoal text-white py-4 rounded-full font-bold text-xs tracking-[0.2em] hover:bg-black transition-all flex items-center justify-center gap-2 mt-4 group disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" size={16} /> : (isLogin ? "SIGN IN" : "CREATE ACCOUNT")}
+            {!loading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
           </button>
         </form>
 
