@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
         <header className="sticky top-5 z-50 px-5">
           <nav className="mx-auto max-w-6xl glass-card px-6 py-3 flex items-center justify-between shadow-xl">
             <Link href="/" className="font-serif text-xl tracking-[0.2em] font-bold text-fashion-charcoal">
-              DAILY STYLE
+              DAILY LOOK
             </Link>
             
             {isLoggedIn && (

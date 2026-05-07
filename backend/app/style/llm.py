@@ -20,7 +20,7 @@ def generate_styling_note(skin_tone_name: str, top_color: str, bottom_color: str
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "llama3", # or "mistral"
+                "model": "llama3.2:1b", # or "mistral"
                 "prompt": prompt,
                 "stream": False
             },

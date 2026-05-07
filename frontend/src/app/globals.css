@@ -30,3 +30,13 @@ body {
     @apply text-fashion-muted hover:text-fashion-charcoal;
   }
 }
+
+@keyframes scan {
+  0% { top: 0%; opacity: 1; }
+  50% { top: 100%; opacity: 1; }
+  100% { top: 0%; opacity: 1; }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
+}
