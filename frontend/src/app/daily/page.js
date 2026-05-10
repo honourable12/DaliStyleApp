@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Sparkles, ArrowRight, Loader2, RefreshCw, Shirt, Save, Info } from "lucide-react";
+import { Sparkles, ArrowRight, Loader2, RefreshCw, Shirt, Save, Info, CloudRain, Sun, Thermometer, TrendingUp, MapPin } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import client from "@/api/client";
 import Link from "next/link";
 
@@ -10,159 +11,135 @@ export default function DailyLook() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchLook = async () => {
+  const fetchLookWithLocation = async () => {
     setLoading(true);
     setError(null);
+
+    const getCoords = () => {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+          () => resolve(null),
+          { timeout: 5000 }
+        );
+      });
+    };
+
     try {
-      const res = await client.get("/style/daily-look?include_accessories=true");
+      const coords = await getCoords();
+      let url = "/style/daily-look?include_accessories=true";
+      if (coords) {
+        url += `&lat=${coords.lat}&lon=${coords.lon}`;
+      }
+
+      const res = await client.get(url);
       setLook(res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not generate look. Do you have a selfie and clothes uploaded?");
+      setError(err.response?.data?.detail || "Could not generate look.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLook();
+    fetchLookWithLocation();
   }, []);
-
-  const saveToLookbook = async () => {
-    if (!look) return;
-    setIsSaving(true);
-    try {
-      const clothing_ids = [look.top.id, look.bottom.id];
-      if (look.accessory) clothing_ids.push(look.accessory.id);
-
-      await client.post("/style/outfits", {
-        occasion: "Daily Look",
-        clothing_ids: clothing_ids,
-        llm_reason: look.stylist_note
-      });
-      alert("Look saved to your Lookbook!");
-    } catch (err) {
-      alert("Failed to save outfit.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 space-y-6">
       <Loader2 className="animate-spin text-fashion-muted" size={64} />
-      <p className="font-serif italic text-xl text-fashion-muted">Curating your perfect outfit...</p>
+      <p className="font-serif italic text-xl text-fashion-muted animate-pulse">Curating your daily ensemble...</p>
     </div>
   );
 
   if (error) return (
     <div className="max-w-md mx-auto py-20 text-center space-y-8">
-      <div className="glass-card p-10 bg-white">
+      <div className="glass-card p-10 bg-white shadow-2xl">
         <Info size={48} className="mx-auto text-fashion-gold mb-6" />
-        <h2 className="text-2xl font-serif mb-4">Setup Required</h2>
+        <h2 className="text-2xl font-serif mb-4 italic">Preparation Required</h2>
         <p className="text-fashion-muted text-sm leading-relaxed mb-8">{error}</p>
         <div className="space-y-4">
-          <Link href="/profile" className="block w-full py-4 bg-fashion-charcoal text-white rounded-full font-bold text-xs tracking-widest uppercase">
-            Upload Selfie
-          </Link>
-          <Link href="/wardrobe" className="block w-full py-4 border border-fashion-charcoal text-fashion-charcoal rounded-full font-bold text-xs tracking-widest uppercase">
-            Go to Closet
+          <Link href="/profile" className="block w-full py-4 bg-fashion-charcoal text-white rounded-full font-bold text-[10px] tracking-widest uppercase">
+            Recalibrate Profile
           </Link>
         </div>
       </div>
     </div>
   );
 
+  const weatherIcons = {
+    "Sunny": <Sun className="text-orange-400" size={18} />,
+    "Rainy": <CloudRain className="text-blue-400" size={18} />,
+    "Cold": <Thermometer className="text-fashion-navy" size={18} />,
+    "Clear": <Sparkles className="text-fashion-gold" size={18} />
+  };
+
   return (
     <div className="space-y-12 py-6">
-      <section className="text-center space-y-4">
-        <h1 className="text-5xl font-serif text-fashion-charcoal">Your Daily Look</h1>
-        <div className="flex items-center justify-center gap-2">
-           <div className="h-[1px] w-8 bg-fashion-gold" />
-           <p className="text-fashion-muted uppercase tracking-[0.3em] text-[10px] font-bold">Harmony Score: {(look.harmony_score * 100).toFixed(0)}%</p>
-           <div className="h-[1px] w-8 bg-fashion-gold" />
+      <section className="text-center space-y-6">
+        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-6xl font-serif text-fashion-charcoal uppercase">The Daily Selection</motion.h1>
+        
+        <div className="flex items-center justify-center gap-6">
+           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-black/5">
+              {weatherIcons[look.weather_context] || <Sparkles size={18} />}
+              <span className="text-[10px] font-bold tracking-widest uppercase text-fashion-charcoal">
+                {look.weather_context} AT YOUR LOCATION
+              </span>
+           </div>
+           <div className="h-4 w-[1px] bg-black/10" />
+           <p className="text-fashion-muted uppercase tracking-[0.3em] text-[10px] font-bold">Harmony: {(look.harmony_score * 100).toFixed(0)}%</p>
         </div>
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-        {/* Outfit Preview Area */}
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 gap-6">
-             {/* TOP */}
-             <div className="glass-card bg-white p-6 relative group">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center">
-                   <img src={look.top.image_url} className="w-full h-full object-cover" onError={(e) => e.target.style.display='none'} />
-                   <Shirt size={48} className="absolute text-fashion-muted/10" />
-                </div>
-                <div className="mt-4 flex justify-between items-end text-left">
-                   <div>
-                      <p className="text-[10px] font-bold text-fashion-muted uppercase tracking-widest">Selected Top</p>
-                      <h3 className="text-xl font-serif italic text-fashion-charcoal">{look.top.name}</h3>
-                   </div>
-                   <div className="w-6 h-6 rounded-full border border-black/5" style={{ backgroundColor: look.top.color }} />
-                </div>
-             </div>
+        <div className="space-y-6">
+           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="glass-card bg-white p-6 border-l-8 border-fashion-charcoal">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
+                 <img src={look.top.image_url} className="w-full h-full object-cover" />
+              </div>
+              <div className="mt-4 flex justify-between items-end">
+                 <div><p className="text-[9px] font-bold text-fashion-muted uppercase tracking-widest">Selected Top</p><h3 className="text-2xl font-serif italic text-fashion-charcoal">{look.top.name}</h3></div>
+                 <div className="w-8 h-8 rounded-full border-4 border-white shadow-lg" style={{ backgroundColor: look.top.color }} />
+              </div>
+           </motion.div>
 
-             {/* BOTTOM */}
-             <div className="glass-card bg-white p-6 relative group">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center">
-                   <img src={look.bottom.image_url} className="w-full h-full object-cover" onError={(e) => e.target.style.display='none'} />
-                   <Shirt size={48} className="absolute text-fashion-muted/10" />
-                </div>
-                <div className="mt-4 flex justify-between items-end text-left">
-                   <div>
-                      <p className="text-[10px] font-bold text-fashion-muted uppercase tracking-widest">Selected Bottom</p>
-                      <h3 className="text-xl font-serif italic text-fashion-charcoal">{look.bottom.name}</h3>
-                   </div>
-                   <div className="w-6 h-6 rounded-full border border-black/5" style={{ backgroundColor: look.bottom.color }} />
-                </div>
-             </div>
-          </div>
+           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="glass-card bg-white p-6 border-l-8 border-fashion-gold">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
+                 <img src={look.bottom.image_url} className="w-full h-full object-cover" />
+              </div>
+              <div className="mt-4 flex justify-between items-end">
+                 <div><p className="text-[9px] font-bold text-fashion-muted uppercase tracking-widest">Selected Bottom</p><h3 className="text-2xl font-serif italic text-fashion-charcoal">{look.bottom.name}</h3></div>
+                 <div className="w-8 h-8 rounded-full border-4 border-white shadow-lg" style={{ backgroundColor: look.bottom.color }} />
+              </div>
+           </motion.div>
         </div>
 
-        {/* Styling Reasoning & Actions */}
-        <div className="sticky top-32 space-y-8">
-          {look.accessory && (
-            <div className="glass-card p-6 bg-white flex items-center gap-6 border-l-4 border-fashion-gold">
-               <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
-                  <img src={look.accessory.image_url} className="w-full h-full object-cover" />
-               </div>
-               <div className="text-left">
-                  <p className="text-[10px] font-bold text-fashion-muted uppercase tracking-widest">Matching Accessory</p>
-                  <h4 className="text-lg font-serif italic text-fashion-charcoal">{look.accessory.name}</h4>
-               </div>
-            </div>
+        <div className="sticky top-32 space-y-6">
+          {look.recommended_persona && (
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="glass-card p-6 bg-fashion-gold text-white border-none flex items-center gap-6 shadow-xl relative overflow-hidden">
+                <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12"><TrendingUp size={100} /></div>
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0"><Sparkles size={24} /></div>
+                <div className="space-y-1">
+                   <p className="text-[10px] font-bold tracking-[0.3em] uppercase opacity-80">Style Recommendation</p>
+                   <p className="text-sm font-medium leading-tight">Switch to <span className="font-bold underline">{look.recommended_persona}</span> for better harmony with your current wardrobe.</p>
+                </div>
+            </motion.div>
           )}
 
           <div className="glass-card p-10 bg-fashion-navy text-white border-none shadow-2xl relative overflow-hidden text-left">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-               <Sparkles size={120} />
-            </div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6 text-fashion-gold">
-                <Sparkles size={20} />
-                <span className="uppercase tracking-[0.3em] text-[10px] font-bold">Stylist's Recommendation</span>
-              </div>
-              <p className="font-serif text-2xl md:text-3xl italic leading-snug">
-                "{look.stylist_note}"
-              </p>
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-3 text-fashion-gold"><Sparkles size={18} /><span className="uppercase tracking-[0.4em] text-[10px] font-bold">Stylist's Narrative</span></div>
+              <p className="font-serif text-3xl italic leading-tight text-white/90">"{look.stylist_note}"</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button 
-              onClick={saveToLookbook}
-              disabled={isSaving}
-              className="flex items-center justify-center gap-2 w-full py-5 bg-fashion-charcoal text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all disabled:opacity-50"
-            >
-              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-              SAVE TO LOOKBOOK
+            <button className="flex items-center justify-center gap-2 w-full py-5 bg-fashion-charcoal text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all">
+              <Save size={16} /> SAVE LOOK
             </button>
-            <button 
-              onClick={fetchLook}
-              className="flex items-center justify-center gap-2 w-full py-5 border border-fashion-charcoal text-fashion-charcoal rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-fashion-charcoal hover:text-white transition-all"
-            >
-              <RefreshCw size={16} />
-              NEW SUGGESTION
+            <button onClick={fetchLookWithLocation} className="flex items-center justify-center gap-2 w-full py-5 border border-fashion-charcoal text-fashion-charcoal rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-fashion-charcoal hover:text-white transition-all bg-white">
+              <RefreshCw size={16} /> RE-CALIBRATE
             </button>
           </div>
         </div>

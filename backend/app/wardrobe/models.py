@@ -13,6 +13,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     skin_type = Column(String, nullable=True)
+    style_persona = Column(String, default="Minimalist") #inimalist | Bold | Old Money
     metadata_skin = Column(JSON, nullable=True)
 
     items = relationship("ClothingItem", back_populates="owner")

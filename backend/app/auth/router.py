@@ -55,12 +55,18 @@ class UserResponse(BaseModel):
     email: EmailStr
     is_active: bool
     skin_type: Optional[str] = None
+    style_persona: Optional[str] = None
     metadata_skin: Optional[dict] = None
 
     model_config = {
         "from_attributes": True
     }
 
+class ProfileUpdate(BaseModel):
+    style_persona: Optional[str] = None
+
+
+ 
 _login_attempts: dict[str, list[float]] = {}
 MAX_ATTEMPTS = 5
 WINDOW_SECONDS = 300
@@ -212,6 +218,18 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+@router.patch("/profile", response_model=UserResponse)
+def update_profile(
+    profile_in: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if profile_in.style_persona:
+        current_user.style_persona = profile_in.style_persona
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 
