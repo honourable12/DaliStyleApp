@@ -34,6 +34,46 @@ class OutfitCreate(BaseModel):
     clothing_ids: List[int]
     llm_reason: str
 
+@router.get("/wardrobe-iq")
+def get_wardrobe_iq(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not current_user.skin_type:
+        raise HTTPException(status_code=400, detail="Perform skin analysis to unlock IQ.")
+
+    items = db.query(ClothingItem).filter(ClothingItem.owner_id == current_user.id).all()
+    if not items:
+        raise HTTPException(status_code=400, detail="Add clothes to your closet to see analytics.")
+        
+    from app.style.rules import get_wardrobe_analytics
+    distribution = get_wardrobe_analytics(items, current_user.metadata_skin.get("monk_label"))
+
+    report_prompt = f"""
+    You are a Strategic Fashion Consultant. 
+    User Skin Tone: {current_user.skin_type} (Monk Scale).
+    Wardrobe Distribution: {distribution}.
+    
+    Give a one-sentence high-fashion strategic recommendation on what colors the user should add to their wardrobe next to maximize their biological harmony.
+    Be sophisticated.
+    """
+    
+    from app.style.llm import generate_styling_note
+    try:
+        response = requests.post(
+            f"{os.getenv('OLLAMA_HOST', 'http://host.docker.internal:11434')}/api/generate",
+            json={"model": "llama3.2:1b", "prompt": report_prompt, "stream": False},
+            timeout=10
+        ).json().get("response")
+    except:
+        response = "Your wardrobe is well-balanced. Focus on adding high-quality neutrals to anchor your look."
+
+    return {
+        "distribution": distribution,
+        "consultant_report": response,
+        "total_items": len(items)
+    }
+
 @router.get("/daily-look", response_model=LookResponse)
 def get_daily_look(
     include_accessories: bool = False,

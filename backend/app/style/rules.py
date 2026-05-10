@@ -78,6 +78,22 @@ def get_weather_priority(weather_code: str, category: str) -> float:
         if any(x in cat for x in ["shorts", "t-shirt", "sandals"]): return 2.0
     return 1.0
 
+def get_wardrobe_analytics(items: List, monk_label: str) -> dict:
+    stats = {"Neutral": 0, "Vibrant": 0, "Muted": 0, "Earthy": 0}
+    total = len(items)
+    if total == 0: return stats
+
+    for item in items:
+        h, s, l = hex_to_hsl(item.color_primary)
+        
+        if s < 0.15: stats["Neutral"] += 1
+        elif s > 0.6: stats["Vibrant"] += 1
+        elif 0.1 <= h <= 0.2: stats["Earthy"] += 1
+        else: stats["Muted"] += 1
+
+    # Convert to percentages
+    return {k: round((v / total) * 100, 1) for k, v in stats.items()}
+
 def get_seasonal_compatibility(monk_label: str, clothing_hex: str) -> float:
     h, s, l = hex_to_hsl(clothing_hex)
     season = PALETTE_MAPPING.get(monk_label, ["Neutral", "Medium"])
