@@ -2,14 +2,15 @@ import cv2
 import numpy as np
 import os
 import io
+import base64
 from sklearn.cluster import KMeans
 from PIL import Image
 import torch
 from ultralytics import YOLO
 from transformers import CLIPProcessor, CLIPModel
 
+# Mandatory: Set cache
 os.environ["HF_HOME"] = os.path.join(os.path.dirname(__file__), "models")
-
 os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 from clothing_categories import (
@@ -20,46 +21,38 @@ from clothing_categories import (
     COLOR_NAMES,
 )
 
-def _get_projected_features(model, inputs, is_text=True):
-    with torch.no_grad():
-        outputs = model.get_text_features(**inputs) if is_text else model.get_image_features(**inputs)
+#Model loading (Lazy)
+_yolo           = None
+_clip_model     = None
+_clip_processor = None
+_text_embeddings = None
+
+def _get_tensor(outputs, is_text=True):
+    if isinstance(outputs, torch.Tensor): return outputs
+    if is_text and hasattr(outputs, "text_embeds"): return outputs.text_embeds
+    if not is_text and hasattr(outputs, "image_embeds"): return outputs.image_embeds
+    if hasattr(outputs, "pooler_output"): return outputs.pooler_output
+    return outputs[0]
+
+def _lazy_load_heavy_models():
+    global _yolo, _clip_model, _clip_processor, _text_embeddings
+    if _yolo is not None: return
+    
+    print("AI Service: Loading Heavy AI Models...")
+    _yolo           = YOLO("yolov8n-seg.pt")
+    _clip_model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    _clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    _clip_model.eval()
+
+    _text_inputs = _clip_processor(text=[f"a photo of a {c}" for c in CLOTHING_CATEGORIES], return_tensors="pt", padding=True)
+    raw_outputs = _clip_model.get_text_features(**_text_inputs)
+    _text_embeddings = _get_tensor(raw_outputs, is_text=True)
+    
+    if _text_embeddings.shape[-1] == 768:
+        _text_embeddings = _clip_model.text_projection(_text_embeddings)
         
-        #Extract the raw tensor from wrapper
-        if isinstance(outputs, torch.Tensor):
-            tensor = outputs
-        elif is_text and hasattr(outputs, "text_embeds"):
-            tensor = outputs.text_embeds
-        elif not is_text and hasattr(outputs, "image_embeds"):
-            tensor = outputs.image_embeds
-        elif hasattr(outputs, "pooler_output"):
-            tensor = outputs.pooler_output
-        else:
-            tensor = outputs[0]
-            
-        # Dimension Check 
-        if tensor.shape[-1] == 768:
-            projection = model.text_projection if is_text else model.visual_projection
-            return projection(tensor)
-            
-        return tensor
-
-print("AI Service: Loading YOLOv8 segmentation model...")
-_yolo           = YOLO("yolov8n-seg.pt")
-
-print("AI Service: Loading CLIP vision/text model (openai/clip-vit-base-patch32)...")
-print(" Note: This may take several minutes on first run as it downloads ~600MB.")
-_clip_model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-_clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-_clip_model.eval()
-print("AI Service: CLIP Model loaded successfully.")
-
-# Pre-compute CLIP text embeddings once
-print("AI Service: Pre-computing category embeddings...")
-_text_inputs = _clip_processor(text=[f"a photo of a {c}" for c in CLOTHING_CATEGORIES], 
-                               return_tensors="pt", padding=True)
-_text_embeddings = _get_projected_features(_clip_model, _text_inputs, is_text=True)
-_text_embeddings = _text_embeddings / _text_embeddings.norm(dim=-1, keepdim=True)
-print("AI Service: Category embeddings ready.")
+    _text_embeddings = _text_embeddings / _text_embeddings.norm(dim=-1, keepdim=True)
+    print("✅ AI Service: Heavy Models Ready.")
 
 def _nearest_color_name(rgb: tuple) -> str:
     arr = np.array(rgb, dtype=float)
@@ -68,117 +61,96 @@ def _nearest_color_name(rgb: tuple) -> str:
 def _rgb_to_hex(rgb: tuple) -> str:
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
-def _are_too_similar(rgb1: tuple, rgb2: tuple, threshold: float = 40.0) -> bool:
-    return float(np.linalg.norm(np.array(rgb1) - np.array(rgb2))) < threshold
-
-def _get_garment_mask(img_rgb: np.ndarray) -> np.ndarray | None:
-    results = _yolo(img_rgb, verbose=False)[0]
-    if results.masks is None:
-        return None
-    best_mask, best_area = None, 0
-    for i, cls_id in enumerate(results.boxes.cls.cpu().numpy()):
-        if int(cls_id) not in CLOTHING_YOLO_CLASSES:
-            continue
-        raw   = results.masks.data[i].cpu().numpy()
-        resized = cv2.resize(raw, (img_rgb.shape[1], img_rgb.shape[0]))
-        binary  = (resized > 0.5).astype(np.uint8) * 255
-        area    = int(binary.sum())
-        if area > best_area:
-            best_area, best_mask = area, binary
-    return best_mask
-
-def _fallback_mask(img_rgb: np.ndarray) -> np.ndarray:
-    brightness = img_rgb.mean(axis=2)
-    saturation = img_rgb.max(axis=2).astype(int) - img_rgb.min(axis=2).astype(int)
-    mask = ((brightness < 230) & (brightness > 15) & (saturation > 20)).astype(np.uint8) * 255
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    mask   = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    return mask
-
-def _get_mask(img_rgb: np.ndarray) -> tuple[np.ndarray, str]:
-    mask = _get_garment_mask(img_rgb)
-    if mask is not None:
-        return mask, "yolo"
-    return _fallback_mask(img_rgb), "fallback"
-
-
-def _classify_category(img_rgb: np.ndarray, mask: np.ndarray) -> tuple[str, float]:
-    coords = cv2.findNonZero(mask)
-    if coords is None:
-        cropped = img_rgb
-    else:
-        x, y, bw, bh = cv2.boundingRect(coords)
-        cropped = img_rgb[max(0, y-10):y+bh+10, max(0, x-10):x+bw+10]
-
-    pil_img = Image.fromarray(cropped)
-    inputs = _clip_processor(images=pil_img, return_tensors="pt")
-
-    img_emb = _get_projected_features(_clip_model, inputs, is_text=False)
-    img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
-
-    logits   = (img_emb @ _text_embeddings.T) * 100
-    probs    = logits.softmax(dim=-1)[0].cpu().numpy()
-    
-    best_idx   = int(np.argmax(probs))
-    confidence = float(probs[best_idx])
-    specific   = CLOTHING_CATEGORIES[best_idx]
-    
-    if confidence < CONFIDENCE_THRESHOLD:
-        return CATEGORY_GROUPS.get(specific, "other"), round(confidence, 4)
-    return specific, round(confidence, 4)
-
-
-def _extract_colors(img_rgb: np.ndarray, mask: np.ndarray, n_clusters: int = 5) -> list:
-    pixels = img_rgb[mask > 0]
-    if len(pixels) < 100:
-        pixels = img_rgb.reshape(-1, 3)
-    
-    kmeans = KMeans(n_clusters=min(len(pixels), n_clusters), n_init=10, random_state=42)
-    kmeans.fit(pixels)
-    colors = kmeans.cluster_centers_.astype(int)
-    labels = kmeans.labels_
-    counts = np.bincount(labels)
-
-    scored = []
-    for i, color in enumerate(colors):
-        hsv        = cv2.cvtColor(np.uint8([[color]]), cv2.COLOR_RGB2HSV)[0][0]
-        sat_score  = float(hsv[1])
-        size_score = counts[i] / len(labels)
-        score      = sat_score * 0.75 + size_score * 0.25 * 255
-        scored.append((tuple(color), int(counts[i]), score))
-    
-    scored.sort(key=lambda x: x[2], reverse=True)
-    return scored
-
-def _pick_primary_secondary(scored: list) -> tuple[tuple, tuple | None]:
-    primary = scored[0][0]
-    secondary = next(
-        (rgb for rgb, _, _ in scored[1:] if not _are_too_similar(primary, rgb, threshold=50)),
-        None,
-    )
-    return primary, secondary
-
-
- # Public API
-def analyze_clothing(image_bytes: bytes) -> dict:
+# PIPELINE STAGE 1: FAST COLOR (SMART FILTERING)
+def analyze_clothing_fast(image_bytes: bytes) -> dict:
     nparr = np.frombuffer(image_bytes, np.uint8)
-    img   = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    img   = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    proc_img = cv2.resize(img, (448, 448), interpolation=cv2.INTER_AREA)
+    #Center Crop
+    h, w = img_rgb.shape[:2]
+    cy, cx = h // 2, w // 2
+    rh, rw = h // 3, w // 3
+    center = img_rgb[cy-rh:cy+rh, cx-rw:cx+rw]
+    
+    #Reshape and filter out 'Pure White' or 'Pure Black' background noise
+    pixels = center.reshape(-1, 3)
+    # Ignore pixels where all channels > 240 (white) or < 15 (black)
+    filtered = pixels[~((pixels > 240).all(axis=1) | (pixels < 15).all(axis=1))]
+    
+    if len(filtered) < 100: filtered = pixels # Fallback if too aggressive
 
-    mask, seg_source = _get_mask(proc_img)
-    category, category_confidence = _classify_category(proc_img, mask)
+    # KMeans for dominant color
+    kmeans = KMeans(n_clusters=3, n_init=5)
+    kmeans.fit(filtered)
     
-    scored = _extract_colors(proc_img, mask)
-    primary_rgb, secondary_rgb = _pick_primary_secondary(scored)
+    colors = kmeans.cluster_centers_.astype(int)
+    # most SATURATED color, not most frequent
+    best_color = colors[0]
+    max_sat = -1
+    for c in colors:
+        hsv = cv2.cvtColor(np.uint8([[c]]), cv2.COLOR_RGB2HSV)[0][0]
+        if hsv[1] > max_sat:
+            max_sat = hsv[1]
+            best_color = c
+            
+    return {
+        "primary_color": _rgb_to_hex(best_color),
+        "primary_name": _nearest_color_name(best_color)
+    }
+
+#PIPELINE STAGE 2: HEAVY AI 
+def analyze_clothing_heavy(image_bytes: bytes) -> dict:
+    _lazy_load_heavy_models()
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    proc_img = cv2.resize(img_rgb, (448, 448), interpolation=cv2.INTER_AREA)
+
+    # Segmentation
+    results = _yolo(proc_img, verbose=False)[0]
+    mask = None
+    if results.masks:
+        areas = [m.data.sum() for m in results.masks]
+        raw = results.masks.data[np.argmax(areas)].cpu().numpy()
+        mask = (cv2.resize(raw, (448, 448)) > 0.5).astype(np.uint8) * 255
+    
+    if mask is None:
+        mask = np.zeros((448, 448), dtype=np.uint8)
+        cv2.rectangle(mask, (50, 50), (398, 398), 255, -1)
+
+    # Background Removal
+    white_bg = np.full(proc_img.shape, 255, dtype=np.uint8)
+    mask_3d = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR) / 255.0
+    processed = (proc_img * mask_3d + white_bg * (1 - mask_3d)).astype(np.uint8)
+    _, buffer = cv2.imencode('.jpg', cv2.cvtColor(processed, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 85])
+    processed_b64 = base64.b64encode(buffer).decode('utf-8')
+
+    # Refined Color (from cleaned image)
+    pixels = processed[mask > 0]
+    kmeans = KMeans(n_clusters=3, n_init=5)
+    kmeans.fit(pixels)
+    refined_rgb = kmeans.cluster_centers_.astype(int)[0] # Largest cluster on mask
+
+    # CLIP Classification
+    pil_img = Image.fromarray(processed)
+    inputs = _clip_processor(images=pil_img, return_tensors="pt")
+    with torch.no_grad():
+        img_raw = _clip_model.get_image_features(**inputs)
+        img_emb = _get_tensor(img_raw, is_text=False)
+        if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
+        img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+        logits = (img_emb @ _text_embeddings.T) * 100
+        probs = logits.softmax(dim=-1)[0].cpu().numpy()
+    
+    idx = int(np.argmax(probs))
+    category = CLOTHING_CATEGORIES[idx]
+    if probs[idx] < CONFIDENCE_THRESHOLD:
+        category = CATEGORY_GROUPS.get(category, "other")
 
     return {
-        "primary_color":          _rgb_to_hex(primary_rgb),
-        "primary_name":           _nearest_color_name(primary_rgb),
-        "secondary_color":        _rgb_to_hex(secondary_rgb) if secondary_rgb else None,
-        "secondary_name":         _nearest_color_name(secondary_rgb) if secondary_rgb else None,
-        "category":               category,
-        "category_confidence":    category_confidence,
-        "segmentation_source":    seg_source,
+        "category": category,
+        "category_confidence": float(probs[idx]),
+        "processed_image_b64": processed_b64,
+        "refined_primary_color": _rgb_to_hex(refined_rgb)
     }
