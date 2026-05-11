@@ -2,7 +2,7 @@ import requests
 import os
 import json
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
 def generate_styling_note(skin_tone_name: str, top_color: str, bottom_color: str, category: str):
     prompt = f"""
@@ -20,7 +20,7 @@ def generate_styling_note(skin_tone_name: str, top_color: str, bottom_color: str
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "llama3.2:1b", # or "mistral"
+                "model": "gemma3", # or "mistral"
                 "prompt": prompt,
                 "stream": False
             },

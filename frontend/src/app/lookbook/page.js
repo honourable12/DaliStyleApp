@@ -1,11 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Sparkles, Calendar, ArrowUpRight, Loader2, Heart, Trash2 } from "lucide-react";
+import { Sparkles, Calendar, Trash2, Loader2, Heart, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import client from "@/api/client";
 
 export default function Lookbook() {
   const [outfits, setOutfits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState({ type: "", message: "" });
+
+  const showStatus = (type, message) => {
+    setStatus({ type, message });
+    setTimeout(() => setStatus({ type: "", message: "" }), 4000);
+  };
 
   const fetchOutfits = async () => {
     try {
@@ -22,6 +29,16 @@ export default function Lookbook() {
     fetchOutfits();
   }, []);
 
+  const handleDelete = async (id) => {
+    try {
+      await client.delete(`/style/outfits/${id}`);
+      setOutfits(outfits.filter(o => o.id !== id));
+      showStatus("success", "Look removed from archive.");
+    } catch (err) {
+      showStatus("error", "Could not delete look.");
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center py-40">
       <Loader2 className="animate-spin text-fashion-muted" size={48} />
@@ -29,63 +46,111 @@ export default function Lookbook() {
   );
 
   return (
-    <div className="space-y-12 py-6">
-      <div className="space-y-2">
-        <h1 className="text-5xl font-serif text-fashion-charcoal">Saved Looks</h1>
-        <p className="text-fashion-muted font-light uppercase tracking-widest text-[10px] font-bold tracking-[0.3em]">Your personal style history</p>
-      </div>
+    <div className="space-y-16 py-10 relative">
+      {/* Status Toast */}
+      <AnimatePresence>
+        {status.message && (
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] glass-card p-4 flex items-center gap-3 shadow-2xl ${
+              status.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600'
+            }`}>
+            <CheckCircle2 size={18} />
+            <p className="text-[10px] font-bold tracking-widest uppercase">{status.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <section className="text-center space-y-4">
+        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-6xl md:text-8xl font-serif text-fashion-charcoal">Style Archive</motion.h1>
+        <p className="text-fashion-muted uppercase tracking-[0.4em] text-[10px] font-bold">Your Curated Journey</p>
+      </section>
 
       {outfits.length === 0 ? (
         <div className="rounded-[40px] border-2 border-dashed border-black/5 p-24 flex flex-col items-center justify-center text-center space-y-6 bg-white/30 backdrop-blur">
-           <div className="w-20 h-20 bg-fashion-bg rounded-full flex items-center justify-center text-fashion-muted/20">
-              <Heart size={40} />
-           </div>
+           <Heart size={40} className="text-black/10" />
            <div className="space-y-2">
-              <h3 className="text-2xl font-serif italic text-fashion-charcoal">Your Lookbook is Empty</h3>
-              <p className="text-fashion-muted text-sm max-w-xs mx-auto">Generate a Daily Look and save it to start building your personal style archive.</p>
+              <h3 className="text-2xl font-serif italic text-fashion-charcoal">Archive is Empty</h3>
+              <p className="text-fashion-muted text-sm max-w-xs mx-auto">Save your first Daily Look to begin your collection.</p>
            </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {outfits.map((outfit) => (
-            <div key={outfit.id} className="glass-card p-8 bg-white group cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
-              <div className="flex justify-between items-start mb-8">
-                <div className="space-y-1 text-left">
-                   <h3 className="text-2xl font-serif italic text-fashion-charcoal">{outfit.occasion}</h3>
-                   <div className="flex items-center gap-2 text-fashion-muted text-[10px] font-bold tracking-widest uppercase">
-                      <Calendar size={12} />
-                      {new Date(outfit.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        <div className="space-y-24">
+          {outfits.map((outfit, index) => (
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: index * 0.1 }}
+              key={outfit.id} 
+              className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center border-b border-black/5 pb-24 group"
+            >
+              {/* Image Stack: Column 1-7 */}
+              <div className="lg:col-span-7 relative">
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-4">
+                      {outfit.items.slice(0, 1).map(item => (
+                        <div key={item.id} className="aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
+                           <img src={item.image_url} className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" />
+                        </div>
+                      ))}
+                      <div className="flex gap-2">
+                         {outfit.items.map(item => (
+                            <div key={item.id} className="w-8 h-8 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: item.color_primary }} />
+                         ))}
+                      </div>
+                   </div>
+                   <div className="pt-12 space-y-4">
+                      {outfit.items.slice(1, 2).map(item => (
+                        <div key={item.id} className="aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
+                           <img src={item.image_url} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                      {outfit.items.length > 2 && (
+                        <div className="aspect-square w-24 rounded-2xl overflow-hidden shadow-xl ml-auto bg-white border border-black/5 rotate-3">
+                           <img src={outfit.items[2].image_url} className="w-full h-full object-cover" />
+                        </div>
+                      )}
                    </div>
                 </div>
-                <div className="flex gap-2">
-                   <button className="p-2 text-fashion-muted hover:text-red-500 transition-colors">
-                      <Trash2 size={18} />
+              </div>
+
+              {/* Info Panel: Column 8-12 */}
+              <div className="lg:col-span-5 space-y-8 text-left">
+                <div className="flex justify-between items-start">
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-bold tracking-[0.4em] text-fashion-gold uppercase">{outfit.occasion}</p>
+                      <h3 className="text-4xl font-serif italic text-fashion-charcoal">
+                        {new Date(outfit.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </h3>
+                   </div>
+                   <button onClick={() => handleDelete(outfit.id)} className="p-3 text-fashion-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                      <Trash2 size={20} />
                    </button>
-                   <ArrowUpRight size={20} className="text-fashion-muted group-hover:text-fashion-gold transition-colors mt-2" />
+                </div>
+
+                <div className="glass-card p-8 bg-fashion-navy text-white border-none shadow-xl relative overflow-hidden">
+                   <div className="absolute -right-2 -top-2 opacity-5">
+                      <Sparkles size={100} />
+                   </div>
+                   <div className="relative z-10">
+                      <p className="text-[8px] font-bold tracking-[0.3em] uppercase text-fashion-gold mb-4">Stylist Note</p>
+                      <p className="font-serif text-xl italic leading-relaxed text-white/90 italic">
+                        "{outfit.llm_reason}"
+                      </p>
+                   </div>
+                </div>
+
+                <div className="pt-4 flex items-center gap-4 text-fashion-muted group-hover:text-fashion-charcoal transition-colors">
+                   <span className="text-[10px] font-bold tracking-widest uppercase underline underline-offset-8">VIEW COMPOSITION</span>
+                   <ArrowRight size={14} />
                 </div>
               </div>
-
-              {/* Outfit Strip */}
-              <div className="flex gap-4 mb-8">
-                 {/* Logic to show color blocks based on clothing_ids would go here */}
-                 <div className="w-16 h-20 rounded-2xl shadow-inner border border-black/5 bg-fashion-navy/20 flex items-center justify-center text-fashion-navy">
-                    <Sparkles size={16} />
-                 </div>
-                 <div className="w-16 h-20 rounded-2xl shadow-inner border border-black/5 bg-fashion-gold/20 flex items-center justify-center text-fashion-gold">
-                    <Sparkles size={16} />
-                 </div>
-                 <div className="flex-1 rounded-2xl border-2 border-dashed border-black/5 flex items-center justify-center text-fashion-muted/30">
-                    <Sparkles size={16} />
-                 </div>
-              </div>
-
-              <p className="text-fashion-muted font-light italic text-sm leading-relaxed border-l-2 border-fashion-gold pl-4 text-left">
-                "{outfit.llm_reason}"
-              </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
     </div>
   );
 }
+
+import { CheckCircle2 } from "lucide-react";
