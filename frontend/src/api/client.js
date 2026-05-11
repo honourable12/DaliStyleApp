@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = '/api';
 
 const client = axios.create({
   baseURL: API_URL,
@@ -16,6 +16,7 @@ client.interceptors.request.use((config) => {
   }
   return config;
 });
+
 
 client.interceptors.response.use(
   (response) => response,
