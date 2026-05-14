@@ -1,14 +1,25 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { Camera, Loader2, CheckCircle2, RefreshCw, AlertCircle, Sparkles, User as UserIcon, Fingerprint, Palette, TrendingUp, BrainCircuit, BarChart3 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Camera, RefreshCw, AlertCircle, Sparkles, User as UserIcon, Fingerprint, Palette, BrainCircuit, BarChart3, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
+import { ProfileSkeleton } from "@/components/Skeleton";
+import { StatusToast } from "@/components/StatusToast";
+
+const fetcher = url => client.get(url).then(res => res.data);
 
 export default function Profile() {
-  const [user, setUser] = useState(null);
-  const [iqData, setIqData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [iqLoading, setIqLoading] = useState(false);
+  const { data: user, isLoading: userLoading } = useSWR('/auth/me', fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: true,
+  });
+
+  const { data: iqData, isLoading: iqLoading } = useSWR(user?.skin_type ? '/style/wardrobe-iq' : null, fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: true,
+  });
+
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const fileInputRef = useRef(null);
@@ -24,31 +35,6 @@ export default function Profile() {
     setTimeout(() => setStatus({ type: "", message: "" }), 5000);
   };
 
-  const fetchData = async () => {
-    try {
-      const res = await client.get("/auth/me");
-      setUser(res.data);
-      
-      // Fetch IQ Data if user has skin tone analyzed
-      if (res.data.skin_type) {
-         setIqLoading(true);
-         try {
-           const iqRes = await client.get("/style/wardrobe-iq");
-           setIqData(iqRes.data);
-         } catch (e) { console.log("IQ data not ready yet"); }
-         setIqLoading(false);
-      }
-    } catch (err) {
-      console.error("Failed to fetch data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleSelfieUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -59,7 +45,7 @@ export default function Profile() {
     try {
       await client.post("/wardrobe/selfie", formData, { headers: { "Content-Type": "multipart/form-data" } });
       showStatus("success", `Analysis complete.`);
-      fetchData();
+      mutate('/auth/me');
     } catch (err) {
       showStatus("error", "Analysis failed.");
     } finally {
@@ -69,33 +55,22 @@ export default function Profile() {
 
   const handlePersonaChange = async (newPersona) => {
     try {
-      const res = await client.patch("/auth/profile", { style_persona: newPersona });
-      setUser(res.data);
+      // Optimistic update
+      mutate('/auth/me', { ...user, style_persona: newPersona }, false);
+      await client.patch("/auth/profile", { style_persona: newPersona });
       showStatus("success", `Style Persona saved: ${newPersona}`);
     } catch (err) {
       showStatus("error", "Failed to update persona.");
+      mutate('/auth/me');
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center py-40">
-      <Loader2 className="animate-spin text-fashion-muted" size={48} />
-    </div>
-  );
+  if (userLoading && !user) return <ProfileSkeleton />;
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 py-10 relative px-4">
       <AnimatePresence>
-        {status.message && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] glass-card p-4 flex items-center gap-3 shadow-2xl min-w-[320px] ${
-              status.type === 'error' ? 'bg-red-50 text-red-600 border-red-100' : 
-              status.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-fashion-charcoal text-white'
-            }`}>
-            {status.type === 'error' ? <AlertCircle size={18} /> : status.type === 'success' ? <CheckCircle2 size={18} /> : <RefreshCw className="animate-spin" size={18} />}
-            <p className="text-[10px] font-bold tracking-[0.2em] uppercase">{status.message}</p>
-          </motion.div>
-        )}
+        <StatusToast message={status.message} type={status.type} />
       </AnimatePresence>
 
       <section className="text-center space-y-4">
@@ -104,7 +79,6 @@ export default function Profile() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Biometric Profile */}
         <div className="lg:col-span-1 space-y-8">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
             className="glass-card p-10 bg-white text-center shadow-xl border-t-8 h-fit" 
@@ -140,7 +114,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Right Column: Wardrobe IQ */}
         <div className="lg:col-span-2 space-y-8">
            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
              className="glass-card p-10 bg-white shadow-xl relative overflow-hidden"
@@ -150,19 +123,27 @@ export default function Profile() {
                     <BrainCircuit className="text-fashion-gold" size={24} />
                     <h2 className="text-3xl font-serif italic">Wardrobe IQ</h2>
                  </div>
-                 {iqLoading && <Loader2 className="animate-spin text-fashion-muted" size={20} />}
+                 {iqLoading && <RefreshCw className="animate-spin text-fashion-muted" size={20} />}
               </div>
 
-              {!iqData ? (
+              {!iqData && !iqLoading ? (
                  <div className="py-20 text-center space-y-4">
                     <BarChart3 className="mx-auto text-black/5" size={48} />
                     <p className="text-fashion-muted text-sm italic">Analyze your skin tone and add clothes to unlock <br/> deep wardrobe analytics.</p>
                  </div>
+              ) : iqLoading && !iqData ? (
+                <div className="space-y-6">
+                   {[...Array(3)].map((_, i) => (
+                     <div key={i} className="space-y-2">
+                        <div className="h-4 w-24 bg-black/5 rounded animate-pulse" />
+                        <div className="h-1.5 w-full bg-black/5 rounded-full" />
+                     </div>
+                   ))}
+                </div>
               ) : (
                 <div className="space-y-10">
-                   {/* Distribution Bars */}
                    <div className="space-y-6">
-                      {Object.entries(iqData.distribution).map(([key, val]) => (
+                      {iqData && Object.entries(iqData.distribution).map(([key, val]) => (
                         <div key={key} className="space-y-2">
                            <div className="flex justify-between text-[10px] font-bold tracking-widest uppercase">
                               <span className="text-fashion-charcoal">{key}</span>
@@ -180,21 +161,19 @@ export default function Profile() {
                       ))}
                    </div>
 
-                   {/* Strategic Report */}
                    <div className="p-8 bg-fashion-bg rounded-[32px] border border-black/5 relative">
                       <div className="absolute top-4 right-6 opacity-10">
                          <Sparkles size={40} />
                       </div>
                       <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-fashion-gold mb-4">Strategic Consultant Report</p>
                       <p className="font-serif text-xl italic text-fashion-charcoal leading-relaxed">
-                         "{iqData.consultant_report}"
+                         "{iqData?.consultant_report}"
                       </p>
                    </div>
                 </div>
               )}
            </motion.div>
 
-           {/* Persona Selection (Quick Switch) */}
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {personas.map((p) => (
                 <button 

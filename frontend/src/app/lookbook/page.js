@@ -1,12 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Sparkles, Calendar, Trash2, Loader2, Heart, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, Trash2, Heart, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
+import { LookbookSkeleton } from "@/components/Skeleton";
+import { StatusToast } from "@/components/StatusToast";
+
+const fetcher = url => client.get(url).then(res => res.data);
 
 export default function Lookbook() {
-  const [outfits, setOutfits] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: outfits = [], isLoading } = useSWR('/style/outfits', fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: true,
+  });
+
   const [status, setStatus] = useState({ type: "", message: "" });
 
   const showStatus = (type, message) => {
@@ -14,50 +22,24 @@ export default function Lookbook() {
     setTimeout(() => setStatus({ type: "", message: "" }), 4000);
   };
 
-  const fetchOutfits = async () => {
-    try {
-      const res = await client.get("/style/outfits");
-      setOutfits(res.data);
-    } catch (err) {
-      console.error("Failed to fetch outfits");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOutfits();
-  }, []);
-
   const handleDelete = async (id) => {
     try {
+      // Optimistic update
+      const updatedOutfits = outfits.filter(o => o.id !== id);
+      mutate('/style/outfits', updatedOutfits, false);
+
       await client.delete(`/style/outfits/${id}`);
-      setOutfits(outfits.filter(o => o.id !== id));
       showStatus("success", "Look removed from archive.");
     } catch (err) {
       showStatus("error", "Could not delete look.");
+      mutate('/style/outfits'); // Revalidate on error
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center py-40">
-      <Loader2 className="animate-spin text-fashion-muted" size={48} />
-    </div>
-  );
-
   return (
     <div className="space-y-16 py-10 relative">
-      {/* Status Toast */}
       <AnimatePresence>
-        {status.message && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] glass-card p-4 flex items-center gap-3 shadow-2xl ${
-              status.type === 'success' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600'
-            }`}>
-            <CheckCircle2 size={18} />
-            <p className="text-[10px] font-bold tracking-widest uppercase">{status.message}</p>
-          </motion.div>
-        )}
+        <StatusToast message={status.message} type={status.type} />
       </AnimatePresence>
 
       <section className="text-center space-y-4">
@@ -65,7 +47,9 @@ export default function Lookbook() {
         <p className="text-fashion-muted uppercase tracking-[0.4em] text-[10px] font-bold">Your Curated Journey</p>
       </section>
 
-      {outfits.length === 0 ? (
+      {isLoading && outfits.length === 0 ? (
+        <LookbookSkeleton />
+      ) : outfits.length === 0 ? (
         <div className="rounded-[40px] border-2 border-dashed border-black/5 p-24 flex flex-col items-center justify-center text-center space-y-6 bg-white/30 backdrop-blur">
            <Heart size={40} className="text-black/10" />
            <div className="space-y-2">
@@ -84,7 +68,6 @@ export default function Lookbook() {
               key={outfit.id} 
               className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center border-b border-black/5 pb-24 group"
             >
-              {/* Image Stack: Column 1-7 */}
               <div className="lg:col-span-7 relative">
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-4">
@@ -114,7 +97,6 @@ export default function Lookbook() {
                 </div>
               </div>
 
-              {/* Info Panel: Column 8-12 */}
               <div className="lg:col-span-5 space-y-8 text-left">
                 <div className="flex justify-between items-start">
                    <div className="space-y-1">
@@ -152,5 +134,3 @@ export default function Lookbook() {
     </div>
   );
 }
-
-import { CheckCircle2 } from "lucide-react";

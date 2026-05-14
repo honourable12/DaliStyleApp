@@ -1,4 +1,12 @@
 services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Required for Lambda/RDS/EKS simulation
+      - ./floci/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+  
   db:
     image: postgres:16-alpine
     ports:
@@ -23,7 +31,14 @@ services:
     environment:
       DB_HOST: db
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-daily_style}
-      S3_BUCKET: ${S3_BUCKET}
+      STORAGE_TYPE: s3
+      S3_ENDPOINT_URL: http://floci:4566
+      S3_EXTERNAL_ENDPOINT_URL: http://localhost:4566
+      S3_BUCKET: daily-style-assets
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      AI_SERVICE_URL: http://ai-service:8001
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
     depends_on:
       - db
@@ -42,12 +57,18 @@ services:
     environment:
       HF_HOME: /models
       MODEL_PATH: /models
+      YOLO_CONFIG_DIR: /tmp
+      PYTHONUNBUFFERED: 1
 
   frontend:
     build: ./frontend
+    ports:
+      - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      - BACKEND_URL=http://backend:8000
 
 
   nginx:

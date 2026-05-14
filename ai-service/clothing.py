@@ -9,9 +9,10 @@ import torch
 from ultralytics import YOLO
 from transformers import CLIPProcessor, CLIPModel
 
-# Mandatory: Set cache
-os.environ["HF_HOME"] = os.path.join(os.path.dirname(__file__), "models")
-os.makedirs(os.environ["HF_HOME"], exist_ok=True)
+# Mandatory: Set cache to persistent volume
+os.environ["HF_HOME"] = "/models"
+os.environ["TORCH_HOME"] = "/models"
+os.makedirs("/models", exist_ok=True)
 
 from clothing_categories import (
     CLOTHING_CATEGORIES,
@@ -38,7 +39,7 @@ def _lazy_load_heavy_models():
     global _yolo, _clip_model, _clip_processor, _text_embeddings
     if _yolo is not None: return
     
-    print("AI Service: Loading Heavy AI Models...")
+    print("AI Service: Loading Heavy AI Models...", flush=True)
     _yolo           = YOLO("yolov8n-seg.pt")
     _clip_model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     _clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
@@ -52,7 +53,7 @@ def _lazy_load_heavy_models():
         _text_embeddings = _clip_model.text_projection(_text_embeddings)
         
     _text_embeddings = _text_embeddings / _text_embeddings.norm(dim=-1, keepdim=True)
-    print("✅ AI Service: Heavy Models Ready.")
+    print("✅ AI Service: Heavy Models Ready.", flush=True)
 
 def _nearest_color_name(rgb: tuple) -> str:
     arr = np.array(rgb, dtype=float)

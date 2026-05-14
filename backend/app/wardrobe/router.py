@@ -25,7 +25,7 @@ def process_heavy_ai(item_id: int, image_bytes: bytes, filename: str, content_ty
         response = requests.post(
             f"{AI_SERVICE_URL}/analyze-clothing-heavy",
             files={"file": (filename, image_bytes, content_type)},
-            timeout=60
+            timeout=300
         )
         
         if response.status_code == 200:

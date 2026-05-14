@@ -1,8 +1,13 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { Plus, Search, Tag, Loader2, Shirt, Camera, X, CheckCircle2, AlertCircle, Sparkles, LayoutPanelLeft, Save, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, LayoutPanelLeft, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
+import { WardrobeSkeleton } from "@/components/Skeleton";
+import { StatusToast } from "@/components/StatusToast";
+
+const fetcher = url => client.get(url).then(res => res.data);
 
 const getCategoryType = (cat) => {
   const c = cat.toLowerCase();
@@ -46,10 +51,13 @@ const calculateHarmony = (items) => {
 };
 
 export default function Wardrobe() {
-  const [items, setItems] = useState([]);
+  const { data: items = [], isLoading } = useSWR('/wardrobe/items', fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: true,
+  });
+
   const [workbench, setWorkbench] = useState([]);
   const [showWorkbench, setShowWorkbench] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [activeCategory, setActiveCategory] = useState("All");
@@ -61,15 +69,6 @@ export default function Wardrobe() {
     setStatus({ type, message });
     setTimeout(() => setStatus({ type: "", message: "" }), 3000);
   };
-
-  const fetchItems = async () => {
-    try {
-      const res = await client.get("/wardrobe/items");
-      setItems(res.data);
-    } catch (err) { console.error("Fetch error"); } finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchItems(); }, []);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -83,7 +82,7 @@ export default function Wardrobe() {
     try {
       await client.post("/wardrobe/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
       showStatus("success", "Added!");
-      fetchItems();
+      mutate('/wardrobe/items');
     } catch (err) { showStatus("error", "Failed."); } finally { setUploading(false); }
   };
 
@@ -101,11 +100,17 @@ export default function Wardrobe() {
 
   const handleDelete = async (id) => {
     try {
+      // Optimistic update
+      const updatedItems = items.filter(i => i.id !== id);
+      mutate('/wardrobe/items', updatedItems, false);
+      
       await client.delete(`/wardrobe/items/${id}`);
-      setItems(items.filter(i => i.id !== id));
       setWorkbench(workbench.filter(i => i.id !== id));
       showStatus("success", "Deleted.");
-    } catch (err) { showStatus("error", "Failed."); }
+    } catch (err) { 
+      showStatus("error", "Failed."); 
+      mutate('/wardrobe/items'); // Revalidate on error
+    }
   };
 
   const filteredItems = items.filter(item =>
@@ -114,30 +119,18 @@ export default function Wardrobe() {
 
   return (
     <>
-      {/* Main scroll container — padding-bottom grows when workbench is open so content never hides behind it */}
       <div
         className="relative min-h-screen transition-all duration-300"
         style={{ paddingBottom: showWorkbench ? '220px' : '40px' }}
       >
-        {/* Status Toast */}
         <AnimatePresence>
-          {status.message && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-fashion-charcoal text-white px-8 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-2xl"
-            >
-              {status.message}
-            </motion.div>
-          )}
+          <StatusToast message={status.message} type={status.type} />
         </AnimatePresence>
 
-        {/* Header */}
         <header className="flex justify-between items-center mb-10 px-2">
           <div>
             <h1 className="text-5xl font-serif text-fashion-charcoal tracking-tighter uppercase italic">Closet</h1>
-            <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em]">{items.length} PIECES</p>
+            <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em]">{items?.length || 0} PIECES</p>
           </div>
           <div className="flex gap-4">
             <button
@@ -155,7 +148,6 @@ export default function Wardrobe() {
           </div>
         </header>
 
-        {/* Filter Row */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar mb-10 pb-2 px-2">
           {categories.map((cat) => (
             <button
@@ -172,11 +164,8 @@ export default function Wardrobe() {
           ))}
         </div>
 
-        {/* Grid */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-fashion-muted" />
-          </div>
+        {isLoading && items.length === 0 ? (
+          <WardrobeSkeleton />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2">
             {filteredItems.map((item, idx) => (
@@ -221,7 +210,6 @@ export default function Wardrobe() {
         )}
       </div>
 
-      {/* Workbench — rendered outside the scroll container so fixed positioning is never clipped */}
       <AnimatePresence>
         {showWorkbench && (
           <motion.div
@@ -234,7 +222,6 @@ export default function Wardrobe() {
           >
             <div className="w-full max-w-5xl bg-fashion-navy/95 backdrop-blur-2xl text-white px-5 py-5 md:px-8 md:py-6 shadow-[0_-20px_80px_rgba(0,0,0,0.4)] rounded-t-[40px] border-t border-x border-white/10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
 
-              {/* Slots */}
               <div className="flex gap-3 md:gap-4 flex-shrink-0">
                 {[0, 1, 2].map((slot) => {
                   const item = workbench[slot];
@@ -246,15 +233,11 @@ export default function Wardrobe() {
                       {item ? (
                         <>
                           <img src={item.image_url} className="w-full h-full object-cover" />
-
-                          {/* Name overlay — fixed to bottom of slot, truncates cleanly */}
                           <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-1">
                             <p className="text-white text-[8px] font-bold uppercase tracking-wide truncate text-center leading-tight">
                               {item.name}
                             </p>
                           </div>
-
-                          {/* Remove button */}
                           <button
                             onClick={() => setWorkbench(workbench.filter(i => i.id !== item.id))}
                             className="absolute top-1.5 right-1.5 bg-black/60 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -272,7 +255,6 @@ export default function Wardrobe() {
                 })}
               </div>
 
-              {/* Action Panel */}
               <div className="flex flex-col items-center md:items-start flex-1 min-w-0 gap-4">
                 <div className="text-center md:text-left">
                   <p className="text-[9px] font-bold tracking-[0.5em] uppercase text-fashion-gold mb-1">Color Harmony</p>

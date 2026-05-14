@@ -9,6 +9,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -20,6 +21,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       if (isLogin) {
@@ -34,8 +36,9 @@ export default function Auth() {
         router.push("/wardrobe");
       } else {
         await client.post("/auth/register", formData);
+        setSuccess("Registration successful! Please sign in with your new credentials.");
         setIsLogin(true);
-        alert("Registration successful! Please sign in.");
+        setFormData({ email: formData.email, password: "" });
       }
     } catch (err) {
       setError(err.response?.data?.detail || "Something went wrong. Please try again.");
@@ -56,8 +59,14 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="space-y-6 glass-card p-10 bg-white">
           {error && (
-            <div className="bg-red-50 text-red-500 text-xs p-4 rounded-xl font-bold tracking-widest uppercase">
+            <div className="bg-red-50 text-red-500 text-[10px] p-4 rounded-xl font-bold tracking-widest uppercase border border-red-100">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 text-green-600 text-[10px] p-4 rounded-xl font-bold tracking-widest uppercase border border-green-100">
+              {success}
             </div>
           )}
 
