@@ -71,19 +71,39 @@ export default function Wardrobe() {
   };
 
   const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
     setUploading(true);
-    showStatus("info", "AI Scanning...");
+    showStatus("info", files.length > 1 ? `AI Scanning ${files.length} items...` : "AI Scanning...");
+    
     const formData = new FormData();
-    formData.append("file", file);
-    formData.append("name", file.name.split('.')[0]);
-    formData.append("category", "unknown");
+    files.forEach(file => {
+      formData.append("files", file);
+    });
+
     try {
-      await client.post("/wardrobe/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      showStatus("success", "Added!");
+      const response = await client.post("/wardrobe/upload-bulk", formData, { 
+        headers: { "Content-Type": "multipart/form-data" } 
+      });
+      
+      const uploadedCount = response.data.length;
+      if (uploadedCount === files.length) {
+        showStatus("success", `Added ${uploadedCount} items!`);
+      } else if (uploadedCount > 0) {
+        showStatus("info", `Added ${uploadedCount} items. Some were filtered.`);
+      } else {
+        showStatus("error", "No clothing detected.");
+      }
+      
       mutate('/wardrobe/items');
-    } catch (err) { showStatus("error", "Failed."); } finally { setUploading(false); }
+    } catch (err) { 
+      const errorMsg = err.response?.data?.detail || "Upload failed.";
+      showStatus("error", errorMsg); 
+    } finally { 
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; 
+    }
   };
 
   const addToWorkbench = (item) => {
@@ -294,7 +314,7 @@ export default function Wardrobe() {
         )}
       </AnimatePresence>
 
-      <input type="file" hidden ref={fileInputRef} onChange={handleUpload} accept="image/*" />
+      <input type="file" hidden ref={fileInputRef} onChange={handleUpload} accept="image/*" multiple />
     </>
   );
 }

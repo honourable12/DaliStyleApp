@@ -27,6 +27,7 @@ _yolo           = None
 _clip_model     = None
 _clip_processor = None
 _text_embeddings = None
+_validation_embeddings = None
 
 def _get_tensor(outputs, is_text=True):
     if isinstance(outputs, torch.Tensor): return outputs
@@ -36,7 +37,7 @@ def _get_tensor(outputs, is_text=True):
     return outputs[0]
 
 def _lazy_load_heavy_models():
-    global _yolo, _clip_model, _clip_processor, _text_embeddings
+    global _yolo, _clip_model, _clip_processor, _text_embeddings, _validation_embeddings
     if _yolo is not None: return
     
     print("AI Service: Loading Heavy AI Models...", flush=True)
@@ -45,15 +46,26 @@ def _lazy_load_heavy_models():
     _clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     _clip_model.eval()
 
+    # Full categories for heavy analysis
     _text_inputs = _clip_processor(text=[f"a photo of a {c}" for c in CLOTHING_CATEGORIES], return_tensors="pt", padding=True)
     raw_outputs = _clip_model.get_text_features(**_text_inputs)
     _text_embeddings = _get_tensor(raw_outputs, is_text=True)
     
     if _text_embeddings.shape[-1] == 768:
         _text_embeddings = _clip_model.text_projection(_text_embeddings)
-        
     _text_embeddings = _text_embeddings / _text_embeddings.norm(dim=-1, keepdim=True)
-    print("✅ AI Service: Heavy Models Ready.", flush=True)
+
+    # Validation prompts for fast check
+    validation_prompts = ["a photo of clothing", "a photo of shoes", "a photo of an accessory", "a photo of something else, not clothing"]
+    _val_inputs = _clip_processor(text=validation_prompts, return_tensors="pt", padding=True)
+    raw_val_outputs = _clip_model.get_text_features(**_val_inputs)
+    _validation_embeddings = _get_tensor(raw_val_outputs, is_text=True)
+    
+    if _validation_embeddings.shape[-1] == 768:
+        _validation_embeddings = _clip_model.text_projection(_validation_embeddings)
+    _validation_embeddings = _validation_embeddings / _validation_embeddings.norm(dim=-1, keepdim=True)
+
+    print(" AI Service: Heavy Models Ready.", flush=True)
 
 def _nearest_color_name(rgb: tuple) -> str:
     arr = np.array(rgb, dtype=float)
@@ -64,19 +76,34 @@ def _rgb_to_hex(rgb: tuple) -> str:
 
 # PIPELINE STAGE 1: FAST COLOR (SMART FILTERING)
 def analyze_clothing_fast(image_bytes: bytes) -> dict:
+    _lazy_load_heavy_models()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    #Center Crop
+    # 1. Quick Clothing Validation (CLIP)
+    pil_img = Image.fromarray(img_rgb)
+    inputs = _clip_processor(images=pil_img, return_tensors="pt")
+    with torch.no_grad():
+        img_raw = _clip_model.get_image_features(**inputs)
+        img_emb = _get_tensor(img_raw, is_text=False)
+        if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
+        img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+        logits = (img_emb @ _validation_embeddings.T) * 100
+        probs = logits.softmax(dim=-1)[0].cpu().numpy()
+    
+    # Index 3 is "something else"
+    is_clothing = bool(probs[3] < 0.5 and (probs[0] + probs[1] + probs[2]) > 0.5)
+
+    # 2. Dominant Color logic
+    # Center Crop
     h, w = img_rgb.shape[:2]
     cy, cx = h // 2, w // 2
     rh, rw = h // 3, w // 3
-    center = img_rgb[cy-rh:cy+rh, cx-rw:cx+rw]
+    center = img_rgb[max(0, cy-rh):min(h, cy+rh), max(0, cx-rw):min(w, cx+rw)]
     
     #Reshape and filter out 'Pure White' or 'Pure Black' background noise
     pixels = center.reshape(-1, 3)
-    # Ignore pixels where all channels > 240 (white) or < 15 (black)
     filtered = pixels[~((pixels > 240).all(axis=1) | (pixels < 15).all(axis=1))]
     
     if len(filtered) < 100: filtered = pixels # Fallback if too aggressive
@@ -96,6 +123,7 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
             best_color = c
             
     return {
+        "is_clothing": is_clothing,
         "primary_color": _rgb_to_hex(best_color),
         "primary_name": _nearest_color_name(best_color)
     }

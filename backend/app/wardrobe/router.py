@@ -61,16 +61,22 @@ async def upload_item(
     file_content = await file.read()
     
     color_primary = "unknown"
+    is_clothing = True
     try:
         fast_res = requests.post(
             f"{AI_SERVICE_URL}/analyze-clothing-fast",
             files={"file": (file.filename, file_content, file.content_type)},
-            timeout=5
+            timeout=10
         )
         if fast_res.status_code == 200:
-            color_primary = fast_res.json().get("primary_color", "unknown")
+            data = fast_res.json()
+            color_primary = data.get("primary_color", "unknown")
+            is_clothing = data.get("is_clothing", True)
     except Exception as e:
         print(f"Fast AI error: {e}")
+
+    if not is_clothing:
+        raise HTTPException(status_code=400, detail="Image does not appear to contain clothing.")
 
     object_name = f"users/{current_user.id}/{uuid.uuid4()}.jpg"
     s3_key = upload_file_to_s3(file_content, object_name)
@@ -89,6 +95,61 @@ async def upload_item(
     
     new_item.image_url = get_image_url(new_item.image_url)
     return new_item
+
+@router.post("/upload-bulk", response_model=List[ClothingResponse])
+async def upload_items_bulk(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    uploaded_items = []
+    errors = []
+
+    for file in files:
+        file_content = await file.read()
+        name = file.filename.split('.')[0]
+        
+        color_primary = "unknown"
+        is_clothing = True
+        try:
+            fast_res = requests.post(
+                f"{AI_SERVICE_URL}/analyze-clothing-fast",
+                files={"file": (file.filename, file_content, file.content_type)},
+                timeout=10
+            )
+            if fast_res.status_code == 200:
+                data = fast_res.json()
+                color_primary = data.get("primary_color", "unknown")
+                is_clothing = data.get("is_clothing", True)
+        except Exception as e:
+            print(f"Fast AI error for {file.filename}: {e}")
+
+        if not is_clothing:
+            errors.append(f"{file.filename}: Not a clothing image.")
+            continue
+
+        object_name = f"users/{current_user.id}/{uuid.uuid4()}.jpg"
+        s3_key = upload_file_to_s3(file_content, object_name)
+        
+        new_item = ClothingItem(
+            name=name, category="unknown", color_primary=color_primary,
+            image_url=s3_key, owner_id=current_user.id
+        )
+        db.add(new_item); db.commit(); db.refresh(new_item)
+        
+        background_tasks.add_task(
+            process_heavy_ai, 
+            new_item.id, file_content, file.filename, file.content_type
+        )
+        
+        new_item.image_url = get_image_url(new_item.image_url)
+        uploaded_items.append(new_item)
+
+    if not uploaded_items and errors:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
+    
+    return uploaded_items
 
 @router.get("/items", response_model=List[ClothingResponse])
 def list_items(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
