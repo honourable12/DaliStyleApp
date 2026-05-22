@@ -18,7 +18,8 @@ def compute_daily_look(
     style_persona: str = "Minimalist",
     vibe: str = "Casual",
     lat: Optional[float] = None,
-    lon: Optional[float] = None
+    lon: Optional[float] = None,
+    custom_weights: Optional[Dict] = None # { "category_boost": {"shirt": 1.5}, "brand_id": "..." }
 ) -> Dict:
     current_weather = get_real_weather(lat=lat or 48.8566, lon=lon or 2.3522)
     
@@ -40,14 +41,25 @@ def compute_daily_look(
             weather_mult = get_weather_priority(current_weather, top["category"]) * get_weather_priority(current_weather, bottom["category"])
             vibe_mult = get_vibe_priority(vibe, top["category"]) * get_vibe_priority(vibe, bottom["category"])
             
+            # Partner Boosts
+            partner_mult = 1.0
+            if custom_weights:
+                boosts = custom_weights.get("category_boost", {})
+                partner_mult *= boosts.get(top["category"], 1.0)
+                partner_mult *= boosts.get(bottom["category"], 1.0)
+                
+                # Boost specific brand items if present
+                if "priority_brand" in custom_weights and top.get("brand") == custom_weights["priority_brand"]:
+                    partner_mult *= 1.2
+
             base_score = (harmony * 0.4) + (skin_comp * 0.3) + (season_comp * 0.3)
             
             for p_name in persona_potential.keys():
-                p_final = base_score * get_persona_score(p_name, harmony, top["color_primary"]) * weather_mult * vibe_mult
+                p_final = base_score * get_persona_score(p_name, harmony, top["color_primary"]) * weather_mult * vibe_mult * partner_mult
                 if p_final > persona_potential[p_name]:
                     persona_potential[p_name] = p_final
             
-            final_score = base_score * get_persona_score(style_persona, harmony, top["color_primary"]) * weather_mult * vibe_mult
+            final_score = base_score * get_persona_score(style_persona, harmony, top["color_primary"]) * weather_mult * vibe_mult * partner_mult
             if top.get("is_favourite"):
                 final_score *= 1.2
             

@@ -5,6 +5,7 @@ import os
 from app.auth.router import router as auth_router
 from app.wardrobe.router import router as wardrobe_router
 from app.style.router import router as style_router
+from app.auth.admin_router import router as admin_router
 from app.database import engine, Base
 
 # Create tables
@@ -33,6 +34,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(wardrobe_router)
 app.include_router(style_router)
+app.include_router(admin_router)
 
 @app.get("/")
 def read_root():

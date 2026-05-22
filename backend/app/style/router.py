@@ -20,6 +20,8 @@ from app.style.rules import (
 )
 from app.style.engine import compute_daily_look
 from app.style.llm import generate_styling_note
+from app.auth.partners import get_partner
+from app.wardrobe.models import Partner
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/style", tags=["style"])
@@ -115,9 +117,16 @@ def get_daily_look(vibe: str = "Casual", include_accessories: bool = False, lat:
     return result
 
 @router.post("/engine/look", response_model=LookResponse)
-def get_headless_look(req: StylingRequest):
-    #stateless styling engine user not required
+def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partner)):
+    """
+    Stateless styling engine for external partners.
+    Requires a valid X-Partner-Key in the header.
+    Applies partner-specific weights from their settings.
+    """
     wardrobe_dicts = [item.model_dump() for item in req.wardrobe]
+    
+    # Extract custom weights from partner settings if they exist
+    custom_weights = partner.settings if partner.settings else None
     
     try:
         result = compute_daily_look(
@@ -128,7 +137,8 @@ def get_headless_look(req: StylingRequest):
             style_persona=req.style_persona,
             vibe=req.vibe,
             lat=req.lat,
-            lon=req.lon
+            lon=req.lon,
+            custom_weights=custom_weights
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
