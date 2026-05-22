@@ -111,3 +111,13 @@ def get_skin_compatibility(skin_hex: str, clothing_hex: str) -> float:
     is_color_warm = 0.0 <= ch <= 0.18 or 0.8 <= ch <= 1.0
     if is_skin_warm == is_color_warm: score += 0.5
     return min(score, 1.0)
+
+def get_vibe_priority(vibe: str, category: str) -> float:
+    cat = str(category).lower()
+    if vibe == "Professional":
+        if any(x in cat for x in ["shirt", "trousers", "coat", "formal"]): return 2.5
+    elif vibe == "Casual":
+        if any(x in cat for x in ["t-shirt", "jeans", "sneakers", "hoodie", "shorts"]): return 2.5
+    elif vibe == "Elegant":
+        if any(x in cat for x in ["dress", "skirt", "silk", "jacket"]): return 2.5
+    return 1.0

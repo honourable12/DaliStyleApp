@@ -50,3 +50,4 @@ backend/fix_db.py
 ai-service/yolov8n-seg.pt
 ai-service/models/
 DESIGN.md
+sale.md

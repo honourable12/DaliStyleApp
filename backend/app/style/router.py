@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import random
+import requests
+import os
 
 from app.database import get_db, SessionLocal
 from app.auth.router import get_current_user
@@ -13,15 +15,35 @@ from app.style.rules import (
     get_seasonal_compatibility,
     get_persona_score,
     get_weather_priority,
-    get_real_weather
+    get_real_weather,
+    get_vibe_priority
 )
+from app.style.engine import compute_daily_look
 from app.style.llm import generate_styling_note
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/style", tags=["style"])
 
+class ExternalClothingItem(BaseModel):
+    id: str
+    name: str
+    category: str
+    color_primary: str
+    image_url: str
+    is_favourite: bool = False
+
+class StylingRequest(BaseModel):
+    wardrobe: List[ExternalClothingItem]
+    skin_type: str
+    skin_hex: str = "#d7bd96"
+    monk_label: str = "MST-5"
+    style_persona: str = "Minimalist"
+    vibe: str = "Casual"
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
 class ClothingMinResponse(BaseModel):
-    id: int; name: str; category: str; color_primary: str; image_url: str
+    id: str; name: str; category: str; color_primary: str; image_url: str
     model_config = {"from_attributes": True}
 
 class OutfitResponse(BaseModel):
@@ -35,16 +57,6 @@ class LookResponse(BaseModel):
 
 class OutfitCreate(BaseModel):
     occasion: str; clothing_ids: List[int]; llm_reason: str
-
-def get_vibe_priority(vibe: str, category: str) -> float:
-    cat = str(category).lower()
-    if vibe == "Professional":
-        if any(x in cat for x in ["shirt", "trousers", "coat", "formal"]): return 2.5
-    elif vibe == "Casual":
-        if any(x in cat for x in ["t-shirt", "jeans", "sneakers", "hoodie", "shorts"]): return 2.5
-    elif vibe == "Elegant":
-        if any(x in cat for x in ["dress", "skirt", "silk", "jacket"]): return 2.5
-    return 1.0
 
 @router.get("/wardrobe-iq")
 def get_wardrobe_iq(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -63,38 +75,65 @@ def get_wardrobe_iq(db: Session = Depends(get_db), current_user: User = Depends(
 @router.get("/daily-look", response_model=LookResponse)
 def get_daily_look(vibe: str = "Casual", include_accessories: bool = False, lat: Optional[float] = None, lon: Optional[float] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user.skin_type: raise HTTPException(status_code=400, detail="Perform skin analysis first.")
+    
+    # Map SQLAlchemy models to plain dicts for the engine
     items = db.query(ClothingItem).filter(ClothingItem.owner_id == current_user.id).all()
-    current_weather = get_real_weather(lat=lat or 48.8566, lon=lon or 2.3522)
-    user_persona = current_user.style_persona or "Minimalist"
-    tops = [i for i in items if i.category in ["top", "t-shirt", "shirt", "sweater", "hoodie", "jacket", "coat"]]
-    bottoms = [i for i in items if i.category in ["bottom", "trousers", "jeans", "shorts", "skirt"]]
-    if not tops or not bottoms: raise HTTPException(status_code=400, detail="Need at least 1 top and 1 bottom.")
-    skin_hex = current_user.metadata_skin.get("hex", "#d7bd96"); monk_label = current_user.metadata_skin.get("monk_label", "MST-5")
-    candidates = []; persona_potential = {"Minimalist": 0.0, "Bold": 0.0, "Old Money": 0.0}
-    for top in tops:
-        for bottom in bottoms:
-            harmony = calculate_harmony_score(top.color_primary, bottom.color_primary)
-            skin_comp = get_skin_compatibility(skin_hex, top.color_primary)
-            season_comp = get_seasonal_compatibility(monk_label, top.color_primary)
-            weather_mult = get_weather_priority(current_weather, top.category) * get_weather_priority(current_weather, bottom.category)
-            vibe_mult = get_vibe_priority(vibe, top.category) * get_vibe_priority(vibe, bottom.category)
-            base_score = (harmony * 0.4) + (skin_comp * 0.3) + (season_comp * 0.3)
-            for p_name in persona_potential.keys():
-                p_final = base_score * get_persona_score(p_name, harmony, top.color_primary) * weather_mult * vibe_mult
-                if p_final > persona_potential[p_name]: persona_potential[p_name] = p_final
-            final_score = base_score * get_persona_score(user_persona, harmony, top.color_primary) * weather_mult * vibe_mult
-            if top.is_favourite: final_score *= 1.2
-            candidates.append({"top": top, "bottom": bottom, "score": final_score})
-    candidates.sort(key=lambda x: x["score"], reverse=True); best_look = candidates[0]
-    best_pot_persona = max(persona_potential, key=persona_potential.get)
-    recommended_persona = best_pot_persona if persona_potential[best_pot_persona] > (persona_potential[user_persona] * 1.3) else None
+    if not items: raise HTTPException(status_code=400, detail="Add clothes first.")
+    
+    wardrobe_dicts = [
+        {
+            "id": str(i.id),
+            "name": i.name,
+            "category": i.category,
+            "color_primary": i.color_primary,
+            "image_url": i.image_url,
+            "is_favourite": i.is_favourite
+        } for i in items
+    ]
+    
+    skin_hex = current_user.metadata_skin.get("hex", "#d7bd96")
+    monk_label = current_user.metadata_skin.get("monk_label", "MST-5")
+    
+    try:
+        result = compute_daily_look(
+            items=wardrobe_dicts,
+            skin_type=current_user.skin_type,
+            skin_hex=skin_hex,
+            monk_label=monk_label,
+            style_persona=current_user.style_persona or "Minimalist",
+            vibe=vibe,
+            lat=lat,
+            lon=lon
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     from app.wardrobe.s3 import get_image_url
-    note = generate_styling_note(current_user.skin_type, best_look["top"].color_primary, best_look["bottom"].color_primary, f"{best_look['top'].category} ({vibe} for {current_weather})")
-    return {
-        "top": {"id": best_look["top"].id, "name": best_look["top"].name, "color": best_look["top"].color_primary, "image_url": get_image_url(best_look["top"].image_url)},
-        "bottom": {"id": best_look["bottom"].id, "name": best_look["bottom"].name, "color": best_look["bottom"].color_primary, "image_url": get_image_url(best_look["bottom"].image_url)},
-        "stylist_note": note, "harmony_score": round(min(best_look["score"], 1.0), 2), "weather_context": current_weather, "persona_applied": user_persona, "vibe_context": vibe, "recommended_persona": recommended_persona
-    }
+    result["top"]["image_url"] = get_image_url(result["top"]["image_url"])
+    result["bottom"]["image_url"] = get_image_url(result["bottom"]["image_url"])
+    
+    return result
+
+@router.post("/engine/look", response_model=LookResponse)
+def get_headless_look(req: StylingRequest):
+    #stateless styling engine user not required
+    wardrobe_dicts = [item.model_dump() for item in req.wardrobe]
+    
+    try:
+        result = compute_daily_look(
+            items=wardrobe_dicts,
+            skin_type=req.skin_type,
+            skin_hex=req.skin_hex,
+            monk_label=req.monk_label,
+            style_persona=req.style_persona,
+            vibe=req.vibe,
+            lat=req.lat,
+            lon=req.lon
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return result
 
 @router.post("/outfits")
 def save_outfit(outfit_in: OutfitCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
