@@ -23,3 +23,12 @@ def get_partner(
             status_code=HTTP_403_FORBIDDEN, detail="Invalid Partner API Key"
         )
     return partner
+
+def get_optional_partner(
+    api_key_header: str = Security(api_key_header),
+    db: Session = Depends(get_db)
+):
+    if not api_key_header:
+        return None
+    
+    return db.query(Partner).filter(Partner.api_key == api_key_header, Partner.is_active == True).first()

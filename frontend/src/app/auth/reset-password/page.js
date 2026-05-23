@@ -84,7 +84,7 @@ function ResetPasswordForm() {
              <ShieldCheck size={40} className="text-fashion-gold opacity-20" />
           </div>
 
-          {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
+          {error && <p className="text-red-500 text-xs font-bold uppercase">{typeof error === 'string' ? error : "An error occurred"}</p>}
           
           <div className="space-y-2 text-left">
             <label className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase ml-2">New Password</label>

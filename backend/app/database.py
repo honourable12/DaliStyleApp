@@ -24,7 +24,14 @@ def get_engine():
                 )
                 logger.info(f" Using SQLite Database: {SQLALCHEMY_DATABASE_URL}")
             else:
-                engine = create_engine(SQLALCHEMY_DATABASE_URL)
+                engine = create_engine(
+                    SQLALCHEMY_DATABASE_URL,
+                    pool_size=20,
+                    max_overflow=10,
+                    pool_timeout=30,
+                    pool_recycle=1800,
+                    pool_pre_ping=True
+                )
                 # Test connection
                 with engine.connect() as conn:
                     pass

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { User, LogOut, Shirt, Sparkles, BookOpen, Home as HomeIcon } from "lucide-react";
+import { User, LogOut, Shirt, Sparkles, BookOpen, Home as HomeIcon, Code } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ClientLayout({ children }) {
@@ -54,9 +54,14 @@ export default function ClientLayout({ children }) {
 
           <div className="flex items-center gap-4">
             {!isLoggedIn ? (
-              <Link href="/auth" className="bg-fashion-charcoal text-white px-6 py-2 rounded-full text-[10px] font-bold tracking-widest hover:bg-black transition-all">
-                SIGN IN
-              </Link>
+              <>
+                <Link href="/developer/auth" className="hidden md:block bg-white/50 backdrop-blur px-6 py-2 rounded-full font-bold text-[10px] tracking-[0.2em] border border-black/5 hover:bg-white transition-all text-fashion-charcoal">
+                  PARTNER PORTAL
+                </Link>
+                <Link href="/auth" className="bg-fashion-charcoal text-white px-6 py-2 rounded-full text-[10px] font-bold tracking-widest hover:bg-black transition-all">
+                  SIGN IN
+                </Link>
+              </>
             ) : (
               <>
                 <Link href="/profile" className="hover:scale-105 transition-transform">

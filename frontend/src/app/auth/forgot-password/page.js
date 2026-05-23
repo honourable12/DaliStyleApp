@@ -53,7 +53,7 @@ export default function ForgotPassword() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6 glass-card p-10 bg-white">
-            {error && <p className="text-red-500 text-xs font-bold uppercase">{error}</p>}
+            {error && <p className="text-red-500 text-xs font-bold uppercase">{typeof error === 'string' ? error : "An error occurred"}</p>}
             
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase ml-2">Your Email</label>

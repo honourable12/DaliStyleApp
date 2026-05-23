@@ -41,7 +41,14 @@ export default function Auth() {
         setFormData({ email: formData.email, password: "" });
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "Something went wrong. Please try again.");
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        setError(detail[0]?.msg || "Validation error occurred.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -60,7 +67,7 @@ export default function Auth() {
         <form onSubmit={handleSubmit} className="space-y-6 glass-card p-10 bg-white">
           {error && (
             <div className="bg-red-50 text-red-500 text-[10px] p-4 rounded-xl font-bold tracking-widest uppercase border border-red-100">
-              {error}
+              {typeof error === 'string' ? error : "Authentication failed"}
             </div>
           )}
 
