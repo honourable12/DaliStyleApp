@@ -33,13 +33,13 @@ class ApiUsageMiddleware(BaseHTTPMiddleware):
             key_hash = hashlib.sha256(partner_key.encode()).hexdigest()
             api_key_record = db.query(PartnerApiKey).filter(
                 PartnerApiKey.key_hash == key_hash,
-                PartnerApiKey.is_active
+                PartnerApiKey.is_active == True
             ).first()
 
             if api_key_record:
                 partner = db.query(Partner).filter(
                     Partner.id == api_key_record.partner_id,
-                    Partner.is_active
+                    Partner.is_active == True
                 ).first()
 
                 if partner:

@@ -52,3 +52,4 @@ ai-service/models/
 DESIGN.md
 sale.md
 backend/alembic/env.py
+backend/test.db-journal
