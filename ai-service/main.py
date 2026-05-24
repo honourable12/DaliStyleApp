@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI, File, UploadFile
 
 from clothing import (
