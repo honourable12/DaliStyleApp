@@ -10,12 +10,14 @@ dependencies = [
     "numpy",
     "scikit-learn",
     "transformers",
-    "torch==2.6.0",
+    "torch>=2.8.0",
     "python-multipart>=0.0.26",
     "pillow>=12.2.0",
     "ultralytics>=8.4.41",
-    "torchvision==0.21.0",
-    ]
+    "torchvision>=0.23.0",
+    "requests>=2.33.1",
+    "boto3>=1.43.14",
+]
 
 
 [[tool.uv.index]]
