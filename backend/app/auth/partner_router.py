@@ -1,6 +1,7 @@
+import hashlib
 import secrets
-from datetime import timedelta
-from typing import Dict, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -20,7 +21,7 @@ from app.auth.utils import (
     verify_password,
 )
 from app.database import get_db
-from app.wardrobe.models import ApiUsage, Partner
+from app.wardrobe.models import ApiUsage, Partner, PartnerApiKey
 
 router = APIRouter(prefix="/auth/partner", tags=["partner-auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/partner/login")
@@ -58,6 +59,26 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+
+class ApiKeyResponse(BaseModel):
+    id: UUID
+    name: str
+    key_prefix: str
+    type: str
+    is_active: bool
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class ApiKeyCreate(BaseModel):
+    name: str
+    type: str = "production"  # production | sandbox
+
+
+class ApiKeyCreatedResponse(ApiKeyResponse):
+    api_key: str  # The plaintext key, only shown once
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -173,10 +194,106 @@ def regenerate_api_key(
     db: Session = Depends(get_db),
 ):
     new_key = f"ds_live_{secrets.token_urlsafe(32)}"
+    key_hash = hashlib.sha256(new_key.encode()).hexdigest()
+
+    new_api_key = PartnerApiKey(
+        partner_id=current_partner.id,
+        key_hash=key_hash,
+        key_prefix=new_key[:8],
+        name="Regenerated Key",
+        type="production",
+    )
+    db.add(new_api_key)
+
     current_partner.api_key = new_key
+
     db.commit()
     db.refresh(current_partner)
     return current_partner
+
+
+@router.get("/keys", response_model=List[ApiKeyResponse])
+def list_api_keys(
+    current_partner: Partner = Depends(get_current_partner),
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(PartnerApiKey)
+        .filter(PartnerApiKey.partner_id == current_partner.id)
+        .all()
+    )
+
+
+@router.post("/keys", response_model=ApiKeyCreatedResponse)
+def create_api_key(
+    key_in: ApiKeyCreate,
+    current_partner: Partner = Depends(get_current_partner),
+    db: Session = Depends(get_db),
+):
+    prefix = "ds_live_" if key_in.type == "production" else "ds_test_"
+    raw_key = f"{prefix}{secrets.token_urlsafe(32)}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    new_key = PartnerApiKey(
+        partner_id=current_partner.id,
+        key_hash=key_hash,
+        key_prefix=raw_key[:8],
+        name=key_in.name,
+        type=key_in.type,
+    )
+    db.add(new_key)
+    db.commit()
+    db.refresh(new_key)
+
+    # Manually construct the response to include the one-time plaintext key
+    base_data = ApiKeyResponse.model_validate(new_key).model_dump()
+    return ApiKeyCreatedResponse(**base_data, api_key=raw_key)
+
+
+@router.patch("/keys/{key_id}", response_model=ApiKeyResponse)
+def toggle_api_key(
+    key_id: UUID,
+    is_active: bool,
+    current_partner: Partner = Depends(get_current_partner),
+    db: Session = Depends(get_db),
+):
+    key = (
+        db.query(PartnerApiKey)
+        .filter(
+            PartnerApiKey.id == key_id, PartnerApiKey.partner_id == current_partner.id
+        )
+        .first()
+    )
+
+    if not key:
+        raise HTTPException(status_code=404, detail="API Key not found")
+
+    key.is_active = is_active
+    db.commit()
+    db.refresh(key)
+    return key
+
+
+@router.delete("/keys/{key_id}")
+def delete_api_key(
+    key_id: UUID,
+    current_partner: Partner = Depends(get_current_partner),
+    db: Session = Depends(get_db),
+):
+    key = (
+        db.query(PartnerApiKey)
+        .filter(
+            PartnerApiKey.id == key_id, PartnerApiKey.partner_id == current_partner.id
+        )
+        .first()
+    )
+
+    if not key:
+        raise HTTPException(status_code=404, detail="API Key not found")
+
+    db.delete(key)
+    db.commit()
+    return {"message": "API Key deleted"}
 
 
 @router.post("/forgot-password")

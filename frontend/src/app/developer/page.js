@@ -3,15 +3,20 @@ import { useState, useEffect } from "react";
 import { Key, Book, Code, Activity, Copy, Check, Terminal, Zap, Shield, Globe, Settings, Database, Cloud, Cpu, Info, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import client from "@/api/client";
 
 export default function PartnerPortal() {
   const [partner, setPartner] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState("api-keys");
+  const [apiKeys, setApiKeys] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyType, setNewKeyType] = useState("production");
+  const [revealedKey, setRevealedKey] = useState(null);
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState("headless");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -27,13 +32,15 @@ export default function PartnerPortal() {
       }
 
       try {
-        const [pRes, aRes] = await Promise.all([
+        const [pRes, aRes, kRes] = await Promise.all([
           client.get("/auth/partner/me", { headers: { Authorization: `Bearer ${token}` } }),
-          client.get("/auth/partner/analytics", { headers: { Authorization: `Bearer ${token}` } })
+          client.get("/auth/partner/analytics", { headers: { Authorization: `Bearer ${token}` } }),
+          client.get("/auth/partner/keys", { headers: { Authorization: `Bearer ${token}` } })
         ]);
         
         setPartner(pRes.data);
         setAnalytics(aRes.data);
+        setApiKeys(kRes.data);
         if (pRes.data.settings?.mode) setMode(pRes.data.settings.mode);
         setFormSettings(pRes.data.settings || {});
       } catch (err) {
@@ -51,6 +58,59 @@ export default function PartnerPortal() {
 
     fetchPartnerData();
   }, [router]);
+
+  const createKey = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("partner_token");
+      const res = await client.post("/auth/partner/keys", {
+        name: newKeyName || "New Key",
+        type: newKeyType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApiKeys([...apiKeys, res.data]);
+      setRevealedKey(res.data.api_key);
+      setNewKeyName("");
+      setSuccess("Key created successfully.");
+    } catch (err) {
+      setError("Failed to create API key.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteKey = async (id) => {
+    if (!confirm("Are you sure you want to permanently delete this key?")) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("partner_token");
+      await client.delete(`/auth/partner/keys/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApiKeys(apiKeys.filter(k => k.id !== id));
+      setSuccess("Key deleted.");
+    } catch (err) {
+      setError("Failed to delete key.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleKey = async (id, currentStatus) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("partner_token");
+      const res = await client.patch(`/auth/partner/keys/${id}?is_active=${!currentStatus}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApiKeys(apiKeys.map(k => k.id === id ? res.data : k));
+    } catch (err) {
+      setError("Failed to update key status.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const saveSettings = async () => {
     setLoading(true);
@@ -71,22 +131,6 @@ export default function PartnerPortal() {
     }
   };
 
-  const generateKey = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("partner_token");
-      const res = await client.post("/auth/partner/regen-key", {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPartner(res.data);
-      setSuccess("New API key generated successfully.");
-    } catch (err) {
-      setError("Failed to regenerate key. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleModeChange = async (newMode) => {
     setMode(newMode);
     try {
@@ -102,9 +146,8 @@ export default function PartnerPortal() {
     }
   };
 
-  const copyToClipboard = () => {
-    if (!partner?.api_key) return;
-    navigator.clipboard.writeText(partner.api_key);
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -114,7 +157,7 @@ export default function PartnerPortal() {
     router.push("/developer/auth");
   };
 
-  if (loading) return (
+  if (loading && !partner) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-12 h-12 border-4 border-fashion-gold border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -196,7 +239,7 @@ export default function PartnerPortal() {
               <Shield size={24} className="text-fashion-gold mb-3" />
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-fashion-charcoal mb-2">Security Note</h4>
               <p className="text-[10px] text-fashion-muted leading-relaxed">
-                Never share your partner keys in client-side code unless using our secure proxy or authorized domains.
+                Daily Style uses hashed storage. Once created, your keys are revealed ONLY ONCE. 
               </p>
             </div>
           </aside>
@@ -297,33 +340,63 @@ export default function PartnerPortal() {
                 </AnimatePresence>
 
                 <section className="pt-8 border-t border-black/5">
-                  <h2 className="text-2xl font-serif mb-6">API Credentials</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-serif">API Keys</h2>
+                    <button 
+                      onClick={() => setShowCreateModal(true)}
+                      className="px-6 py-2 bg-fashion-charcoal text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-black transition-all shadow-lg"
+                    >
+                      + Create New Key
+                    </button>
+                  </div>
+                  
                   <div className="space-y-4">
-                    {!partner?.api_key ? (
-                      <button 
-                        onClick={generateKey}
-                        disabled={loading}
-                        className="flex items-center justify-center gap-3 w-full py-5 bg-fashion-charcoal text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl disabled:opacity-50"
-                      >
-                        {loading ? "Processing..." : "Generate Production Key"}
-                      </button>
-                    ) : (
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted">Your Partner Key</label>
-                        <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-2xl border border-black/5 group">
-                          <Terminal size={18} className="text-fashion-muted" />
-                          <code className="flex-1 font-mono text-xs text-fashion-charcoal overflow-hidden text-ellipsis whitespace-nowrap">
-                            {partner.api_key}
-                          </code>
-                          <button 
-                            onClick={copyToClipboard}
-                            className="p-2 hover:bg-white rounded-lg transition-colors text-fashion-muted hover:text-fashion-gold"
-                          >
-                            {copied ? <Check size={18} /> : <Copy size={18} />}
-                          </button>
-                        </div>
-                        <button onClick={generateKey} className="text-[9px] font-bold text-fashion-muted hover:text-red-500 uppercase tracking-widest pl-2">Revoke & Re-generate</button>
+                    {apiKeys.length === 0 ? (
+                      <div className="p-12 border-2 border-dashed border-black/5 rounded-[32px] text-center">
+                        <Key size={32} className="mx-auto text-fashion-muted/20 mb-4" />
+                        <p className="text-xs text-fashion-muted uppercase tracking-widest">No active keys found</p>
                       </div>
+                    ) : (
+                      apiKeys.map((key) => (
+                        <div key={key.id} className="flex items-center justify-between p-6 bg-gray-50 rounded-3xl border border-black/5 group">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-2 h-2 rounded-full ${key.is_active ? 'bg-emerald-500' : 'bg-gray-300'} shadow-[0_0_8px_rgba(16,185,129,0.5)]`} />
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-bold text-[11px] uppercase tracking-widest">{key.name}</h4>
+                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${
+                                  key.type === 'production' ? 'bg-fashion-gold/10 text-fashion-gold' : 'bg-blue-50 text-blue-500'
+                                }`}>
+                                  {key.type}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <code className="text-[10px] font-mono text-fashion-muted">{key.key_prefix}••••••••••••</code>
+                                <span className="text-[8px] text-gray-400 uppercase tracking-widest">
+                                  Created {new Date(key.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => toggleKey(key.id, key.is_active)}
+                              className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full transition-all ${
+                                key.is_active ? 'bg-white text-fashion-muted hover:text-red-500' : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              }`}
+                            >
+                              {key.is_active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button 
+                              onClick={() => deleteKey(key.id)}
+                              className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                            >
+                              <LogOut size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
                 </section>
@@ -349,20 +422,20 @@ export default function PartnerPortal() {
 
                   <h3 className="text-fashion-charcoal font-bold uppercase tracking-widest text-xs mb-4">Resource Center</h3>
                   <ul className="space-y-4 list-none p-0">
-                    <li className="flex items-center gap-3 p-4 border border-black/5 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Link href="/developer/docs/api-spec" className="flex items-center gap-3 p-4 border border-black/5 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors block">
                       <div className="w-8 h-8 rounded-full bg-fashion-gold/10 flex items-center justify-center text-fashion-gold"><Book size={16}/></div>
                       <div>
                         <p className="text-fashion-charcoal font-bold text-xs">Full API Specification</p>
                         <p className="text-[10px]">OpenAPI / Swagger documentation for all headless endpoints.</p>
                       </div>
-                    </li>
-                    <li className="flex items-center gap-3 p-4 border border-black/5 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors">
+                    </Link>
+                    <Link href="/developer/docs/guides/react" className="flex items-center gap-3 p-4 border border-black/5 rounded-2xl hover:bg-gray-50 cursor-pointer transition-colors block">
                       <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500"><Code size={16}/></div>
                       <div>
                         <p className="text-fashion-charcoal font-bold text-xs">React/Next.js Guide</p>
                         <p className="text-[10px]">Step-by-step tutorial for integrating with modern JS frameworks.</p>
                       </div>
-                    </li>
+                    </Link>
                   </ul>
                 </div>
               </div>
@@ -421,6 +494,123 @@ export default function PartnerPortal() {
           </main>
         </div>
       </div>
+
+      {/* Create Key Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!revealedKey) setShowCreateModal(false) }}
+              className="absolute inset-0 bg-fashion-charcoal/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 overflow-hidden"
+            >
+              {!revealedKey ? (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 text-fashion-gold mb-2">
+                    <Key size={24} />
+                    <h3 className="text-2xl font-serif text-fashion-charcoal">Create New API Key</h3>
+                  </div>
+                  <p className="text-xs text-fashion-muted leading-relaxed uppercase tracking-widest">
+                    Identify this key for your internal tracking.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Key Name</label>
+                      <input 
+                        type="text"
+                        value={newKeyName}
+                        onChange={(e) => setNewKeyName(e.target.value)}
+                        placeholder="e.g. Website Production"
+                        className="w-full px-5 py-4 bg-gray-50 border border-black/5 rounded-2xl text-[11px] focus:ring-1 focus:ring-fashion-gold outline-none transition-all"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Environment</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['production', 'sandbox'].map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setNewKeyType(t)}
+                            className={`py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
+                              newKeyType === t ? 'border-fashion-gold bg-fashion-gold/5 text-fashion-charcoal' : 'border-black/5 text-fashion-muted hover:border-black/10'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button 
+                      onClick={() => setShowCreateModal(false)}
+                      className="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-fashion-muted hover:text-fashion-charcoal transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={createKey}
+                      disabled={loading || !newKeyName}
+                      className="flex-1 py-4 bg-fashion-gold text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-xl disabled:opacity-50"
+                    >
+                      {loading ? "Generating..." : "Generate Key"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8 py-4">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Shield size={32} />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-2xl font-serif text-fashion-charcoal">Security Reveal</h3>
+                    <p className="text-xs text-fashion-muted leading-relaxed font-bold uppercase tracking-widest">
+                      Store this key securely. You will not be able to see it again.
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="p-6 bg-fashion-charcoal text-white rounded-3xl font-mono text-xs break-all pr-14 shadow-2xl">
+                      {revealedKey}
+                    </div>
+                    <button 
+                      onClick={() => copyToClipboard(revealedKey)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all text-white"
+                    >
+                      {copied ? <Check size={18} /> : <Copy size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-start gap-3">
+                    <Info size={16} className="text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-[9px] text-red-700 leading-relaxed font-bold uppercase tracking-widest">
+                      Daily Style does not store raw keys. If you lose this, you must revoke and regenerate a new one.
+                    </p>
+                  </div>
+
+                  <button 
+                    onClick={() => { setShowCreateModal(false); setRevealedKey(null); }}
+                    className="w-full py-5 bg-fashion-charcoal text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-xl"
+                  >
+                    I have saved this key
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
