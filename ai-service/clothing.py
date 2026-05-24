@@ -3,6 +3,8 @@ import numpy as np
 import os
 import io
 import base64
+import requests
+import json
 from sklearn.cluster import KMeans
 from PIL import Image
 import torch
@@ -38,6 +40,12 @@ def _get_tensor(outputs, is_text=True):
 
 def _lazy_load_heavy_models():
     global _yolo, _clip_model, _clip_processor, _text_embeddings, _validation_embeddings
+    
+    # If we are in Lite mode, don't load heavy models to save RAM
+    provider = os.getenv("HEAVY_AI_PROVIDER", "local").lower()
+    if provider == "hf_api":
+        return
+
     if _yolo is not None: return
     
     print("AI Service: Loading Heavy AI Models...", flush=True)
@@ -76,26 +84,31 @@ def _rgb_to_hex(rgb: tuple) -> str:
 
 # PIPELINE STAGE 1: FAST COLOR (SMART FILTERING)
 def analyze_clothing_fast(image_bytes: bytes) -> dict:
-    _lazy_load_heavy_models()
+    provider = os.getenv("HEAVY_AI_PROVIDER", "local").lower()
+    
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # 1. Quick Clothing Validation (CLIP)
-    pil_img = Image.fromarray(img_rgb)
-    inputs = _clip_processor(images=pil_img, return_tensors="pt")
-    with torch.no_grad():
-        img_raw = _clip_model.get_image_features(**inputs)
-        img_emb = _get_tensor(img_raw, is_text=False)
-        if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
-        img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
-        logits = (img_emb @ _validation_embeddings.T) * 100
-        probs = logits.softmax(dim=-1)[0].cpu().numpy()
+    is_clothing = True # Default
     
-    # Index 3 is "something else"
-    is_clothing = bool(probs[3] < 0.5 and (probs[0] + probs[1] + probs[2]) > 0.5)
+    # 1. Quick Clothing Validation (CLIP) - Skip if in Lite mode to save RAM
+    if provider == "local":
+        _lazy_load_heavy_models()
+        pil_img = Image.fromarray(img_rgb)
+        inputs = _clip_processor(images=pil_img, return_tensors="pt")
+        with torch.no_grad():
+            img_raw = _clip_model.get_image_features(**inputs)
+            img_emb = _get_tensor(img_raw, is_text=False)
+            if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
+            img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+            logits = (img_emb @ _validation_embeddings.T) * 100
+            probs = logits.softmax(dim=-1)[0].cpu().numpy()
+        
+        # Index 3 is "something else"
+        is_clothing = bool(probs[3] < 0.5 and (probs[0] + probs[1] + probs[2]) > 0.5)
 
-    # 2. Dominant Color logic
+    # 2. Dominant Color logic (Lightweight)
     # Center Crop
     h, w = img_rgb.shape[:2]
     cy, cx = h // 2, w // 2
@@ -128,8 +141,47 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
         "primary_name": _nearest_color_name(best_color)
     }
 
+def _analyze_heavy_hf_api(image_bytes: bytes) -> dict:
+    """Offloads CLIP categorization to Hugging Face Inference API."""
+    HF_TOKEN = os.getenv("HF_TOKEN")
+    # Base CLIP model for zero-shot classification
+    API_URL = "https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32"
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"} if HF_TOKEN else {}
+
+    try:
+        payload = {
+            "inputs": base64.b64encode(image_bytes).decode("utf-8"),
+            "parameters": {"candidate_labels": CLOTHING_CATEGORIES}
+        }
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
+        
+        if response.status_code == 200:
+            result = response.json()
+            best = max(result, key=lambda x: x['score'])
+            category = best['label']
+            confidence = best['score']
+            
+            if confidence < CONFIDENCE_THRESHOLD:
+                category = CATEGORY_GROUPS.get(category, "other")
+                
+            return {
+                "category": category,
+                "category_confidence": float(confidence),
+                "processed_image_b64": base64.b64encode(image_bytes).decode("utf-8"),
+                "refined_primary_color": "unknown"
+            }
+    except Exception as e:
+        print(f"HF API Error: {e}")
+    
+    return {"category": "unknown", "error": "HF API failed"}
+
 #PIPELINE STAGE 2: HEAVY AI 
 def analyze_clothing_heavy(image_bytes: bytes) -> dict:
+    provider = os.getenv("HEAVY_AI_PROVIDER", "local").lower()
+    
+    if provider == "hf_api":
+        return _analyze_heavy_hf_api(image_bytes)
+
     _lazy_load_heavy_models()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)

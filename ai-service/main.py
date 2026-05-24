@@ -7,13 +7,24 @@ from clothing import (
     analyze_clothing_heavy,
 )
 from skin_tone import analyze_skin_tone
+from bootloader import sync_models, upload_model
 
 app = FastAPI(title="Daily Style AI Service")
 
 
 @app.on_event("startup")
 async def startup_event():
+    # List of models we want to keep in S3 for persistence
+    REQUIRED_MODELS = ["yolov8n-seg.pt"]
+    sync_models(REQUIRED_MODELS)
+    
+    # Load models
     _lazy_load_heavy_models()
+    
+    # After first load (if they were downloaded from HF), upload to S3 for future restarts
+    if os.getenv("PERSIST_MODELS", "true").lower() == "true":
+        for model in REQUIRED_MODELS:
+            upload_model(model)
 
 
 @app.post("/analyze-clothing-fast")
