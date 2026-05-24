@@ -7,9 +7,6 @@ import requests
 import json
 from sklearn.cluster import KMeans
 from PIL import Image
-import torch
-from ultralytics import YOLO
-from transformers import CLIPProcessor, CLIPModel
 
 # Mandatory: Set cache to persistent volume
 os.environ["HF_HOME"] = "/models"
@@ -30,8 +27,10 @@ _clip_model     = None
 _clip_processor = None
 _text_embeddings = None
 _validation_embeddings = None
+_torch = None 
 
 def _get_tensor(outputs, is_text=True):
+    import torch
     if isinstance(outputs, torch.Tensor): return outputs
     if is_text and hasattr(outputs, "text_embeds"): return outputs.text_embeds
     if not is_text and hasattr(outputs, "image_embeds"): return outputs.image_embeds
@@ -39,7 +38,7 @@ def _get_tensor(outputs, is_text=True):
     return outputs[0]
 
 def _lazy_load_heavy_models():
-    global _yolo, _clip_model, _clip_processor, _text_embeddings, _validation_embeddings
+    global _yolo, _clip_model, _clip_processor, _text_embeddings, _validation_embeddings, _torch
     
     # If we are in Lite mode, don't load heavy models to save RAM
     provider = os.getenv("HEAVY_AI_PROVIDER", "local").lower()
@@ -48,7 +47,13 @@ def _lazy_load_heavy_models():
 
     if _yolo is not None: return
     
-    print("AI Service: Loading Heavy AI Models...", flush=True)
+    # HEAVY IMPORTS HAPPEN HERE ONLY IF NEEDED
+    print("AI Service: Loading Heavy AI Models (Torch/CLIP/YOLO)...", flush=True)
+    import torch
+    from ultralytics import YOLO
+    from transformers import CLIPProcessor, CLIPModel
+    _torch = torch
+    
     _yolo           = YOLO("yolov8n-seg.pt")
     _clip_model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     _clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
@@ -97,7 +102,7 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
         _lazy_load_heavy_models()
         pil_img = Image.fromarray(img_rgb)
         inputs = _clip_processor(images=pil_img, return_tensors="pt")
-        with torch.no_grad():
+        with _torch.no_grad():
             img_raw = _clip_model.get_image_features(**inputs)
             img_emb = _get_tensor(img_raw, is_text=False)
             if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
@@ -216,7 +221,7 @@ def analyze_clothing_heavy(image_bytes: bytes) -> dict:
     # CLIP Classification
     pil_img = Image.fromarray(processed)
     inputs = _clip_processor(images=pil_img, return_tensors="pt")
-    with torch.no_grad():
+    with _torch.no_grad():
         img_raw = _clip_model.get_image_features(**inputs)
         img_emb = _get_tensor(img_raw, is_text=False)
         if img_emb.shape[-1] == 768: img_emb = _clip_model.visual_projection(img_emb)
