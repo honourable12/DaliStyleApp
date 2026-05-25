@@ -9,9 +9,10 @@ from sklearn.cluster import KMeans
 from PIL import Image
 
 # Mandatory: Set cache to persistent volume
-os.environ["HF_HOME"] = "/models"
-os.environ["TORCH_HOME"] = "/models"
-os.makedirs("/models", exist_ok=True)
+MODELS_DIR = os.getenv("MODELS_DIR", "/models")
+os.environ["HF_HOME"] = MODELS_DIR
+os.environ["TORCH_HOME"] = MODELS_DIR
+os.makedirs(MODELS_DIR, exist_ok=True)
 
 from clothing_categories import (
     CLOTHING_CATEGORIES,

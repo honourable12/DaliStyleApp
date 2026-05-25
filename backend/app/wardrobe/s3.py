@@ -20,16 +20,17 @@ if STORAGE_TYPE == "s3":
     logger.info(f"🔌 Initializing S3 Client (Bucket: {S3_BUCKET}, Endpoint: {S3_ENDPOINT_URL})")
     
 
-    # remove signature_version='s3v4'
+    # Supabase / Cloudflare / AWS S3 compatibility
     s3_config = Config(
         s3={'addressing_style': 'path'},
+        signature_version='s3v4',
         retries={'max_attempts': 3}
     )
 
     s3_client = boto3.client(
         "s3",
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         region_name=AWS_REGION,
         endpoint_url=S3_ENDPOINT_URL,
         config=s3_config

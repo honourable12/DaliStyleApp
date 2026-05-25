@@ -13,9 +13,9 @@ S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://floci:4566")
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "test")
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "test")
 MODEL_BUCKET = os.getenv("MODEL_STORE_BUCKET", "ai-models")
-MODELS_DIR = "/models"
+MODELS_DIR = os.getenv("MODELS_DIR", "/models")
 
-# Render + LocalStack/Floci requires Path Style addressing
+# Supabase / Cloudflare / AWS S3 compatibility
 s3_config = Config(
     s3={'addressing_style': 'path'},
     signature_version='s3v4'
