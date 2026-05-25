@@ -2,6 +2,7 @@ import os
 import boto3
 import logging
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,12 +15,19 @@ S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "test")
 MODEL_BUCKET = os.getenv("MODEL_STORE_BUCKET", "ai-models")
 MODELS_DIR = "/models"
 
+# Render + LocalStack/Floci requires Path Style addressing
+s3_config = Config(
+    s3={'addressing_style': 'path'},
+    signature_version='s3v4'
+)
+
 s3_client = boto3.client(
     "s3",
     endpoint_url=S3_ENDPOINT,
     aws_access_key_id=S3_ACCESS_KEY,
     aws_secret_access_key=S3_SECRET_KEY,
-    region_name="us-east-1"
+    region_name="us-east-1",
+    config=s3_config
 )
 
 def ensure_bucket_exists():

@@ -2,6 +2,7 @@ import boto3
 import os
 import logging
 from botocore.exceptions import NoCredentialsError, ClientError
+from botocore.config import Config
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -17,12 +18,21 @@ S3_EXTERNAL_ENDPOINT_URL = os.getenv("S3_EXTERNAL_ENDPOINT_URL", S3_ENDPOINT_URL
 s3_client = None
 if STORAGE_TYPE == "s3":
     logger.info(f"🔌 Initializing S3 Client (Bucket: {S3_BUCKET}, Endpoint: {S3_ENDPOINT_URL})")
+    
+    # Render + LocalStack/Floci requires Path Style addressing
+    s3_config = Config(
+        s3={'addressing_style': 'path'},
+        signature_version='s3v4',
+        retries={'max_attempts': 3}
+    )
+
     s3_client = boto3.client(
         "s3",
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
         region_name=AWS_REGION,
-        endpoint_url=S3_ENDPOINT_URL
+        endpoint_url=S3_ENDPOINT_URL,
+        config=s3_config
     )
     
     # Ensure bucket exists
