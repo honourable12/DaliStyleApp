@@ -19,10 +19,10 @@ s3_client = None
 if STORAGE_TYPE == "s3":
     logger.info(f"🔌 Initializing S3 Client (Bucket: {S3_BUCKET}, Endpoint: {S3_ENDPOINT_URL})")
     
-    # Render + LocalStack/Floci requires Path Style addressing
+
+    # remove signature_version='s3v4'
     s3_config = Config(
         s3={'addressing_style': 'path'},
-        signature_version='s3v4',
         retries={'max_attempts': 3}
     )
 
