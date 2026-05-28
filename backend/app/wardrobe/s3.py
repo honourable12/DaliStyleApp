@@ -54,7 +54,7 @@ if STORAGE_TYPE == "s3":
     except Exception as e:
         logger.error(f"❌ Unexpected error initializing S3: {e}")
 
-def upload_file_to_s3(file_data, object_name: str) -> Optional[str]:
+def upload_file_to_s3(file_data, object_name: str, content_type: str = "image/jpeg") -> Optional[str]:
     if STORAGE_TYPE == "local":
         logger.info(f" LOCAL MODE: Skipping upload for {object_name}")
         return object_name
@@ -68,7 +68,7 @@ def upload_file_to_s3(file_data, object_name: str) -> Optional[str]:
             Bucket=S3_BUCKET,
             Key=object_name,
             Body=file_data,
-            ContentType="image/jpeg"
+            ContentType=content_type
         )
         return object_name
     except ClientError as e:

@@ -1,7 +1,14 @@
 import io
-
 import pytest
+from PIL import Image
 
+def get_valid_image_bytes():
+    img = Image.new('RGB', (10, 10), color = 'red')
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG')
+    return buf.getvalue()
+
+VALID_IMAGE = get_valid_image_bytes()
 
 def test_user_upload_item(client):
     # Register and login user
@@ -16,7 +23,7 @@ def test_user_upload_item(client):
 
     # Upload item
     # Correct format: (filename, content, content_type)
-    file = ("test.jpg", b"fake-image-content", "image/jpeg")
+    file = ("test.jpg", VALID_IMAGE, "image/jpeg")
 
     response = client.post(
         "/wardrobe/upload",
@@ -66,7 +73,7 @@ def test_list_items_filtering(client):
         "/wardrobe/upload",
         headers=u_headers,
         data={"name": "No Partner"},
-        files={"file": ("1.jpg", b"img", "image/jpeg")},
+        files={"file": ("1.jpg", VALID_IMAGE, "image/jpeg")},
     )
 
     # 2. Upload item WITH partner
@@ -74,7 +81,7 @@ def test_list_items_filtering(client):
         "/wardrobe/upload",
         headers={**u_headers, "X-Partner-Key": p_api_key},
         data={"name": "With Partner"},
-        files={"file": ("2.jpg", b"img", "image/jpeg")},
+        files={"file": ("2.jpg", VALID_IMAGE, "image/jpeg")},
     )
 
     # 3. List all items (no partner header) -> should see 2 items
@@ -99,8 +106,8 @@ def test_bulk_upload(client):
     u_headers = {"Authorization": f"Bearer {u_login.json()['access_token']}"}
 
     files = [
-        ("files", ("img1.jpg", b"1", "image/jpeg")),
-        ("files", ("img2.jpg", b"2", "image/jpeg")),
+        ("files", ("img1.jpg", VALID_IMAGE, "image/jpeg")),
+        ("files", ("img2.jpg", VALID_IMAGE, "image/jpeg")),
     ]
 
     response = client.post("/wardrobe/upload-bulk", headers=u_headers, files=files)

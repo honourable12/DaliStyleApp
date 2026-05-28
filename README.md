@@ -45,3 +45,17 @@ An AI-powered personal styling application that helps you manage your wardrobe a
 - **Style recommendations:** Daily outfit curation using HSL harmony math and LLM (Ollama) reasoning.
 - **Lookbook:** Save your favorite curated looks for future reference.
 - **Accessories:** Intelligent matching for belts, hats, and bags.
+
+## Security Best Practices
+
+### Image Storage (S3/Supabase)
+The application implements several security measures for image handling:
+1. **Presigned URLs:** Images are not public by default. The backend generates short-lived presigned URLs for secure browser access.
+2. **File Validation:** Strict enforcement of file size (5MB), allowed extensions (JPG, PNG, WEBP), and MIME type.
+3. **Content Verification:** Every upload is verified using `Pillow` to ensure the content is a valid image, mitigating malicious file injections.
+4. **Storage Isolation:** Files are stored in user-specific paths (`users/{user_id}/...`) enforced by the backend.
+
+**Production Recommendations:**
+- Ensure the S3 bucket has **Block Public Access** enabled.
+- Use IAM roles with **Least Privilege** (only `s3:PutObject`, `s3:GetObject` for the backend).
+- Enable **Default Encryption** (AES-256) at the bucket level.
