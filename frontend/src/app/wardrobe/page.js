@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Plus, LayoutPanelLeft, X, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
@@ -198,8 +199,11 @@ export default function Wardrobe() {
                 className="group relative"
               >
                 <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden bg-white border border-black/5 shadow-sm hover:shadow-xl transition-all duration-700">
-                  <img
+                  <Image
                     src={item.image_url}
+                    alt={item.name}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw"
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
@@ -252,7 +256,13 @@ export default function Wardrobe() {
                     >
                       {item ? (
                         <>
-                          <img src={item.image_url} className="w-full h-full object-cover" />
+                          <Image 
+                            src={item.image_url} 
+                            alt={item.name}
+                            fill
+                            sizes="(max-width: 768px) 64px, 112px"
+                            className="w-full h-full object-cover" 
+                          />
                           <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1.5 py-1">
                             <p className="text-white text-[8px] font-bold uppercase tracking-wide truncate text-center leading-tight">
                               {item.name}

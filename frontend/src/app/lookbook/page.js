@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { Sparkles, Trash2, Heart, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
@@ -72,8 +73,14 @@ export default function Lookbook() {
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-4">
                       {outfit.items.slice(0, 1).map(item => (
-                        <div key={item.id} className="aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
-                           <img src={item.image_url} className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" />
+                        <div key={item.id} className="relative aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
+                           <Image 
+                            src={item.image_url} 
+                            alt={item.name}
+                            fill
+                            sizes="(max-width: 1024px) 50vw, 30vw"
+                            className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" 
+                           />
                         </div>
                       ))}
                       <div className="flex gap-2">
@@ -84,13 +91,25 @@ export default function Lookbook() {
                    </div>
                    <div className="pt-12 space-y-4">
                       {outfit.items.slice(1, 2).map(item => (
-                        <div key={item.id} className="aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
-                           <img src={item.image_url} className="w-full h-full object-cover" />
+                        <div key={item.id} className="relative aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl bg-white border border-black/5">
+                           <Image 
+                            src={item.image_url} 
+                            alt={item.name}
+                            fill
+                            sizes="(max-width: 1024px) 50vw, 30vw"
+                            className="w-full h-full object-cover" 
+                           />
                         </div>
                       ))}
                       {outfit.items.length > 2 && (
-                        <div className="aspect-square w-24 rounded-2xl overflow-hidden shadow-xl ml-auto bg-white border border-black/5 rotate-3">
-                           <img src={outfit.items[2].image_url} className="w-full h-full object-cover" />
+                        <div className="relative aspect-square w-24 rounded-2xl overflow-hidden shadow-xl ml-auto bg-white border border-black/5 rotate-3">
+                           <Image 
+                            src={outfit.items[2].image_url} 
+                            alt={outfit.items[2].name}
+                            fill
+                            sizes="96px"
+                            className="w-full h-full object-cover" 
+                           />
                         </div>
                       )}
                    </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Sparkles, RefreshCw, Save, Info, CloudRain, Sun, Thermometer, TrendingUp, Briefcase, Coffee, Music } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, RefreshCw, Save, Info, CloudRain, Sun, Thermometer, TrendingUp, Briefcase, Coffee, Music, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
@@ -9,11 +10,25 @@ import { DailySkeleton } from "@/components/Skeleton";
 import { StatusToast } from "@/components/StatusToast";
 
 const fetcher = async (url) => {
+  const getCachedCoords = () => {
+    const cached = sessionStorage.getItem('user_coords');
+    if (cached) return JSON.parse(cached);
+    return null;
+  };
+
   const getCoords = () => {
     return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
+      const cached = getCachedCoords();
+      if (cached) return resolve(cached);
+
+      if (typeof window === 'undefined' || !navigator.geolocation) return resolve(null);
+      
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          sessionStorage.setItem('user_coords', JSON.stringify(coords));
+          resolve(coords);
+        },
         () => resolve(null),
         { timeout: 5000 }
       );
@@ -68,18 +83,27 @@ export default function DailyLook() {
     </div>
   );
 
-  if (error && !look) return (
-    <div className="max-w-md mx-auto py-10 px-4 text-center">
-      <div className="glass-card p-10 bg-white shadow-2xl">
-        <Info size={40} className="mx-auto text-fashion-gold mb-6" />
-        <h2 className="text-xl font-serif mb-4 italic text-fashion-charcoal">Setup Required</h2>
-        <p className="text-fashion-muted text-xs leading-relaxed mb-8">{error?.response?.data?.detail || "Could not generate look."}</p>
-        <Link href="/profile" className="block w-full py-4 bg-fashion-charcoal text-white rounded-full font-bold text-[10px] tracking-widest uppercase">
-          Go to Profile
-        </Link>
+  if (error && !look) {
+    const isRateLimited = error?.response?.status === 429;
+    return (
+      <div className="max-w-md mx-auto py-10 px-4 text-center">
+        <div className="glass-card p-10 bg-white shadow-2xl">
+          {isRateLimited ? <ShieldAlert size={40} className="mx-auto text-red-500 mb-6" /> : <Info size={40} className="mx-auto text-fashion-gold mb-6" />}
+          <h2 className="text-xl font-serif mb-4 italic text-fashion-charcoal">
+            {isRateLimited ? "Slow Down" : "Setup Required"}
+          </h2>
+          <p className="text-fashion-muted text-xs leading-relaxed mb-8">
+            {isRateLimited 
+              ? "You've reached the styling limit. Please wait a minute before requesting another look." 
+              : (error?.response?.data?.detail || "Could not generate look.")}
+          </p>
+          <Link href={isRateLimited ? "/" : "/profile"} className="block w-full py-4 bg-fashion-charcoal text-white rounded-full font-bold text-[10px] tracking-widest uppercase">
+            {isRateLimited ? "Back Home" : "Go to Profile"}
+          </Link>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   const weatherIcons = {
     "Sunny": <Sun size={14} className="text-orange-400" />,
@@ -132,8 +156,15 @@ export default function DailyLook() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-start max-w-5xl mx-auto">
           <div className="space-y-6">
              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass-card bg-white p-6 relative border-l-8 border-fashion-charcoal shadow-lg">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
-                   <img src={look.top.image_url} className="w-full h-full object-cover" />
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
+                   <Image 
+                    src={look.top.image_url} 
+                    alt={look.top.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover" 
+                    priority
+                   />
                 </div>
                 <div className="mt-4 flex justify-between items-end">
                    <div className="text-left">
@@ -145,8 +176,14 @@ export default function DailyLook() {
              </motion.div>
 
              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="glass-card bg-white p-6 relative border-l-8 border-fashion-gold shadow-lg">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
-                   <img src={look.bottom.image_url} className="w-full h-full object-cover" />
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 border border-black/5 shadow-inner">
+                   <Image 
+                    src={look.bottom.image_url} 
+                    alt={look.bottom.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover" 
+                   />
                 </div>
                 <div className="mt-4 flex justify-between items-end text-left">
                    <div>

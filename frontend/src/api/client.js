@@ -24,9 +24,16 @@ client.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
-        window.location.href = '/auth';
+        if (window.location.pathname !== '/auth') {
+          window.location.href = '/auth';
+        }
       }
     }
+    
+    if (error.response?.status === 429) {
+      console.error('Rate limit exceeded');
+    }
+    
     return Promise.reject(error);
   }
 );
