@@ -15,6 +15,7 @@ dependencies = [
     "boto3",
     "requests",
     "Pillow",
+    "cachetools",
     "python-multipart",
     "pydantic-settings",
     "pydantic[all,email]>=2.13.3",

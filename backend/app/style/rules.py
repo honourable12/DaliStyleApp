@@ -1,26 +1,32 @@
 import colorsys
 import requests
 from typing import List, Tuple, Optional
+from cachetools import TTLCache, cached
 
-#Weather api integration
-def get_real_weather(lat: float = 48.8566, lon: float = 2.3522) -> str:
+weather_cache = TTLCache(maxsize=100, ttl=1800)
+
+@cached(cache=weather_cache)
+def get_cached_weather(lat: float, lon: float) -> str:
+    lat_r = round(lat, 2)
+    lon_r = round(lon, 2)
     try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-        response = requests.get(url, timeout=5)
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat_r}&longitude={lon_r}&current_weather=true"
+        response = requests.get(url, timeout=3)
         if response.status_code == 200:
             data = response.json()
             temp = data['current_weather']['temperature']
             code = data['current_weather']['weathercode']
-            
-            # WMO Weather interpretation codes
-            # 51-65, 80-82 are rain/drizzle/showers
             if code in [51, 53, 55, 61, 63, 65, 80, 81, 82]: return "Rainy"
             if temp < 15: return "Cold"
             if temp > 25: return "Sunny"
             return "Clear"
     except Exception as e:
         print(f"Weather API error: {e}")
-    return "Clear" # Fallback
+    return "Clear"
+
+# Weather api integration
+def get_real_weather(lat: float = 48.8566, lon: float = 2.3522) -> str:
+    return get_cached_weather(lat, lon)
 
 #seasonal mapping
 PALETTE_MAPPING = {

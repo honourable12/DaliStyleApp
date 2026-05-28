@@ -1,9 +1,11 @@
 import requests
 import os
 import json
+from cachetools import TTLCache, cached
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+note_cache = TTLCache(maxsize=500, ttl=86400)
 
+@cached(cache=note_cache)
 def generate_styling_note(skin_tone_name: str, top_color: str, bottom_color: str, category: str):
     prompt = f"""
     You are a professional fashion stylist. 
@@ -16,11 +18,12 @@ def generate_styling_note(skin_tone_name: str, top_color: str, bottom_color: str
     Be encouraging and chic.
     """
     
+    OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     try:
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
             json={
-                "model": "gemma3", # or "mistral"
+                "model": "gemma3", 
                 "prompt": prompt,
                 "stream": False
             },

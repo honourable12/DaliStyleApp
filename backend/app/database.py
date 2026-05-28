@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.pool import NullPool
 
 # Standard logging
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./daily_style.db")
 
 def get_engine():
-    retries = 20
+    retries = 5 
     while retries > 0:
         try:
             if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
@@ -26,10 +27,7 @@ def get_engine():
             else:
                 engine = create_engine(
                     SQLALCHEMY_DATABASE_URL,
-                    pool_size=20,
-                    max_overflow=10,
-                    pool_timeout=30,
-                    pool_recycle=1800,
+                    poolclass=NullPool,
                     pool_pre_ping=True
                 )
                 # Test connection
@@ -40,7 +38,7 @@ def get_engine():
         except OperationalError as e:
             retries -= 1
             logger.info(f" Database not ready ({retries} retries left)...")
-            time.sleep(2)
+            time.sleep(1)
     raise Exception("Could not connect to database after several retries")
 
 engine = get_engine()

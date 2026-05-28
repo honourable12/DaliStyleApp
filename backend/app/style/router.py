@@ -153,18 +153,28 @@ def save_outfit(outfit_in: OutfitCreate, db: Session = Depends(get_db), current_
 @router.get("/outfits")
 def list_outfits(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     outfits = db.query(Outfit).filter(Outfit.user_id == current_user.id).order_by(Outfit.created_at.desc()).all()
-    from app.wardrobe.s3 import get_image_url
+    if not outfits: return []
     
-    results = []
+    # 1. Collect ALL clothing IDs needed across ALL outfits
+    all_item_ids = []
     for o in outfits:
-        # Resolve real items from IDs
-        items = db.query(ClothingItem).filter(ClothingItem.id.in_(o.clothing_ids)).all()
-        enriched_items = []
-        for i in items:
-            enriched_items.append({
+        all_item_ids.extend(o.clothing_ids or [])
+
+    all_item_ids = list(set(all_item_ids))
+
+    items_map = {}
+    if all_item_ids:
+        db_items = db.query(ClothingItem).filter(ClothingItem.id.in_(all_item_ids)).all()
+        from app.wardrobe.s3 import get_image_url
+        for i in db_items:
+            items_map[i.id] = {
                 "id": i.id, "name": i.name, "category": i.category,
                 "color_primary": i.color_primary, "image_url": get_image_url(i.image_url)
-            })
+            }
+
+    results = []
+    for o in outfits:
+        enriched_items = [items_map[iid] for iid in o.clothing_ids if iid in items_map]
         
         results.append({
             "id": str(o.id),
