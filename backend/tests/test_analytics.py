@@ -1,5 +1,3 @@
-import pytest
-
 from app.auth.utils import create_password_reset_token
 
 

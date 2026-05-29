@@ -41,6 +41,7 @@ app.include_router(style_router)
 app.include_router(admin_router)
 app.include_router(partner_auth_router)
 
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Daily Style Fashion API"}

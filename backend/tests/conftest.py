@@ -52,7 +52,9 @@ def client(db):
     original_db_session_local = app.database.SessionLocal
     original_middleware_session_local = app.auth.middleware.SessionLocal
 
-    session_factory = lambda: db
+    def session_factory():
+        return db
+
     app.database.SessionLocal = session_factory
     app.auth.middleware.SessionLocal = session_factory
 

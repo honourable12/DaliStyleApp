@@ -1,14 +1,16 @@
 import io
-import pytest
 from PIL import Image
 
+
 def get_valid_image_bytes():
-    img = Image.new('RGB', (10, 10), color = 'red')
+    img = Image.new("RGB", (10, 10), color="red")
     buf = io.BytesIO()
-    img.save(buf, format='JPEG')
+    img.save(buf, format="JPEG")
     return buf.getvalue()
 
+
 VALID_IMAGE = get_valid_image_bytes()
+
 
 def test_user_upload_item(client):
     # Register and login user

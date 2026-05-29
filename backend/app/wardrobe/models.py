@@ -1,9 +1,10 @@
 import uuid
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, JSON, DateTime
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -12,7 +13,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True) # Linked to a brand
+    partner_id = Column(
+        UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
+    )  # Linked to a brand
     skin_type = Column(String, nullable=True)
     style_persona = Column(String, default="Minimalist")
     metadata_skin = Column(JSON, nullable=True)
@@ -20,20 +23,26 @@ class User(Base):
     items = relationship("ClothingItem", back_populates="owner")
     outfits = relationship("Outfit", back_populates="user")
 
+
 class Partner(Base):
     __tablename__ = "partners"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=True) 
+    email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=True)
-    api_key = Column(String, unique=True, index=True) # LEGACY: Keep for migration, remove later
+    api_key = Column(
+        String, unique=True, index=True
+    )  # LEGACY: Keep for migration, remove later
     is_active = Column(Boolean, default=True)
     settings = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     usage_logs = relationship("ApiUsage", back_populates="partner")
-    api_keys = relationship("PartnerApiKey", back_populates="partner", cascade="all, delete-orphan")
+    api_keys = relationship(
+        "PartnerApiKey", back_populates="partner", cascade="all, delete-orphan"
+    )
+
 
 class PartnerApiKey(Base):
     __tablename__ = "partner_api_keys"
@@ -41,9 +50,9 @@ class PartnerApiKey(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), index=True)
     key_hash = Column(String, unique=True, index=True, nullable=False)
-    key_prefix = Column(String, nullable=False) # e.g. "ds_live_"
-    name = Column(String, nullable=False) # e.g. "Production Main"
-    type = Column(String, default="production") # production | sandbox
+    key_prefix = Column(String, nullable=False)  # e.g. "ds_live_"
+    name = Column(String, nullable=False)  # e.g. "Production Main"
+    type = Column(String, default="production")  # production | sandbox
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_used_at = Column(DateTime(timezone=True), nullable=True)
@@ -51,19 +60,23 @@ class PartnerApiKey(Base):
     partner = relationship("Partner", back_populates="api_keys")
     usage_logs = relationship("ApiUsage", back_populates="api_key")
 
+
 class ApiUsage(Base):
     __tablename__ = "api_usage"
 
     id = Column(Integer, primary_key=True, index=True)
     partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), index=True)
-    api_key_id = Column(UUID(as_uuid=True), ForeignKey("partner_api_keys.id"), index=True, nullable=True)
-    endpoint = Column(String) # e.g. "/style/engine/look"
+    api_key_id = Column(
+        UUID(as_uuid=True), ForeignKey("partner_api_keys.id"), index=True, nullable=True
+    )
+    endpoint = Column(String)  # e.g. "/style/engine/look"
     status_code = Column(Integer)
     response_time_ms = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     partner = relationship("Partner", back_populates="usage_logs")
     api_key = relationship("PartnerApiKey", back_populates="usage_logs")
+
 
 class ClothingItem(Base):
     __tablename__ = "clothing_items"
@@ -76,19 +89,24 @@ class ClothingItem(Base):
     color_secondary = Column(String, nullable=True)
     image_url = Column(String)
     is_favourite = Column(Boolean, default=False)
-    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True)
+    partner_id = Column(
+        UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
+    )
 
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     owner = relationship("User", back_populates="items")
-    
+
     metadata_ai = Column(JSON, nullable=True)
+
 
 class Outfit(Base):
     __tablename__ = "outfits"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
-    partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True)
+    partner_id = Column(
+        UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
+    )
     occasion = Column(String, index=True)
     clothing_ids = Column(JSON)
     llm_reason = Column(String)

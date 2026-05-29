@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_partner_registration(client):
     response = client.post(
         "/auth/partner/register",

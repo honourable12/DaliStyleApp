@@ -18,6 +18,7 @@ MAX_REQUESTS = 60  # per window
 
 api_key_cache = TTLCache(maxsize=1000, ttl=300)
 
+
 class ApiUsageMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -32,29 +33,31 @@ class ApiUsageMiddleware(BaseHTTPMiddleware):
         key_hash = hashlib.sha256(partner_key.encode()).hexdigest()
 
         cached_info = api_key_cache.get(key_hash)
-        
+
         db = SessionLocal()
         try:
             if cached_info:
                 partner_id, api_key_id = cached_info
             else:
                 # DB Lookup
-                api_key_record = db.query(PartnerApiKey).filter(
-                    PartnerApiKey.key_hash == key_hash,
-                    PartnerApiKey.is_active == True
-                ).first()
+                api_key_record = (
+                    db.query(PartnerApiKey)
+                    .filter(PartnerApiKey.key_hash == key_hash, PartnerApiKey.is_active)
+                    .first()
+                )
 
                 if not api_key_record:
                     return await call_next(request)
 
-                partner = db.query(Partner).filter(
-                    Partner.id == api_key_record.partner_id,
-                    Partner.is_active == True
-                ).first()
+                partner = (
+                    db.query(Partner)
+                    .filter(Partner.id == api_key_record.partner_id, Partner.is_active)
+                    .first()
+                )
 
                 if not partner:
                     return await call_next(request)
-                
+
                 partner_id, api_key_id = partner.id, api_key_record.id
                 api_key_cache[key_hash] = (partner_id, api_key_id)
 
@@ -88,11 +91,13 @@ class ApiUsageMiddleware(BaseHTTPMiddleware):
                 response_time_ms=process_time,
             )
             db.add(usage)
-            
+
             # Efficiently update last used
-            db.query(PartnerApiKey).filter(PartnerApiKey.id == api_key_id).update({"last_used_at": func.now()})
+            db.query(PartnerApiKey).filter(PartnerApiKey.id == api_key_id).update(
+                {"last_used_at": func.now()}
+            )
             db.commit()
-            
+
             return response
 
         except Exception as e:

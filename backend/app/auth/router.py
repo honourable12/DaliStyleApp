@@ -23,9 +23,11 @@ from app.auth.utils import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+
     @property
     def is_password_strong(self) -> bool:
         return len(self.password) >= 8
@@ -58,15 +60,13 @@ class UserResponse(BaseModel):
     style_persona: Optional[str] = None
     metadata_skin: Optional[dict] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
 
 class ProfileUpdate(BaseModel):
     style_persona: Optional[str] = None
 
 
- 
 _login_attempts: dict[str, list[float]] = {}
 MAX_ATTEMPTS = 5
 WINDOW_SECONDS = 300
@@ -83,6 +83,7 @@ def _check_rate_limit(identifier: str) -> None:
         )
     attempts.append(now)
     _login_attempts[identifier] = attempts
+
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -117,7 +118,10 @@ async def get_current_active_user(
         )
     return current_user
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     if len(user_in.password) < 8:
         raise HTTPException(
@@ -147,9 +151,9 @@ def login(
 ):
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
-    
+
     email_to_check = form_data.username.lower()
-    
+
     user = db.query(User).filter(User.email == email_to_check).first()
 
     if not user:
@@ -158,7 +162,7 @@ def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -216,15 +220,17 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
         "token_type": "bearer",
     }
 
+
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
 
 @router.patch("/profile", response_model=UserResponse)
 def update_profile(
     profile_in: ProfileUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     if profile_in.style_persona:
         current_user.style_persona = profile_in.style_persona
@@ -254,7 +260,9 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
         if email is None:
             raise HTTPException(status_code=400, detail="Invalid reset token")
     except JWTError:
-        raise HTTPException(status_code=400, detail="Reset token has expired or is invalid")
+        raise HTTPException(
+            status_code=400, detail="Reset token has expired or is invalid"
+        )
 
     user = db.query(User).filter(User.email == email).first()
     if not user:

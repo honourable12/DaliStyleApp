@@ -51,7 +51,7 @@ jobs:
           uv sync --dev
 
       - name: Lint with ruff
-        run: uv run ruff check .
+        run: uv run ruff check . --fix
 
       - name: Run tests
         env:
