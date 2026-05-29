@@ -12,7 +12,7 @@ os.environ["HF_HOME"] = MODELS_DIR
 os.environ["TORCH_HOME"] = MODELS_DIR
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-from clothing_categories import (
+from clothing_categories import (  # noqa: E402
     CLOTHING_CATEGORIES,
     CLOTHING_PATTERNS,
     CATEGORY_GROUPS,
@@ -20,7 +20,7 @@ from clothing_categories import (
     COLOR_NAMES,
 )
 
-from duckduckgo_search import DDGS
+from duckduckgo_search import DDGS  # noqa: E402
 
 # Model loading (Lazy)
 _yolo = None
