@@ -15,6 +15,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-path: ai-service/uv.lock
       - name: Lint with ruff
         run: |
           cd ai-service
@@ -42,15 +43,7 @@ jobs:
           cp -rv ai-service/* deploy/
           cd deploy
           
-          # Handle Dockerfile for HF
-          if [ -f "Dockerfile.hf" ]; then
-            cp Dockerfile.hf Dockerfile
-            echo "Using Dockerfile.hf for Hugging Face deployment"
-          fi
-          
           # Cleanup unwanted files
-          rm Dockerfile.render 2>/dev/null || true
-          rm Dockerfile.hf 2>/dev/null || true
           rm .env 2>/dev/null || true
           rm -rf models 2>/dev/null || true
           rm -rf .venv 2>/dev/null || true

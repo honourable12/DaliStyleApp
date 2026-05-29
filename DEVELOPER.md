@@ -68,9 +68,43 @@ async function analyzeUserSkin(file) {
 ```json
 {
   "category": "shirt",
+  "pattern": "solid",
   "primary_color": "#FFFFFF",
   "is_clothing": true,
-  "processed_image_b64": "..." 
+  "processed_image_b64": "...", 
+  "detections": [
+    {
+      "category": "shirt",
+      "pattern": "solid",
+      "primary_color": "#FFFFFF",
+      "processed_image_b64": "...",
+      "category_confidence": 0.98,
+      "pattern_confidence": 0.95
+    }
+  ]
+}
+```
+
+### Find Matching Clothing
+**Endpoint:** `POST /wardrobe/engine/find-clothing`
+**Header:** `X-Partner-Key: your_api_key`
+**Body:** `multipart/form-data` with `file`
+
+**Response:**
+```json
+{
+  "detections": [
+    {
+      "analysis": {
+        "category": "shirt",
+        "pattern": "solid",
+        "primary_color": "#FFFFFF"
+      },
+      "found_images": ["url1", "url2", "url3"]
+    }
+  ],
+  "count": 1,
+  "message": "Identified 1 items and found corresponding high-quality images."
 }
 ```
 

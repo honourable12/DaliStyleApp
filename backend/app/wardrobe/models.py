@@ -71,6 +71,7 @@ class ClothingItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     category = Column(String)
+    pattern = Column(String, nullable=True)
     color_primary = Column(String)
     color_secondary = Column(String, nullable=True)
     image_url = Column(String)

@@ -55,11 +55,11 @@ def compute_daily_look(
             base_score = (harmony * 0.4) + (skin_comp * 0.3) + (season_comp * 0.3)
             
             for p_name in persona_potential.keys():
-                p_final = base_score * get_persona_score(p_name, harmony, top["color_primary"]) * weather_mult * vibe_mult * partner_mult
+                p_final = base_score * get_persona_score(p_name, harmony, top["color_primary"], top.get("pattern")) * weather_mult * vibe_mult * partner_mult
                 if p_final > persona_potential[p_name]:
                     persona_potential[p_name] = p_final
             
-            final_score = base_score * get_persona_score(style_persona, harmony, top["color_primary"]) * weather_mult * vibe_mult * partner_mult
+            final_score = base_score * get_persona_score(style_persona, harmony, top["color_primary"], top.get("pattern")) * weather_mult * vibe_mult * partner_mult
             if top.get("is_favourite"):
                 final_score *= 1.2
             

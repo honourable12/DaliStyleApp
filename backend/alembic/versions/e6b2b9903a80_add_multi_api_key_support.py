@@ -46,9 +46,10 @@ def upgrade() -> None:
     # 2. Add api_key_id to api_usage
     columns = [c['name'] for c in inspector.get_columns('api_usage')]
     if 'api_key_id' not in columns:
-        op.add_column('api_usage', sa.Column('api_key_id', sa.UUID(), nullable=True))
-        op.create_foreign_key('fk_api_usage_api_key_id', 'api_usage', 'partner_api_keys', ['api_key_id'], ['id'])
-        op.create_index(op.f('ix_api_usage_api_key_id'), 'api_usage', ['api_key_id'], unique=False)
+        with op.batch_alter_table('api_usage', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('api_key_id', sa.UUID(), nullable=True))
+            batch_op.create_foreign_key('fk_api_usage_api_key_id', 'partner_api_keys', ['api_key_id'], ['id'])
+            batch_op.create_index(op.f('ix_api_usage_api_key_id'), ['api_key_id'], unique=False)
 
     # 3. Data Migration: Move existing api_keys to the new table
     # This is complex because we want to hash them.

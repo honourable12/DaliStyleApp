@@ -30,6 +30,7 @@ class ExternalClothingItem(BaseModel):
     id: str
     name: str
     category: str
+    pattern: Optional[str] = None
     color_primary: str
     image_url: str
     is_favourite: bool = False
@@ -87,6 +88,7 @@ def get_daily_look(vibe: str = "Casual", include_accessories: bool = False, lat:
             "id": str(i.id),
             "name": i.name,
             "category": i.category,
+            "pattern": i.pattern,
             "color_primary": i.color_primary,
             "image_url": i.image_url,
             "is_favourite": i.is_favourite

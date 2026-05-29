@@ -61,7 +61,7 @@ def calculate_harmony_score(color1_hex: str, color2_hex: str) -> float:
     if s1 < 0.1 or s2 < 0.1: return 0.75 # Neutral
     return 0.3
 
-def get_persona_score(persona: str, harmony_score: float, color_hex: str) -> float:
+def get_persona_score(persona: str, harmony_score: float, color_hex: str, pattern: Optional[str] = None) -> float:
     h, s, l = hex_to_hsl(color_hex)
     score = 1.0
     h_type = "Monochromatic" if harmony_score > 0.85 else "Complementary" if harmony_score > 0.95 else "Other"
@@ -69,9 +69,14 @@ def get_persona_score(persona: str, harmony_score: float, color_hex: str) -> flo
     if persona == "Minimalist":
         if s < 0.2: score += 0.3
         if h_type == "Monochromatic": score += 0.4
+        if pattern == "solid": score += 0.3
     elif persona == "Bold":
         if s > 0.6: score += 0.3
         if h_type == "Complementary": score += 0.5
+        if pattern and pattern in ["floral", "graphic print", "leopard print", "camouflage"]: score += 0.5
+    elif persona == "Old Money":
+        if s < 0.3 and l > 0.4: score += 0.4
+        if pattern in ["solid", "striped", "checkered"]: score += 0.3
     return score
 
 def get_weather_priority(weather_code: str, category: str) -> float:

@@ -20,9 +20,11 @@ AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://localhost:8001")
 
 class AnalysisResponse(BaseModel):
     category: Optional[str] = None
+    pattern: Optional[str] = None
     primary_color: str
     is_clothing: bool
     processed_image_url: Optional[str] = None
+    detections: Optional[List[dict]] = None
 
 @router.post("/engine/analyze-clothing")
 async def headless_analyze_clothing(file: UploadFile = File(...), partner: Partner = Depends(get_partner)):
@@ -33,12 +35,30 @@ async def headless_analyze_clothing(file: UploadFile = File(...), partner: Partn
         fast_data = fast_res.json() if fast_res.status_code == 200 else {}
         heavy_res = requests.post(f"{AI_SERVICE_URL}/analyze-clothing-heavy", files={"file": (file.filename, file_content, file.content_type)}, timeout=300)
         heavy_data = heavy_res.json() if heavy_res.status_code == 200 else {}
+        
+        # New multi-detection format: heavy_data["detections"] is a list
+        detections = heavy_data.get("detections", [])
+        # For backward compatibility, pick the first detection as primary
+        best_match = detections[0] if detections else {}
+        
         return {
-            "category": heavy_data.get("category", "unknown"),
+            "category": best_match.get("category", "unknown"),
+            "pattern": best_match.get("pattern", "solid"),
             "primary_color": fast_data.get("primary_color", "unknown"),
             "is_clothing": fast_data.get("is_clothing", True),
-            "processed_image_b64": heavy_data.get("processed_image_b64")
+            "processed_image_b64": best_match.get("processed_image_b64"),
+            "detections": detections
         }
+    except Exception as e: raise HTTPException(status_code=500, detail=f"AI Service error: {str(e)}")
+
+@router.post("/engine/find-clothing")
+async def headless_find_clothing(file: UploadFile = File(...), partner: Partner = Depends(get_partner)):
+    file_content = await file.read()
+    validate_image(file, file_content)
+    try:
+        res = requests.post(f"{AI_SERVICE_URL}/find-clothing", files={"file": (file.filename, file_content, file.content_type)}, timeout=300)
+        if res.status_code == 200: return res.json()
+        else: raise HTTPException(status_code=res.status_code, detail="Find clothing failed")
     except Exception as e: raise HTTPException(status_code=500, detail=f"AI Service error: {str(e)}")
 
 @router.post("/engine/analyze-skin")
@@ -58,17 +78,26 @@ def process_heavy_ai(item_id: int, image_bytes: bytes, filename: str, content_ty
         if not item: return
         response = requests.post(f"{AI_SERVICE_URL}/analyze-clothing-heavy", files={"file": (filename, image_bytes, content_type)}, timeout=300)
         if response.status_code == 200:
-            data = response.json(); processed_b64 = data.get("processed_image_b64")
+            res_data = response.json()
+            detections = res_data.get("detections", [])
+            if not detections: return
+            
+            # Use the best match for the primary item
+            data = detections[0]
+            processed_b64 = data.get("processed_image_b64")
             if processed_b64:
                 clean_bytes = base64.b64decode(processed_b64)
-                
                 upload_file_to_s3(clean_bytes, item.image_url, "image/jpeg")
-            item.category = data.get("category", item.category); db.commit()
+            
+            item.category = data.get("category", item.category)
+            item.pattern = data.get("pattern", "solid")
+            item.metadata_ai = data # Store all AI results including pattern
+            db.commit()
     except Exception as e: print(f" AI error: {e}")
     finally: db.close()
 
 class ClothingResponse(BaseModel):
-    id: int; name: str; category: str; color_primary: str; image_url: str; is_favourite: bool
+    id: int; name: str; category: str; pattern: Optional[str] = None; color_primary: str; image_url: str; is_favourite: bool
     model_config = {"from_attributes": True}
 
 @router.post("/upload", response_model=ClothingResponse)
