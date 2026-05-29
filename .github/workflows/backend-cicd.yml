@@ -56,7 +56,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/daily_style_test
-          JWT_SECRET_KEY: test_secret
+          SECRET_KEY: 499IEEFJIWSJFKODPS949OVRE04T9343TIIJ34TTLSJFO
           AI_SERVICE_URL: http://localhost:8001
         run: uv run pytest
 
