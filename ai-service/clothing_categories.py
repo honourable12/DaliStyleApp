@@ -7,6 +7,10 @@ CLOTHING_CATEGORIES = [
     "belt", "hat", "cap", "scarf", "handbag", "sunglasses"
 ]
 
+CLOTHING_PATTERNS = [
+    "solid", "striped", "checkered", "floral", "polka dot", "graphic print", "camouflage", "leopard print"
+]
+
 CATEGORY_GROUPS = {
     "t-shirt": "top", "shirt": "top", "sweater": "top", "hoodie": "top",
     "jacket": "outerwear", "coat": "outerwear",

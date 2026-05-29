@@ -17,6 +17,7 @@ dependencies = [
     "torchvision>=0.23.0",
     "requests>=2.33.1",
     "boto3>=1.43.14",
+    "duckduckgo_search",
 ]
 
 

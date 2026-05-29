@@ -1,0 +1,66 @@
+name: Deploy AI Service to Hugging Face
+
+on:
+  push:
+    branches: [ divide ]
+    paths:
+      - 'ai-service/**'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Lint with ruff
+        run: |
+          cd ai-service
+          uvx ruff check .
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare and Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Configure Git
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          
+          # Create deployment directory
+          mkdir deploy
+          cp -rv ai-service/* deploy/
+          cd deploy
+          
+          # Handle Dockerfile for HF
+          if [ -f "Dockerfile.hf" ]; then
+            cp Dockerfile.hf Dockerfile
+            echo "Using Dockerfile.hf for Hugging Face deployment"
+          fi
+          
+          # Cleanup unwanted files
+          rm Dockerfile.render 2>/dev/null || true
+          rm Dockerfile.hf 2>/dev/null || true
+          rm .env 2>/dev/null || true
+          rm -rf models 2>/dev/null || true
+          rm -rf .venv 2>/dev/null || true
+          rm -rf __pycache__ 2>/dev/null || true
+          rm yolov8n-seg.pt 2>/dev/null || true
+          
+          # Initialize new repo for HF Space
+          git init -b main
+          git add .
+          git commit -m "Deploying ai-service from branch ${{ github.ref_name }} (commit: ${{ github.sha }})"
+          
+          # Push to Hugging Face
+          git remote add hf https://honourablewise1:$HF_TOKEN@huggingface.co/spaces/honourablewise1/daily-style-ai
+          git push -f hf main

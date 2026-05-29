@@ -6,6 +6,7 @@ from clothing import (
     _lazy_load_heavy_models,
     analyze_clothing_fast,
     analyze_clothing_heavy,
+    search_images,
 )
 from skin_tone import analyze_skin_tone
 from bootloader import sync_models, upload_model
@@ -37,7 +38,31 @@ async def analyse_clothing_fast(file: UploadFile = File(...)):
 @app.post("/analyze-clothing-heavy")
 async def analyse_clothing_heavy(file: UploadFile = File(...)):
     contents = await file.read()
-    return analyze_clothing_heavy(contents)
+    detections = analyze_clothing_heavy(contents)
+    return {"detections": detections, "count": len(detections)}
+
+
+@app.post("/find-clothing")
+async def find_clothing(file: UploadFile = File(...)):
+    """Analyzes clothing and finds better quality images online for all detected items."""
+    contents = await file.read()
+    detections = analyze_clothing_heavy(contents)
+    
+    results = []
+    for det in detections:
+        query = det.get("recommended_search_query")
+        found_images = search_images(query, max_results=3)
+        results.append({
+            "analysis": det,
+            "search_query": query,
+            "found_images": found_images
+        })
+    
+    return {
+        "detections": results,
+        "count": len(results),
+        "message": f"Identified {len(results)} items and found corresponding high-quality images."
+    }
 
 
 @app.post("/analyze-skin")

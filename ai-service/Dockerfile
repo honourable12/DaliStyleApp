@@ -1,65 +1,43 @@
-# FROM python:3.11-slim
-# COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-# # Install system dependencies
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     curl \
-#     ca-certificates \
-#     libgl1 \
-#     libglib2.0-0 \
-#     && rm -rf /var/lib/apt/lists/*
-
-# WORKDIR /app
-
-# ENV UV_COMPILE_BYTECODE=1
-# ENV UV_HTTP_TIMEOUT=300
-# ENV UV_CONCURRENT_DOWNLOADS=1
-# ENV UV_HTTP_RETRIES=10
-
-# # Copy project files
-# COPY pyproject.toml uv.lock* /app/
-
-# # Install dependencies
-# RUN uv sync --no-dev
-
-# # Copy application code
-# COPY . /app
-
-# # Run the application
-# CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
-
-# Render-optimized Dockerfile for AI Service
-# Keeps RAM usage under 500MB by skipping Torch/YOLO installation
-
 FROM python:3.11-slim
 
-# Install system dependencies
+# Install system dependencies for OpenCV and other libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy dependency files
-COPY requirements-lite.txt .
+# Set up user for Hugging Face (UID 1000)
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
-# Install ONLY lightweight dependencies
-RUN pip install --no-cache-dir -r requirements-lite.txt
+WORKDIR $HOME/app
+
+# Copy project files
+COPY --chown=user pyproject.toml .
+
+RUN uv sync --no-dev
 
 # Copy application code
-COPY . .
+COPY --chown=user . .
 
-# Ensure models directory exists
-RUN mkdir -p /models
+RUN mkdir -p /home/user/app/models
+ENV MODELS_DIR=/home/user/app/models \
+    HF_HOME=/home/user/app/models \
+    TORCH_HOME=/home/user/app/models
 
-# Configuration for Render Free Tier
-ENV HEAVY_AI_PROVIDER=hf_api
-ENV PERSIST_MODELS=false
-ENV PORT=8001
+# Configuration for Hugging Face
+ENV HEAVY_AI_PROVIDER=local
+ENV PERSIST_MODELS=true
+ENV PORT=7860
 
-# Expose port
-EXPOSE 8001
+EXPOSE 7860
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
