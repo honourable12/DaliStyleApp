@@ -1,24 +1,62 @@
 CONFIDENCE_THRESHOLD = 0.65
 
 CLOTHING_CATEGORIES = [
-    "t-shirt", "shirt", "sweater", "hoodie", "jacket", "coat",
-    "trousers", "jeans", "shorts", "skirt", "dress",
-    "sneakers", "boots", "formal shoes", "sandals",
-    "belt", "hat", "cap", "scarf", "handbag", "sunglasses"
+    "t-shirt",
+    "shirt",
+    "sweater",
+    "hoodie",
+    "jacket",
+    "coat",
+    "trousers",
+    "jeans",
+    "shorts",
+    "skirt",
+    "dress",
+    "sneakers",
+    "boots",
+    "formal shoes",
+    "sandals",
+    "belt",
+    "hat",
+    "cap",
+    "scarf",
+    "handbag",
+    "sunglasses",
 ]
 
 CLOTHING_PATTERNS = [
-    "solid", "striped", "checkered", "floral", "polka dot", "graphic print", "camouflage", "leopard print"
+    "solid",
+    "striped",
+    "checkered",
+    "floral",
+    "polka dot",
+    "graphic print",
+    "camouflage",
+    "leopard print",
 ]
 
 CATEGORY_GROUPS = {
-    "t-shirt": "top", "shirt": "top", "sweater": "top", "hoodie": "top",
-    "jacket": "outerwear", "coat": "outerwear",
-    "trousers": "bottom", "jeans": "bottom", "shorts": "bottom",
-    "skirt": "bottom", "dress": "full-body",
-    "sneakers": "shoes", "boots": "shoes", "formal shoes": "shoes", "sandals": "shoes",
-    "belt": "accessory", "hat": "accessory", "cap": "accessory", 
-    "scarf": "accessory", "handbag": "accessory", "sunglasses": "accessory"
+    "t-shirt": "top",
+    "shirt": "top",
+    "sweater": "top",
+    "hoodie": "top",
+    "jacket": "outerwear",
+    "coat": "outerwear",
+    "trousers": "bottom",
+    "jeans": "bottom",
+    "shorts": "bottom",
+    "skirt": "bottom",
+    "dress": "full-body",
+    "sneakers": "shoes",
+    "boots": "shoes",
+    "formal shoes": "shoes",
+    "sandals": "shoes",
+    "belt": "accessory",
+    "hat": "accessory",
+    "cap": "accessory",
+    "scarf": "accessory",
+    "handbag": "accessory",
+    "sunglasses": "accessory",
 }
 
 CLOTHING_YOLO_CLASSES = [0, 24, 26, 27, 28]

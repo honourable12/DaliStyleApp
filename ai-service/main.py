@@ -19,10 +19,10 @@ async def startup_event():
     # List of models we want to keep in S3 for persistence
     REQUIRED_MODELS = ["yolov8n-seg.pt"]
     sync_models(REQUIRED_MODELS)
-    
+
     # Load models
     _lazy_load_heavy_models()
-    
+
     # After first load (if they were downloaded from HF), upload to S3 for future restarts
     if os.getenv("PERSIST_MODELS", "true").lower() == "true":
         for model in REQUIRED_MODELS:
@@ -47,21 +47,19 @@ async def find_clothing(file: UploadFile = File(...)):
     """Analyzes clothing and finds better quality images online for all detected items."""
     contents = await file.read()
     detections = analyze_clothing_heavy(contents)
-    
+
     results = []
     for det in detections:
         query = det.get("recommended_search_query")
         found_images = search_images(query, max_results=3)
-        results.append({
-            "analysis": det,
-            "search_query": query,
-            "found_images": found_images
-        })
-    
+        results.append(
+            {"analysis": det, "search_query": query, "found_images": found_images}
+        )
+
     return {
         "detections": results,
         "count": len(results),
-        "message": f"Identified {len(results)} items and found corresponding high-quality images."
+        "message": f"Identified {len(results)} items and found corresponding high-quality images.",
     }
 
 

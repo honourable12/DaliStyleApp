@@ -16,10 +16,7 @@ MODEL_BUCKET = os.getenv("MODEL_STORE_BUCKET", "ai-models")
 MODELS_DIR = os.getenv("MODELS_DIR", "/models")
 
 # Supabase / Cloudflare / AWS S3 compatibility
-s3_config = Config(
-    s3={'addressing_style': 'path'},
-    signature_version='s3v4'
-)
+s3_config = Config(s3={"addressing_style": "path"}, signature_version="s3v4")
 
 s3_client = boto3.client(
     "s3",
@@ -27,18 +24,20 @@ s3_client = boto3.client(
     aws_access_key_id=S3_ACCESS_KEY,
     aws_secret_access_key=S3_SECRET_KEY,
     region_name="us-east-1",
-    config=s3_config
+    config=s3_config,
 )
+
 
 def ensure_bucket_exists():
     try:
         s3_client.head_bucket(Bucket=MODEL_BUCKET)
     except ClientError as e:
-        if e.response['Error']['Code'] == '404':
+        if e.response["Error"]["Code"] == "404":
             logger.info(f"Bucket {MODEL_BUCKET} not found. Creating it...")
             s3_client.create_bucket(Bucket=MODEL_BUCKET)
         else:
             raise
+
 
 def download_model(model_name):
     local_path = os.path.join(MODELS_DIR, model_name)
@@ -54,6 +53,7 @@ def download_model(model_name):
         logger.error(f"Failed to download {model_name}: {e}")
         # If we can't download, we'll let the main app try to load it (it might download from HF)
 
+
 def upload_model(model_name):
     local_path = os.path.join(MODELS_DIR, model_name)
     if not os.path.exists(local_path):
@@ -66,6 +66,7 @@ def upload_model(model_name):
         logger.info(f"Successfully uploaded {model_name}.")
     except Exception as e:
         logger.error(f"Failed to upload {model_name}: {e}")
+
 
 def sync_models(required_models):
     os.makedirs(MODELS_DIR, exist_ok=True)

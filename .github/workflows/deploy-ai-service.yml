@@ -18,6 +18,7 @@ jobs:
       - name: Lint with ruff
         run: |
           cd ai-service
+          uvx ruff check . --fix
           uvx ruff check .
 
   deploy:
