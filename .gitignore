@@ -51,5 +51,4 @@ ai-service/yolov8n-seg.pt
 ai-service/models/
 DESIGN.md
 sale.md
-backend/alembic/env.py
 backend/test.db-journal
