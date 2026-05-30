@@ -22,7 +22,7 @@ api_key_cache = TTLCache(maxsize=1000, ttl=300)
 class ApiUsageMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if not path.startswith(("/style/engine", "/wardrobe/engine")):
+        if not path.startswith(("/api/style/engine", "/api/wardrobe/engine")):
             return await call_next(request)
 
         partner_key = request.headers.get("X-Partner-Key")

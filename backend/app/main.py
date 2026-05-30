@@ -11,8 +11,6 @@ from app.auth.partner_router import router as partner_auth_router
 from app.auth.middleware import ApiUsageMiddleware
 from app.database import engine, Base
 
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Daily Style Fashion API")
 
 # Configure CORS from Environment
@@ -35,11 +33,11 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(ApiUsageMiddleware)
 
-app.include_router(auth_router)
-app.include_router(wardrobe_router)
-app.include_router(style_router)
-app.include_router(admin_router)
-app.include_router(partner_auth_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(wardrobe_router, prefix="/api")
+app.include_router(style_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(partner_auth_router, prefix="/api")
 
 
 @app.get("/")
