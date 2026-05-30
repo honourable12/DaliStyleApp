@@ -64,9 +64,6 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/divide'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     
     steps:
       - uses: actions/checkout@v4
@@ -82,14 +79,17 @@ jobs:
           enable-cache: true
           cache-dependency-path: backend/uv.lock
 
-      - name: Install dependencies for migrations
+      - name: Generate requirements.txt for Vercel
         run: |
-          uv sync
+          cd backend
+          uv export --format requirements-txt --output-file requirements.txt
 
       - name: Run migrations
         env:
           DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
-        run: uv run alembic upgrade head
+        run: |
+          cd backend
+          uv run alembic upgrade head
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
@@ -97,5 +97,4 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: backend
           vercel-args: '--prod'
