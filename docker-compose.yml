@@ -17,6 +17,11 @@ services:
       POSTGRES_DB: ${DB_NAME:-daily_style}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-daily_style}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
@@ -38,10 +43,16 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_REGION: us-east-1
-      AI_SERVICE_URL: http://ai-service:8001
+      AI_SERVICE_URL: http://ai-service:7860
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   ai-service:
     build: ./ai-service
@@ -49,7 +60,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     ports:
-      - "8001:8001"
+      - "7860:7860"
     volumes:
       - ./ai-service:/app
       - /app/.venv
@@ -59,6 +70,11 @@ services:
       MODEL_PATH: /models
       YOLO_CONFIG_DIR: /tmp
       PYTHONUNBUFFERED: 1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build: ./frontend

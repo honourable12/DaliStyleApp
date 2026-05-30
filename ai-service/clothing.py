@@ -161,6 +161,8 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
 
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        return {"is_clothing": False, "primary_color": "unknown", "error": "Invalid image"}
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     is_clothing = True  # Default
@@ -284,12 +286,13 @@ def analyze_clothing_heavy(image_bytes: bytes) -> list[dict]:
 
     if provider == "hf_api":
         # Note: HF API currently only supports single label zero-shot in this implementation
-        # We would need to update the HF logic for multi-item, but focusing on 'local' as per plan
         return [_analyze_heavy_hf_api(image_bytes)]
 
     _lazy_load_heavy_models()
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        return {"is_clothing": False, "primary_color": "unknown", "error": "Invalid image"} if "fast" in str(image_bytes) else []
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # Clean background detection

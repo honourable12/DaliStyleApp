@@ -57,7 +57,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/daily_style_test
           SECRET_KEY: 499IEEFJIWSJFKODPS949OVRE04T9343TIIJ34TTLSJFO
-          AI_SERVICE_URL: http://localhost:8001
+          AI_SERVICE_URL: http://localhost:7860
         run: uv run pytest
 
   deploy-vercel:

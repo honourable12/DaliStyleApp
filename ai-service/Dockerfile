@@ -32,7 +32,7 @@ ENV MODELS_DIR=/home/user/app/models \
     HF_HOME=/home/user/app/models \
     TORCH_HOME=/home/user/app/models
 
-# Configuration for Hugging Face
+# Configuration
 ENV HEAVY_AI_PROVIDER=local
 ENV PERSIST_MODELS=true
 ENV PORT=7860

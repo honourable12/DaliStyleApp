@@ -5,23 +5,28 @@ from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
 
 
+from pydantic import field_validator
+
+
 class AuthSettings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # @field_validator("SECRET_KEY")
-    # @classmethod
-    # def secret_key_must_be_strong(cls, v: str) -> str:
-    #     if len(v) < 32:
-    #         raise ValueError(
-    #             "SECRET_KEY must be at least 32 characters. "
-    #             "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
-    #         )
-    #     if "temporary" in v.lower() or "development" in v.lower():
-    #         raise ValueError("SECRET_KEY looks like a placeholder. Set a real secret in .env")
-    #     return v
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def secret_key_must_be_strong(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError(
+                "SECRET_KEY must be at least 32 characters. "
+                'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+            )
+        if any(x in v.lower() for x in ["temporary", "dev", "test", "password"]):
+            raise ValueError(
+                "SECRET_KEY looks like a placeholder. Set a unique random hex string in .env"
+            )
+        return v
 
     model_config = {
         "env_file": ".env",
@@ -62,10 +67,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def create_refresh_token(data: dict) -> str:
-    """
-    Creates a long-lived refresh token.
-    Marked type='refresh' so it cannot be used as an access token.
-    """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS

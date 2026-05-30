@@ -14,6 +14,16 @@ const nextConfig = {
           protocol: 'https',
           hostname: '**.amazonaws.com',
         },
+        {
+          protocol: 'http',
+          hostname: 'localhost',
+          port: '4566',
+        },
+        {
+          protocol: 'http',
+          hostname: '127.0.0.1',
+          port: '4566',
+        },
       ],
     },
     async rewrites() {

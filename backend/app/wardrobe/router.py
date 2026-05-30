@@ -13,18 +13,30 @@ import uuid
 import requests
 import os
 import base64
+import logging
 
 from app.database import get_db, SessionLocal
 from app.auth.router import get_current_user
 from app.wardrobe.models import User, ClothingItem
 from app.wardrobe.s3 import upload_file_to_s3, get_image_url
 from app.wardrobe.utils import validate_image
-from app.auth.partners import get_partner, get_optional_partner
+from app.auth.partners import get_optional_partner
 from app.wardrobe.models import Partner
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/wardrobe", tags=["wardrobe"])
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://localhost:8001")
+logger = logging.getLogger(__name__)
+
+
+async def get_any_auth(
+    user: Optional[User] = Depends(get_current_user),
+    partner: Optional[Partner] = Depends(get_optional_partner),
+):
+    """Dependency that allows either a regular user (JWT) or a partner (API Key)."""
+    if user or partner:
+        return user or partner
+    raise HTTPException(status_code=403, detail="Authentication required")
 
 
 class AnalysisResponse(BaseModel):
@@ -38,7 +50,7 @@ class AnalysisResponse(BaseModel):
 
 @router.post("/engine/analyze-clothing")
 async def headless_analyze_clothing(
-    file: UploadFile = File(...), partner: Partner = Depends(get_partner)
+    file: UploadFile = File(...), auth=Depends(get_any_auth)
 ):
     file_content = await file.read()
     validate_image(file, file_content)
@@ -75,7 +87,7 @@ async def headless_analyze_clothing(
 
 @router.post("/engine/find-clothing")
 async def headless_find_clothing(
-    file: UploadFile = File(...), partner: Partner = Depends(get_partner)
+    file: UploadFile = File(...), auth=Depends(get_any_auth)
 ):
     file_content = await file.read()
     validate_image(file, file_content)
@@ -97,7 +109,7 @@ async def headless_find_clothing(
 
 @router.post("/engine/analyze-skin")
 async def headless_analyze_skin(
-    file: UploadFile = File(...), partner: Partner = Depends(get_partner)
+    file: UploadFile = File(...), auth=Depends(get_any_auth)
 ):
     contents = await file.read()
     validate_image(file, contents)
@@ -230,6 +242,7 @@ async def upload_bulk(
         try:
             validate_image(file, file_content)
         except HTTPException:
+            logger.warning(f"Skipping invalid image: {file.filename}")
             continue
 
         color_primary = "unknown"
@@ -238,41 +251,57 @@ async def upload_bulk(
             fast_res = requests.post(
                 f"{AI_SERVICE_URL}/analyze-clothing-fast",
                 files={"file": (file.filename, file_content, file.content_type)},
-                timeout=10,
+                timeout=60,
             )
             if fast_res.status_code == 200:
                 data = fast_res.json()
                 color_primary = data.get("primary_color", "unknown")
                 is_clothing = data.get("is_clothing", True)
-        except Exception:
+            else:
+                logger.warning(f"AI Fast Service returned {fast_res.status_code} for {file.filename}")
+        except Exception as e:
+            logger.error(f"AI Fast Service error for {file.filename}: {e}")
             pass
+
         if not is_clothing:
+            logger.info(f"Skipping non-clothing item: {file.filename}")
             continue
 
         ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
         object_name = f"users/{current_user.id}/{uuid.uuid4()}.{ext}"
 
         s3_key = upload_file_to_s3(file_content, object_name, file.content_type)
-        new_item = ClothingItem(
-            name=file.filename.split(".")[0],
-            category="unknown",
-            color_primary=color_primary,
-            image_url=s3_key,
-            owner_id=current_user.id,
-            partner_id=partner.id if partner else None,
-        )
-        db.add(new_item)
-        db.commit()
-        db.refresh(new_item)
-        background_tasks.add_task(
-            process_heavy_ai,
-            new_item.id,
-            file_content,
-            file.filename,
-            file.content_type,
-        )
-        new_item.image_url = get_image_url(new_item.image_url)
-        results.append(new_item)
+        if not s3_key:
+            logger.error(f"Failed to upload {file.filename} to S3")
+            continue
+
+        try:
+            new_item = ClothingItem(
+                name=file.filename.split(".")[0],
+                category="unknown",
+                color_primary=color_primary,
+                image_url=s3_key,
+                owner_id=current_user.id,
+                partner_id=partner.id if partner else None,
+            )
+            db.add(new_item)
+            db.commit()
+            db.refresh(new_item)
+
+            background_tasks.add_task(
+                process_heavy_ai,
+                new_item.id,
+                file_content,
+                file.filename,
+                file.content_type,
+            )
+            new_item.image_url = get_image_url(new_item.image_url)
+            results.append(new_item)
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Database error saving {file.filename}: {e}")
+            continue
+
     return results
 
 
@@ -337,5 +366,9 @@ async def upload_selfie(
                 "skin_type": current_user.skin_type,
                 "image_url": get_image_url(s3_key),
             }
+        else:
+            raise HTTPException(status_code=res.status_code, detail="Skin analysis failed.")
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=str(e))

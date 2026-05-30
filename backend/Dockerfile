@@ -24,5 +24,8 @@ RUN uv sync --no-dev
 # Copy application code
 COPY . /app
 
-# Run the application
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Make startup script executable
+RUN chmod +x /app/scripts/start.sh
+
+# Run the application via startup script
+CMD ["/app/scripts/start.sh"]

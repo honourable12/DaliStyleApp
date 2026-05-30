@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Plus, LayoutPanelLeft, X, Trash2 } from "lucide-react";
+import { Plus, LayoutPanelLeft, X, Trash2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
@@ -65,6 +65,7 @@ export default function Wardrobe() {
   const fileInputRef = useRef(null);
 
   const categories = ["All", "Tops", "Bottoms", "Shoes", "Accessories"];
+  const discoverInputRef = useRef(null);
 
   const showStatus = (type, message) => {
     setStatus({ type, message });
@@ -134,6 +135,26 @@ export default function Wardrobe() {
     }
   };
 
+  const [discoveryItem, setDiscoveryItem] = useState(null);
+  const [discovering, setDiscovering] = useState(false);
+
+  const handleDiscover = async (file) => {
+    setDiscovering(true);
+    showStatus("info", "Searching for matches...");
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await client.post("/wardrobe/engine/find-clothing", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setDiscoveryItem(res.data);
+    } catch (err) {
+      showStatus("error", "Discovery failed.");
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
   const filteredItems = items.filter(item =>
     activeCategory === "All" || item.category.toLowerCase().includes(activeCategory.toLowerCase().slice(0, -1))
   );
@@ -148,12 +169,49 @@ export default function Wardrobe() {
           <StatusToast message={status.message} type={status.type} />
         </AnimatePresence>
 
+        {discoveryItem && (
+          <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="p-8 border-b flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-serif italic uppercase">Discover Matches</h2>
+                  <p className="text-[10px] font-bold tracking-widest text-fashion-muted">AI FOUND {discoveryItem.count} ITEMS</p>
+                </div>
+                <button onClick={() => setDiscoveryItem(null)} className="p-2 hover:bg-black/5 rounded-full"><X /></button>
+              </div>
+              <div className="overflow-y-auto p-8 space-y-10">
+                {discoveryItem.detections.map((det, i) => (
+                  <div key={i} className="space-y-4 text-left">
+                    <div className="flex gap-4 items-center">
+                      <div className="px-4 py-1.5 bg-fashion-gold text-white rounded-full text-[10px] font-bold uppercase tracking-widest">{det.analysis.category}</div>
+                      <div className="px-4 py-1.5 bg-fashion-charcoal text-white rounded-full text-[10px] font-bold uppercase tracking-widest">{det.analysis.pattern}</div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {det.found_images.map((img, idx) => (
+                        <div key={idx} className="relative aspect-[3/4] rounded-2xl overflow-hidden border">
+                          <Image src={img} alt="Matched item" fill className="object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         <header className="flex justify-between items-center mb-10 px-2">
           <div>
             <h1 className="text-5xl font-serif text-fashion-charcoal tracking-tighter uppercase italic">Closet</h1>
             <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em]">{items?.length || 0} PIECES</p>
           </div>
           <div className="flex gap-4">
+            <button
+              onClick={() => discoverInputRef.current.click()}
+              className="w-12 h-12 rounded-full bg-white border border-black/10 text-fashion-charcoal flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
+            >
+              <Search size={20} />
+            </button>
             <button
               onClick={() => setShowWorkbench(!showWorkbench)}
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg ${showWorkbench ? 'bg-fashion-gold text-white rotate-180' : 'bg-white border border-black/10 text-fashion-charcoal'}`}
@@ -224,6 +282,11 @@ export default function Wardrobe() {
                     className="absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-white shadow-md"
                     style={{ backgroundColor: item.color_primary }}
                   />
+                  {item.pattern && item.pattern !== "solid" && (
+                    <div className="absolute top-4 left-4 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-full text-[7px] font-bold uppercase tracking-widest text-fashion-charcoal border border-black/5 shadow-sm">
+                      {item.pattern}
+                    </div>
+                  )}
                 </div>
                 <p className="mt-3 text-[12px] font-serif italic text-fashion-charcoal truncate px-2 text-center uppercase tracking-tighter">
                   {item.name}
@@ -325,6 +388,7 @@ export default function Wardrobe() {
       </AnimatePresence>
 
       <input type="file" hidden ref={fileInputRef} onChange={handleUpload} accept="image/*" multiple />
+      <input type="file" hidden ref={discoverInputRef} onChange={(e) => e.target.files[0] && handleDiscover(e.target.files[0])} accept="image/*" />
     </>
   );
 }
