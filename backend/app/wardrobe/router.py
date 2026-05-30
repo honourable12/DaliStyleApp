@@ -25,7 +25,7 @@ from app.wardrobe.models import Partner
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/wardrobe", tags=["wardrobe"])
-AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://localhost:8001")
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://localhost:7860")
 logger = logging.getLogger(__name__)
 
 

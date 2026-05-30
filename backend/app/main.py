@@ -9,7 +9,6 @@ from app.style.router import router as style_router
 from app.auth.admin_router import router as admin_router
 from app.auth.partner_router import router as partner_auth_router
 from app.auth.middleware import ApiUsageMiddleware
-from app.database import engine, Base
 
 app = FastAPI(title="Daily Style Fashion API")
 

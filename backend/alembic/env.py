@@ -13,7 +13,6 @@ sys.path.append(os.getcwd())
 
 from app.database import Base, SQLALCHEMY_DATABASE_URL
 # Important: Import all models here so they are registered with Base.metadata
-from app.wardrobe.models import User, Partner, ClothingItem, Outfit, ApiUsage
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

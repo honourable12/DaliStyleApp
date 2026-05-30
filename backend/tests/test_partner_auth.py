@@ -1,6 +1,6 @@
 def test_partner_registration(client):
     response = client.post(
-        "/auth/partner/register",
+        "/api/auth/partner/register",
         json={
             "name": "Test Partner",
             "email": "partner@test.com",
@@ -17,7 +17,7 @@ def test_partner_registration(client):
 def test_partner_login(client):
     # Register first
     client.post(
-        "/auth/partner/register",
+        "/api/auth/partner/register",
         json={
             "name": "Login Partner",
             "email": "login@test.com",
@@ -27,7 +27,7 @@ def test_partner_login(client):
 
     # Login
     response = client.post(
-        "/auth/partner/login",
+        "/api/auth/partner/login",
         data={"username": "login@test.com", "password": "password123"},
     )
     assert response.status_code == 200
@@ -39,7 +39,7 @@ def test_partner_login(client):
 def test_api_key_lifecycle(client):
     # Register and login
     client.post(
-        "/auth/partner/register",
+        "/api/auth/partner/register",
         json={
             "name": "Key Partner",
             "email": "key@test.com",
@@ -47,7 +47,7 @@ def test_api_key_lifecycle(client):
         },
     )
     login_res = client.post(
-        "/auth/partner/login",
+        "/api/auth/partner/login",
         data={"username": "key@test.com", "password": "password123"},
     )
     token = login_res.json()["access_token"]
@@ -55,7 +55,7 @@ def test_api_key_lifecycle(client):
 
     # 1. Create Key
     create_res = client.post(
-        "/auth/partner/keys",
+        "/api/auth/partner/keys",
         json={"name": "Test Production Key", "type": "production"},
         headers=headers,
     )
@@ -67,22 +67,22 @@ def test_api_key_lifecycle(client):
     key_id = key_data["id"]
 
     # 2. List Keys
-    list_res = client.get("/auth/partner/keys", headers=headers)
+    list_res = client.get("/api/auth/partner/keys", headers=headers)
     assert list_res.status_code == 200
     assert len(list_res.json()) >= 1
     assert any(k["id"] == key_id for k in list_res.json())
 
     # 3. Toggle Key (Disable)
     toggle_res = client.patch(
-        f"/auth/partner/keys/{key_id}?is_active=false", headers=headers
+        f"/api/auth/partner/keys/{key_id}?is_active=false", headers=headers
     )
     assert toggle_res.status_code == 200
     assert toggle_res.json()["is_active"] is False
 
     # 4. Delete Key
-    delete_res = client.delete(f"/auth/partner/keys/{key_id}", headers=headers)
+    delete_res = client.delete(f"/api/auth/partner/keys/{key_id}", headers=headers)
     assert delete_res.status_code == 200
 
     # Verify deletion
-    list_after = client.get("/auth/partner/keys", headers=headers)
+    list_after = client.get("/api/auth/partner/keys", headers=headers)
     assert not any(k["id"] == key_id for k in list_after.json())
