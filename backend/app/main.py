@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from mangum import Mangum
 import os
 
 from app.auth.router import router as auth_router
@@ -38,9 +37,6 @@ app.include_router(wardrobe_router, prefix="/api")
 app.include_router(style_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(partner_auth_router, prefix="/api")
-
-# Serverless Handler for AWS Lambda / Vercel
-handler = Mangum(app, lifespan="off")
 
 
 @app.get("/")
