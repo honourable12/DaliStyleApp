@@ -338,12 +338,20 @@ def delete_item(
     return {"message": "Deleted"}
 
 
+@router.get("/health")
+def wardrobe_health():
+    return {"status": "ok", "module": "wardrobe"}
+
+
 @router.post("/selfie")
+@router.post("/analyze-skin")
+@router.post("/engine/analyze-skin-profile")
 async def upload_selfie(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logger.info(f"Selfie upload started for user {current_user.id}")
     contents = await file.read()
     validate_image(file, contents)
 
@@ -351,6 +359,10 @@ async def upload_selfie(
     object_name = f"users/{current_user.id}/profile/selfie.{ext}"
 
     s3_key = upload_file_to_s3(contents, object_name, file.content_type)
+    if not s3_key:
+        logger.error("Failed to upload selfie to S3")
+        raise HTTPException(status_code=500, detail="Failed to upload image.")
+
     try:
         res = requests.post(
             f"{AI_SERVICE_URL}/analyze-skin",
@@ -367,8 +379,10 @@ async def upload_selfie(
                 "image_url": get_image_url(s3_key),
             }
         else:
+            logger.error(f"AI Service skin analysis failed: {res.status_code} - {res.text}")
             raise HTTPException(status_code=res.status_code, detail="Skin analysis failed.")
     except Exception as e:
+        logger.error(f"Selfie upload error: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))

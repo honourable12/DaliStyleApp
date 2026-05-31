@@ -43,7 +43,7 @@ export default function Profile() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      await client.post("/wardrobe/selfie", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      await client.post("/wardrobe/analyze-skin", formData, { headers: { "Content-Type": "multipart/form-data" } });
       showStatus("success", `Analysis complete.`);
       mutate('/auth/me');
     } catch (err) {
