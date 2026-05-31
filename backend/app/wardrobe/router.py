@@ -114,11 +114,23 @@ async def headless_analyze_skin(
     contents = await file.read()
     validate_image(file, contents)
     try:
+        base_url = AI_SERVICE_URL.rstrip("/")
+        # Try primary endpoint
+        target_url = f"{base_url}/analyze-skin"
         res = requests.post(
-            f"{AI_SERVICE_URL}/analyze-skin",
+            target_url,
             files={"file": (file.filename, contents, file.content_type)},
             timeout=30,
         )
+        # Fallback to analyze-skin-fast if primary fails with 404
+        if res.status_code == 404:
+            target_url = f"{base_url}/analyze-skin-fast"
+            res = requests.post(
+                target_url,
+                files={"file": (file.filename, contents, file.content_type)},
+                timeout=30,
+            )
+        
         if res.status_code == 200:
             return res.json()
         else:
@@ -364,11 +376,23 @@ async def upload_selfie(
         raise HTTPException(status_code=500, detail="Failed to upload image.")
 
     try:
+        base_url = AI_SERVICE_URL.rstrip("/")
+        # Try primary endpoint
+        target_url = f"{base_url}/analyze-skin"
         res = requests.post(
-            f"{AI_SERVICE_URL}/analyze-skin",
+            target_url,
             files={"file": (file.filename, contents, file.content_type)},
             timeout=30,
         )
+        # Fallback to analyze-skin-fast if primary fails with 404
+        if res.status_code == 404:
+            target_url = f"{base_url}/analyze-skin-fast"
+            res = requests.post(
+                target_url,
+                files={"file": (file.filename, contents, file.content_type)},
+                timeout=30,
+            )
+        
         if res.status_code == 200:
             data = res.json()
             current_user.skin_type = data.get("skin_type")
