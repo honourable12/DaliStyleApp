@@ -28,14 +28,11 @@ const nextConfig = {
     },
     async rewrites() {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
-        const isProd = process.env.NODE_ENV === 'production';
         
         return [
           {
             source: '/api/:path*',
-            destination: isProd 
-              ? '/_/backend/api/:path*' 
-              : `${backendUrl}/api/:path*`,
+            destination: `${backendUrl}/api/:path*`,
           },
         ];
       },
