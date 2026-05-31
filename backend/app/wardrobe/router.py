@@ -212,6 +212,8 @@ async def upload_item(
             data = fast_res.json()
             color_primary = data.get("primary_color", "unknown")
             is_clothing = data.get("is_clothing", True)
+            if category == "unknown":
+                category = data.get("rough_category", "unknown")
     except Exception:
         pass
     if not is_clothing:
@@ -259,6 +261,7 @@ async def upload_bulk(
 
         color_primary = "unknown"
         is_clothing = True
+        category = "unknown"
         try:
             fast_res = requests.post(
                 f"{AI_SERVICE_URL}/analyze-clothing-fast",
@@ -269,6 +272,7 @@ async def upload_bulk(
                 data = fast_res.json()
                 color_primary = data.get("primary_color", "unknown")
                 is_clothing = data.get("is_clothing", True)
+                category = data.get("rough_category", "unknown")
             else:
                 logger.warning(f"AI Fast Service returned {fast_res.status_code} for {file.filename}")
         except Exception as e:
@@ -290,7 +294,7 @@ async def upload_bulk(
         try:
             new_item = ClothingItem(
                 name=file.filename.split(".")[0],
-                category="unknown",
+                category=category,
                 color_primary=color_primary,
                 image_url=s3_key,
                 owner_id=current_user.id,

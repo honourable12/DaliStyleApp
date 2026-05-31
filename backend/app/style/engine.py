@@ -20,29 +20,52 @@ def compute_daily_look(
     monk_label: str,
     style_persona: str = "Minimalist",
     vibe: str = "Casual",
+    include_accessories: bool = False,
     lat: Optional[float] = None,
     lon: Optional[float] = None,
     custom_weights: Optional[
         Dict
-    ] = None,  # { "category_boost": {"shirt": 1.5}, "brand_id": "..." }
+    ] = None,
 ) -> Dict:
     current_weather = get_real_weather(lat=lat or 48.8566, lon=lon or 2.3522)
 
-    # Filter tops and bottoms
-    tops = [
+    def is_top(item):
+        cat = str(item.get("category", "")).lower()
+        name = str(item.get("name", "")).lower()
+        top_cats = ["top", "t-shirt", "shirt", "sweater", "hoodie", "jacket", "coat"]
+        if cat in top_cats:
+            return True
+        if cat == "unknown" or cat == "":
+            return any(kw in name for kw in top_cats)
+        return False
+
+    def is_bottom(item):
+        cat = str(item.get("category", "")).lower()
+        name = str(item.get("name", "")).lower()
+        bottom_cats = ["bottom", "trousers", "jeans", "shorts", "skirt"]
+        if cat in bottom_cats:
+            return True
+        if cat == "unknown" or cat == "":
+            return any(kw in name for kw in bottom_cats)
+        return False
+
+    tops = [i for i in items if is_top(i)]
+    bottoms = [i for i in items if is_bottom(i)]
+    accessories = [
         i
         for i in items
-        if i["category"]
-        in ["top", "t-shirt", "shirt", "sweater", "hoodie", "jacket", "coat"]
-    ]
-    bottoms = [
-        i
-        for i in items
-        if i["category"] in ["bottom", "trousers", "jeans", "shorts", "skirt"]
+        if str(i.get("category", "")).lower() in ["accessory", "belt", "hat", "cap", "scarf", "handbag", "sunglasses"]
     ]
 
     if not tops or not bottoms:
-        raise ValueError("Need at least 1 top and 1 bottom.")
+        msg = "Need at least 1 top and 1 bottom."
+        if not tops and not bottoms:
+            msg = "Your wardrobe is empty or items are still being processed. Add a top and a bottom to get started!"
+        elif not tops:
+            msg = "You need to add at least one top (shirt, t-shirt, etc.) to generate a look."
+        else:
+            msg = "You need to add at least one bottom (trousers, jeans, etc.) to generate a look."
+        raise ValueError(msg)
 
     candidates = []
     persona_potential = {"Minimalist": 0.0, "Bold": 0.0, "Old Money": 0.0}
@@ -122,9 +145,14 @@ def compute_daily_look(
         f"{best_look['top']['category']} ({vibe} for {current_weather})",
     )
 
+    accessory = None
+    if include_accessories and accessories:
+        accessory = accessories[0]
+
     return {
         "top": best_look["top"],
         "bottom": best_look["bottom"],
+        "accessory": accessory,
         "stylist_note": note,
         "harmony_score": round(min(best_look["score"], 1.0), 2),
         "weather_context": current_weather,

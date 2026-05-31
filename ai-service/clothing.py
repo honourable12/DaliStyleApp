@@ -195,6 +195,14 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
         # Index 3 is "something else"
         is_clothing = bool(probs[3] < 0.5 and (probs[0] + probs[1] + probs[2]) > 0.5)
 
+        # Quick Category Prediction
+        logits_c = (img_emb @ _text_embeddings.T) * 100
+        probs_c = logits_c.softmax(dim=-1)[0].cpu().numpy()
+        c_idx = int(np.argmax(probs_c))
+        rough_category = CLOTHING_CATEGORIES[c_idx]
+    else:
+        rough_category = "unknown"
+
     # 2. Dominant Color logic (Lightweight)
     # Center Crop
     cy, cx = h // 2, w // 2
@@ -235,6 +243,7 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
         "is_clean_background": is_clean_bg,
         "primary_color": _rgb_to_hex(best_color),
         "primary_name": _nearest_color_name(best_color),
+        "rough_category": rough_category,
     }
 
 

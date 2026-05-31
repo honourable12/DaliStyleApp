@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import requests
 import os
+import logging
+from pydantic import BaseModel
 
 from app.database import get_db
 from app.auth.router import get_current_user
@@ -11,7 +13,8 @@ from app.wardrobe.models import User, ClothingItem, Outfit
 from app.style.engine import compute_daily_look
 from app.auth.partners import get_partner
 from app.wardrobe.models import Partner
-from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/style", tags=["style"])
 
@@ -33,6 +36,7 @@ class StylingRequest(BaseModel):
     monk_label: str = "MST-5"
     style_persona: str = "Minimalist"
     vibe: str = "Casual"
+    include_accessories: bool = False
     lat: Optional[float] = None
     lon: Optional[float] = None
 
@@ -118,6 +122,7 @@ def get_daily_look(
     current_user: User = Depends(get_current_user),
 ):
     if not current_user.skin_type:
+        logger.warning(f"User {current_user.email} missing skin analysis.")
         raise HTTPException(status_code=400, detail="Perform skin analysis first.")
 
     # Map SQLAlchemy models to plain dicts for the engine
@@ -125,6 +130,7 @@ def get_daily_look(
         db.query(ClothingItem).filter(ClothingItem.owner_id == current_user.id).all()
     )
     if not items:
+        logger.warning(f"User {current_user.email} has no clothing items.")
         raise HTTPException(status_code=400, detail="Add clothes first.")
 
     wardrobe_dicts = [
@@ -134,14 +140,16 @@ def get_daily_look(
             "category": i.category,
             "pattern": i.pattern,
             "color_primary": i.color_primary,
+            "color": i.color_primary,
             "image_url": i.image_url,
             "is_favourite": i.is_favourite,
         }
         for i in items
     ]
 
-    skin_hex = current_user.metadata_skin.get("hex", "#d7bd96")
-    monk_label = current_user.metadata_skin.get("monk_label", "MST-5")
+    metadata = current_user.metadata_skin or {}
+    skin_hex = metadata.get("hex", "#d7bd96")
+    monk_label = metadata.get("monk_label", "MST-5")
 
     try:
         result = compute_daily_look(
@@ -151,16 +159,20 @@ def get_daily_look(
             monk_label=monk_label,
             style_persona=current_user.style_persona or "Minimalist",
             vibe=vibe,
+            include_accessories=include_accessories,
             lat=lat,
             lon=lon,
         )
     except ValueError as e:
+        logger.error(f"Styling engine error for user {current_user.email}: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
     from app.wardrobe.s3 import get_image_url
 
     result["top"]["image_url"] = get_image_url(result["top"]["image_url"])
     result["bottom"]["image_url"] = get_image_url(result["bottom"]["image_url"])
+    if result.get("accessory"):
+        result["accessory"]["image_url"] = get_image_url(result["accessory"]["image_url"])
 
     return result
 
@@ -185,6 +197,7 @@ def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partne
             monk_label=req.monk_label,
             style_persona=req.style_persona,
             vibe=req.vibe,
+            include_accessories=req.include_accessories,
             lat=req.lat,
             lon=req.lon,
             custom_weights=custom_weights,
