@@ -17,7 +17,7 @@ import logging
 
 from app.database import get_db, SessionLocal
 from app.auth.router import get_current_user
-from app.wardrobe.models import User, ClothingItem
+from app.wardrobe.models import User, ClothingItem, BodyScan
 from app.wardrobe.s3 import upload_file_to_s3, get_image_url
 from app.wardrobe.utils import validate_image, calculate_sustainability_score
 from app.auth.partners import get_optional_partner
@@ -194,6 +194,15 @@ class ClothingResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BodyScanResponse(BaseModel):
+    id: uuid.UUID
+    image_url: str
+    body_mapping: Optional[dict] = None
+    created_at: str 
+
+    model_config = {"from_attributes": True}
+
+
 class ClothingUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
@@ -202,6 +211,96 @@ class ClothingUpdate(BaseModel):
     season: Optional[str] = None
     occasion_tags: Optional[List[str]] = None
     is_favourite: Optional[bool] = None
+
+
+@router.post("/body-scan", response_model=BodyScanResponse)
+async def upload_body_scan(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Uploads a full-body photo and analyzes segments for try-on."""
+    contents = await file.read()
+    validate_image(file, contents)
+
+    # 1. Analyze via AI Service
+    try:
+        files = {"file": (file.filename, contents, file.content_type)}
+        response = requests.post(f"{AI_SERVICE_URL}/analyze-body-segments", files=files, timeout=30)
+        analysis = response.json() if response.status_code == 200 else {}
+    except Exception as e:
+        logger.error(f"AI Service error for body scan: {e}")
+        analysis = {}
+
+    # 2. Upload to S3
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    s3_key = f"scans/{current_user.id}/{uuid.uuid4()}.{ext}"
+    upload_file_to_s3(contents, s3_key, file.content_type)
+
+    # 3. Save to DB
+    new_scan = BodyScan(
+        user_id=current_user.id,
+        image_url=s3_key,
+        body_mapping=analysis.get("body_map")
+    )
+    db.add(new_scan)
+    db.commit()
+    db.refresh(new_scan)
+    
+    return {
+        "id": new_scan.id,
+        "image_url": get_image_url(new_scan.image_url),
+        "body_mapping": new_scan.body_mapping,
+        "created_at": new_scan.created_at.isoformat()
+    }
+
+
+@router.get("/body-scans", response_model=List[BodyScanResponse])
+def list_body_scans(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    scans = db.query(BodyScan).filter(BodyScan.user_id == current_user.id).order_by(BodyScan.created_at.desc()).all()
+    results = []
+    for s in scans:
+        results.append({
+            "id": s.id,
+            "image_url": get_image_url(s.image_url),
+            "body_mapping": s.body_mapping,
+            "created_at": s.created_at.isoformat()
+        })
+    return results
+
+
+@router.get("/items/{item_id}/try-on-mask")
+async def get_item_try_on_mask(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns a transparent PNG of the clothing item for AR overlay."""
+    item = db.query(ClothingItem).filter(ClothingItem.id == item_id, ClothingItem.owner_id == current_user.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    # Download from S3
+    from app.wardrobe.s3 import s3_client
+    BUCKET = os.getenv("S3_BUCKET", "daily-style-vault")
+    try:
+        obj = s3_client.get_object(Bucket=BUCKET, Key=item.image_url)
+        img_bytes = obj['Body'].read()
+
+        files = {"file": ("item.jpg", img_bytes, "image/jpeg")}
+        response = requests.post(f"{AI_SERVICE_URL}/analyze-clothing-heavy", files=files, timeout=20)
+        detections = response.json().get("detections", [])
+        
+        if not detections:
+            raise HTTPException(status_code=400, detail="Could not isolate item.")
+            
+        return {"transparent_b64": detections[0]["processed_image_b64"], "category": detections[0]["category"]}
+    except Exception as e:
+        logger.error(f"Try-on mask error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate try-on mask.")
 
 
 @router.patch("/items/{item_id}", response_model=ClothingResponse)

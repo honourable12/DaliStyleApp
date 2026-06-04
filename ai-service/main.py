@@ -69,6 +69,21 @@ async def analyze_skin(file: UploadFile = File(...)):
     return analyze_skin_tone(contents)
 
 
+@app.post("/analyze-body-segments")
+async def analyze_body_segments(file: UploadFile = File(...)):
+    """Segments a full body photo into regions for virtual try-on overlay."""
+    contents = await file.read()
+    detections = analyze_clothing_heavy(contents)
+    
+    body_map = {det["detected_region"]: det for det in detections if det.get("detected_region")}
+    
+    return {
+        "body_map": body_map,
+        "raw_count": len(detections),
+        "message": "Body segments extracted for try-on Studio."
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "healthy"}

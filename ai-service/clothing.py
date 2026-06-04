@@ -190,14 +190,14 @@ def analyze_clothing_fast(image_bytes: bytes) -> dict:
                 img_emb = _clip_model.visual_projection(img_emb)
             img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
             logits = (img_emb @ _validation_embeddings.T) * 100
-            probs = logits.softmax(dim=-1)[0].cpu().numpy()
+            probs = logits.softmax(dim=-1)[0].detach().cpu().numpy()
 
         # Index 3 is "something else"
         is_clothing = bool(probs[3] < 0.5 and (probs[0] + probs[1] + probs[2]) > 0.5)
 
         # Quick Category Prediction
         logits_c = (img_emb @ _text_embeddings.T) * 100
-        probs_c = logits_c.softmax(dim=-1)[0].cpu().numpy()
+        probs_c = logits_c.softmax(dim=-1)[0].detach().cpu().numpy()
         c_idx = int(np.argmax(probs_c))
         rough_category = CLOTHING_CATEGORIES[c_idx]
     else:
@@ -402,7 +402,7 @@ def analyze_clothing_heavy(image_bytes: bytes) -> list[dict]:
 
 
 def _process_single_mask(
-    img_rgb: np.ndarray, mask: np.ndarray, is_clean_bg: bool, region: str = None
+    img_rgb: np.ndarray, mask: np.ndarray, is_clean_bg: bool, region: str = None, return_transparent: bool = True
 ) -> dict:
     """Internal helper to process an isolated segment."""
     h_orig, w_orig = img_rgb.shape[:2]
@@ -418,21 +418,27 @@ def _process_single_mask(
         crop_img = img_rgb
         crop_mask = np.full((h_orig, w_orig), 255, dtype=np.uint8)
 
-    # Background Removal on Crop
+    # 1. Image for CLIP Analysis (White Background)
     white_bg = np.full(crop_img.shape, 255, dtype=np.uint8)
     mask_3d = cv2.cvtColor(crop_mask, cv2.COLOR_GRAY2BGR) / 255.0
-    processed = (crop_img * mask_3d + white_bg * (1 - mask_3d)).astype(np.uint8)
+    clip_input_processed = (crop_img * mask_3d + white_bg * (1 - mask_3d)).astype(np.uint8)
+    clip_input_img = cv2.resize(clip_input_processed, (224, 224), interpolation=cv2.INTER_AREA)
 
-    # Resize for CLIP
-    clip_input_img = cv2.resize(processed, (224, 224), interpolation=cv2.INTER_AREA)
-
-    # Encode processed image for response
-    _, buffer = cv2.imencode(
-        ".jpg",
-        cv2.cvtColor(processed, cv2.COLOR_RGB2BGR),
-        [cv2.IMWRITE_JPEG_QUALITY, 80],
-    )
-    processed_b64 = base64.b64encode(buffer).decode("utf-8")
+    # 2. Image for UI (Transparent Background)
+    if return_transparent:
+        # Create RGBA image
+        rgba = cv2.cvtColor(crop_img, cv2.COLOR_RGB2RGBA)
+        rgba[:, :, 3] = crop_mask
+        _, buffer = cv2.imencode(".png", cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGRA))
+        processed_b64 = base64.b64encode(buffer).decode("utf-8")
+    else:
+        # Standard white background JPEG
+        _, buffer = cv2.imencode(
+            ".jpg",
+            cv2.cvtColor(clip_input_processed, cv2.COLOR_RGB2BGR),
+            [cv2.IMWRITE_JPEG_QUALITY, 80],
+        )
+        processed_b64 = base64.b64encode(buffer).decode("utf-8")
 
     # Color analysis on mask pixels
     pixels = crop_img[crop_mask > 0]
@@ -458,11 +464,11 @@ def _process_single_mask(
 
         # Category
         logits_c = (img_emb @ _text_embeddings.T) * 100
-        probs_c = logits_c.softmax(dim=-1)[0].cpu().numpy()
+        probs_c = logits_c.softmax(dim=-1)[0].detach().cpu().numpy()
 
         # Pattern
         logits_p = (img_emb @ _pattern_embeddings.T) * 100
-        probs_p = logits_p.softmax(dim=-1)[0].cpu().numpy()
+        probs_p = logits_p.softmax(dim=-1)[0].detach().cpu().numpy()
 
     c_idx = int(np.argmax(probs_c))
     p_idx = int(np.argmax(probs_p))

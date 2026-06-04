@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { User, LogOut, Shirt, Sparkles, BookOpen } from "lucide-react";
+import { User, LogOut, Shirt, Sparkles, BookOpen, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from "./Logo";
 
@@ -24,6 +24,7 @@ export default function ClientLayout({ children }) {
 
   const navItems = [
     { name: "Daily", href: "/daily", icon: <Sparkles size={14} /> },
+    { name: "Fitting Room", href: "/try-on", icon: <Camera size={14} /> },
     { name: "Closet", href: "/wardrobe", icon: <Shirt size={14} /> },
     { name: "Lookbook", href: "/lookbook", icon: <BookOpen size={14} /> },
   ];
@@ -102,6 +103,9 @@ export default function ClientLayout({ children }) {
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] md:hidden w-[90%] max-w-sm glass-card bg-fashion-charcoal text-white px-2 py-2 flex items-center justify-around shadow-2xl rounded-[32px] border border-white/10">
           <Link href="/daily" className={`flex flex-col items-center p-3 rounded-2xl transition-all ${pathname === '/daily' ? 'bg-white/10 text-fashion-gold' : 'text-white/60'}`}>
             <Sparkles size={22} strokeWidth={pathname === '/daily' ? 2.5 : 1.5} />
+          </Link>
+          <Link href="/try-on" className={`flex flex-col items-center p-3 rounded-2xl transition-all ${pathname === '/try-on' ? 'bg-white/10 text-fashion-gold' : 'text-white/60'}`}>
+            <Camera size={22} strokeWidth={pathname === '/try-on' ? 2.5 : 1.5} />
           </Link>
           <Link href="/wardrobe" className={`flex flex-col items-center p-3 rounded-2xl transition-all ${pathname === '/wardrobe' ? 'bg-white/10 text-fashion-gold' : 'text-white/60'}`}>
             <Shirt size={22} strokeWidth={pathname === '/wardrobe' ? 2.5 : 1.5} />

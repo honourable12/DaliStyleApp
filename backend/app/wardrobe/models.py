@@ -22,6 +22,19 @@ class User(Base):
 
     items = relationship("ClothingItem", back_populates="owner")
     outfits = relationship("Outfit", back_populates="user")
+    body_scans = relationship("BodyScan", back_populates="user", cascade="all, delete-orphan")
+
+
+class BodyScan(Base):
+    __tablename__ = "body_scans"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    image_url = Column(String, nullable=False)
+    body_mapping = Column(JSON, nullable=True) 
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="body_scans")
 
 
 class Partner(Base):
