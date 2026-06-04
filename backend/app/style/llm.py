@@ -7,20 +7,29 @@ note_cache = TTLCache(maxsize=500, ttl=86400)
 
 @cached(cache=note_cache)
 def generate_styling_note(
-    skin_tone_name: str, top_color: str, bottom_color: str, category: str
+    skin_tone_name: str, 
+    top_color: str, 
+    bottom_color: str, 
+    context: str,
+    brand: str = None,
+    material: str = None
 ):
+    brand_context = f" featuring {brand}" if brand else ""
+    material_context = f" crafted from {material}" if material else ""
+    
     prompt = f"""
-    You are a professional fashion stylist. 
+    You are a professional high-fashion stylist for the Daily Style movement. 
     The user has a '{skin_tone_name}' skin tone (Monk Scale).
-    You have selected an outfit for them:
-    - Top: {top_color} {category}
+    You have curated an outfit{brand_context}{material_context}:
+    - Top: {top_color} {context}
     - Bottom: {bottom_color}
     
-    Briefly explain in 2 sentences why this combination works for their skin tone and the aesthetic vibe it creates.
-    Be encouraging and chic.
+    Explain in 2 chic sentences why this combination works. 
+    Mention the color synergy with their skin tone and the aesthetic appeal of the {material if material else 'composition'}.
+    Be encouraging, sophisticated, and brief.
     """
 
-    HOST = os.getenv("HOST", "http://127.0.0.1:11434")
+    HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     try:
         response = requests.post(
             f"{HOST}/api/generate",

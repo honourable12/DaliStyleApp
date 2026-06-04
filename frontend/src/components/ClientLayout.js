@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { User, LogOut, Shirt, Sparkles, BookOpen, Home as HomeIcon, Code } from "lucide-react";
+import { User, LogOut, Shirt, Sparkles, BookOpen } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Logo from "./Logo";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
@@ -32,8 +33,11 @@ export default function ClientLayout({ children }) {
       {/* Desktop Header */}
       <header className="sticky top-0 md:top-5 z-50 px-0 md:px-5">
         <nav className="mx-auto max-w-6xl md:glass-card bg-white md:bg-white/80 px-6 py-4 flex items-center justify-between shadow-sm md:shadow-xl border-b md:border border-black/5">
-          <Link href="/" className="font-serif text-xl tracking-[0.2em] font-bold text-fashion-charcoal">
-            DAILY STYLE
+          <Link href="/" className="flex items-center gap-2 group">
+            <Logo className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" color="#C5A059" />
+            <span className="font-serif text-xl tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
+              Daily Style
+            </span>
           </Link>
           
           {/* Desktop Nav */}

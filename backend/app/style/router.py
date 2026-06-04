@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.auth.router import get_current_user
 from app.wardrobe.models import User, ClothingItem, Outfit
-from app.style.engine import compute_daily_look
+from app.style.engine import generate_studio_looks
 from app.auth.partners import get_partner
 from app.wardrobe.models import Partner
 
@@ -36,18 +36,36 @@ class StylingRequest(BaseModel):
     monk_label: str = "MST-5"
     style_persona: str = "Minimalist"
     vibe: str = "Casual"
-    include_accessories: bool = False
+    item_count: int = 3
     lat: Optional[float] = None
     lon: Optional[float] = None
 
 
 class ClothingMinResponse(BaseModel):
-    id: str
+    id: int
     name: str
     category: str
     color_primary: str
     image_url: str
+    brand: Optional[str] = None
+    material: Optional[str] = None
+    sustainability_score: int = 0
     model_config = {"from_attributes": True}
+
+
+class LookResponse(BaseModel):
+    items: List[ClothingMinResponse]
+    stylist_note: str
+    harmony_score: float
+    sustainability_impact: float
+    weather_context: str
+    occasion: str
+
+
+class OutfitCreate(BaseModel):
+    occasion: str
+    clothing_ids: List[int]
+    llm_reason: str
 
 
 class OutfitResponse(BaseModel):
@@ -58,22 +76,6 @@ class OutfitResponse(BaseModel):
     items: List[ClothingMinResponse]
     model_config = {"from_attributes": True}
 
-
-class LookResponse(BaseModel):
-    top: dict
-    bottom: dict
-    accessory: Optional[dict] = None
-    stylist_note: str
-    harmony_score: float
-    weather_context: str
-    persona_applied: str
-    recommended_persona: Optional[str] = None
-
-
-class OutfitCreate(BaseModel):
-    occasion: str
-    clothing_ids: List[int]
-    llm_reason: str
 
 
 @router.get("/wardrobe-iq")
@@ -111,11 +113,12 @@ def get_wardrobe_iq(
         "total_items": len(items),
     }
 
+    
 
-@router.get("/daily-look", response_model=LookResponse)
+@router.get("/daily-look", response_model=List[LookResponse])
 def get_daily_look(
     vibe: str = "Casual",
-    include_accessories: bool = False,
+    item_count: int = 3,
     lat: Optional[float] = None,
     lon: Optional[float] = None,
     db: Session = Depends(get_db),
@@ -135,14 +138,18 @@ def get_daily_look(
 
     wardrobe_dicts = [
         {
-            "id": str(i.id),
+            "id": i.id,
             "name": i.name,
             "category": i.category,
             "pattern": i.pattern,
             "color_primary": i.color_primary,
-            "color": i.color_primary,
             "image_url": i.image_url,
             "is_favourite": i.is_favourite,
+            "brand": i.brand,
+            "material": i.material,
+            "season": i.season,
+            "occasion_tags": i.occasion_tags,
+            "sustainability_score": i.sustainability_score,
         }
         for i in items
     ]
@@ -152,14 +159,14 @@ def get_daily_look(
     monk_label = metadata.get("monk_label", "MST-5")
 
     try:
-        result = compute_daily_look(
+        results = generate_studio_looks(
             items=wardrobe_dicts,
             skin_type=current_user.skin_type,
             skin_hex=skin_hex,
             monk_label=monk_label,
             style_persona=current_user.style_persona or "Minimalist",
-            vibe=vibe,
-            include_accessories=include_accessories,
+            occasion=vibe,
+            item_count=item_count,
             lat=lat,
             lon=lon,
         )
@@ -169,15 +176,15 @@ def get_daily_look(
 
     from app.wardrobe.s3 import get_image_url
 
-    result["top"]["image_url"] = get_image_url(result["top"]["image_url"])
-    result["bottom"]["image_url"] = get_image_url(result["bottom"]["image_url"])
-    if result.get("accessory"):
-        result["accessory"]["image_url"] = get_image_url(result["accessory"]["image_url"])
+    # Enrich image URLs in results
+    for look in results:
+        for item in look["items"]:
+            item["image_url"] = get_image_url(item["image_url"])
 
-    return result
+    return results
 
 
-@router.post("/engine/look", response_model=LookResponse)
+@router.post("/engine/look", response_model=List[LookResponse])
 def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partner)):
     """
     Stateless styling engine for external partners.
@@ -190,14 +197,14 @@ def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partne
     custom_weights = partner.settings if partner.settings else None
 
     try:
-        result = compute_daily_look(
+        results = generate_studio_looks(
             items=wardrobe_dicts,
             skin_type=req.skin_type,
             skin_hex=req.skin_hex,
             monk_label=req.monk_label,
             style_persona=req.style_persona,
-            vibe=req.vibe,
-            include_accessories=req.include_accessories,
+            occasion=req.vibe,
+            item_count=req.item_count,
             lat=req.lat,
             lon=req.lon,
             custom_weights=custom_weights,
@@ -205,7 +212,7 @@ def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partne
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    return result
+    return results
 
 
 @router.post("/outfits")
@@ -226,7 +233,7 @@ def save_outfit(
     return new_outfit
 
 
-@router.get("/outfits")
+@router.get("/outfits", response_model=List[OutfitResponse])
 def list_outfits(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):

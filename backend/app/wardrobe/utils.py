@@ -52,3 +52,28 @@ def validate_image(file: UploadFile, content: bytes):
         )
 
     return True
+
+def calculate_sustainability_score(material: str) -> int:
+    """
+    Calculates a sustainability score (0-100) based on the material.
+    In a real-world scenario, this would be a complex lookup table.
+    """
+    if not material:
+        return 0
+    
+    m = material.lower()
+    
+    # Premium Sustainable Materials
+    if any(x in m for x in ["organic cotton", "hemp", "linen", "tencel", "lyocell", "recycled"]):
+        return 90
+    
+    # Natural Materials
+    if any(x in m for x in ["cotton", "wool", "silk", "cashmere"]):
+        return 60
+    
+    # Synthetics
+    if any(x in m for x in ["polyester", "nylon", "acrylic", "spandex", "elastane"]):
+        return 20
+    
+    # Default/Unknown
+    return 40

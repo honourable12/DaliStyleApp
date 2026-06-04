@@ -89,6 +89,15 @@ class ClothingItem(Base):
     color_secondary = Column(String, nullable=True)
     image_url = Column(String)
     is_favourite = Column(Boolean, default=False)
+    
+    # New Digital Vault Fields
+    brand = Column(String, nullable=True)
+    material = Column(String, nullable=True)
+    sustainability_score = Column(Integer, default=0)
+    season = Column(String, default="All-Season")  # Spring, Summer, Autumn, Winter, All-Season
+    occasion_tags = Column(JSON, default=list)  # ["Work", "Casual", etc.]
+    purchase_date = Column(DateTime(timezone=True), nullable=True)
+
     partner_id = Column(
         UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
     )

@@ -19,7 +19,7 @@ from app.database import get_db, SessionLocal
 from app.auth.router import get_current_user
 from app.wardrobe.models import User, ClothingItem
 from app.wardrobe.s3 import upload_file_to_s3, get_image_url
-from app.wardrobe.utils import validate_image
+from app.wardrobe.utils import validate_image, calculate_sustainability_score
 from app.auth.partners import get_optional_partner
 from app.wardrobe.models import Partner
 from pydantic import BaseModel
@@ -185,10 +185,54 @@ class ClothingResponse(BaseModel):
     color_primary: str
     image_url: str
     is_favourite: bool
+    brand: Optional[str] = None
+    material: Optional[str] = None
+    sustainability_score: int = 0
+    season: str = "All-Season"
+    occasion_tags: List[str] = []
+    
     model_config = {"from_attributes": True}
 
 
-@router.post("/upload", response_model=ClothingResponse)
+class ClothingUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    brand: Optional[str] = None
+    material: Optional[str] = None
+    season: Optional[str] = None
+    occasion_tags: Optional[List[str]] = None
+    is_favourite: Optional[bool] = None
+
+
+@router.patch("/items/{item_id}", response_model=ClothingResponse)
+def update_item(
+    item_id: int,
+    update_data: ClothingUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(ClothingItem)
+        .filter(ClothingItem.id == item_id, ClothingItem.owner_id == current_user.id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    obj_data = update_data.model_dump(exclude_unset=True)
+    for key, value in obj_data.items():
+        setattr(item, key, value)
+    
+    # Calculate sustainability score if material is updated
+    if "material" in obj_data:
+        item.sustainability_score = calculate_sustainability_score(obj_data["material"]) 
+
+    db.commit()
+    db.refresh(item)
+    item.image_url = get_image_url(item.image_url)
+    return item
+
+    
 async def upload_item(
     background_tasks: BackgroundTasks,
     name: str = Form(...),

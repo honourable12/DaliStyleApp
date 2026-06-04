@@ -12,10 +12,10 @@ const fetcher = url => client.get(url).then(res => res.data);
 
 const getCategoryType = (cat) => {
   const c = cat.toLowerCase();
-  if (['t-shirt', 'shirt', 'sweater', 'hoodie', 'top'].includes(c)) return 'top';
-  if (['jacket', 'coat', 'outerwear'].includes(c)) return 'outerwear';
-  if (['trousers', 'jeans', 'shorts', 'skirt', 'bottom'].includes(c)) return 'bottom';
-  if (['sneakers', 'boots', 'formal shoes', 'sandals', 'shoes'].includes(c)) return 'shoes';
+  if (['t-shirt', 'shirt', 'sweater', 'hoodie', 'top', 'blouse'].includes(c)) return 'top';
+  if (['jacket', 'coat', 'outerwear', 'blazer'].includes(c)) return 'outerwear';
+  if (['trousers', 'jeans', 'shorts', 'skirt', 'bottom', 'pants'].includes(c)) return 'bottom';
+  if (['sneakers', 'boots', 'formal shoes', 'sandals', 'shoes', 'heels'].includes(c)) return 'shoes';
   return 'accessory';
 };
 
@@ -24,16 +24,17 @@ const hexToHsl = (hex) => {
   let r = parseInt(hex.slice(1, 3), 16) / 255;
   let g = parseInt(hex.slice(3, 5), 16) / 255;
   let b = parseInt(hex.slice(5, 7), 16) / 255;
-  let max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h, s, l = (max + min) / 2;
   if (max === min) h = s = 0;
   else {
-    let d = max - min;
+    const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
       case r: h = (g - b) / d + (g < b ? 6 : 0); break;
       case g: h = (b - r) / d + 2; break;
       case b: h = (r - g) / d + 4; break;
+      default: break;
     }
     h /= 6;
   }
@@ -51,6 +52,9 @@ const calculateHarmony = (items) => {
   return 60;
 };
 
+const SEASONS = ["Spring", "Summer", "Autumn", "Winter", "All-Season"];
+const OCCASIONS = ["Casual", "Work", "Date Night", "Evening", "Sport", "Formal", "Vacation"];
+
 export default function Wardrobe() {
   const { data: items = [], isLoading } = useSWR('/wardrobe/items', fetcher, {
     revalidateOnFocus: false,
@@ -59,9 +63,27 @@ export default function Wardrobe() {
 
   const [workbench, setWorkbench] = useState([]);
   const [showWorkbench, setShowWorkbench] = useState(false);
+  const [showInsights, setShowWorkbenchInsights] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [activeCategory, setActiveCategory] = useState("All");
+  
+  // Management State
+  const [editingItem, setEditingItem] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Insights Calculation
+  const sustainabilityRatio = items.length > 0 
+    ? Math.round((items.filter(i => i.sustainability_score > 60).length / items.length) * 100) 
+    : 0;
+
+  const topMaterials = items.length > 0
+    ? Object.entries(items.reduce((acc, i) => {
+        if (i.material) acc[i.material] = (acc[i.material] || 0) + 1;
+        return acc;
+      }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    : [];
+
   const fileInputRef = useRef(null);
 
   const categories = ["All", "Tops", "Bottoms", "Shoes", "Accessories"];
@@ -70,6 +92,37 @@ export default function Wardrobe() {
   const showStatus = (type, message) => {
     setStatus({ type, message });
     setTimeout(() => setStatus({ type: "", message: "" }), 3000);
+  };
+
+  const handleUpdateItem = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    try {
+      const response = await client.patch(`/wardrobe/items/${editingItem.id}`, {
+        name: editingItem.name,
+        category: editingItem.category,
+        brand: editingItem.brand,
+        material: editingItem.material,
+        season: editingItem.season,
+        occasion_tags: editingItem.occasion_tags,
+      });
+      mutate('/wardrobe/items');
+      setEditingItem(null);
+      showStatus("success", "Vault updated.");
+    } catch (err) {
+      showStatus("error", "Update failed.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const toggleOccasion = (tag) => {
+    const current = editingItem.occasion_tags || [];
+    if (current.includes(tag)) {
+      setEditingItem({ ...editingItem, occasion_tags: current.filter(t => t !== tag) });
+    } else {
+      setEditingItem({ ...editingItem, occasion_tags: [...current, tag] });
+    }
   };
 
   const handleUpload = async (e) => {
@@ -241,7 +294,51 @@ export default function Wardrobe() {
               {cat.toUpperCase()}
             </button>
           ))}
+          <button
+            onClick={() => setShowWorkbenchInsights(!showInsights)}
+            className={`shrink-0 px-8 py-3 rounded-full text-[10px] font-bold tracking-widest transition-all ${
+              showInsights
+                ? "bg-fashion-gold text-white shadow-xl"
+                : "bg-white text-fashion-gold border border-fashion-gold/20"
+            }`}
+          >
+            VAULT INSIGHTS
+          </button>
         </div>
+
+        <AnimatePresence>
+          {showInsights && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-12 px-2"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-8 rounded-[32px] border border-black/5 shadow-sm">
+                  <p className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase mb-4">Sustainability Ratio</p>
+                  <div className="flex items-end gap-3">
+                    <span className="text-6xl font-serif italic text-fashion-charcoal">{sustainabilityRatio}%</span>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase mb-2">Eco-Conscious</span>
+                  </div>
+                </div>
+                <div className="bg-white p-8 rounded-[32px] border border-black/5 shadow-sm col-span-2">
+                  <p className="text-[10px] font-bold tracking-widest text-fashion-muted uppercase mb-4">Top Materials in Vault</p>
+                  <div className="flex flex-wrap gap-4">
+                    {topMaterials.length > 0 ? topMaterials.map(([mat, count]) => (
+                      <div key={mat} className="flex flex-col">
+                        <span className="text-2xl font-serif italic text-fashion-charcoal">{mat}</span>
+                        <span className="text-[10px] font-bold text-fashion-gold uppercase">{count} PIECES</span>
+                      </div>
+                    )) : (
+                      <p className="text-fashion-muted font-light italic text-sm">Add material details to see insights.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {isLoading && items.length === 0 ? (
           <WardrobeSkeleton />
@@ -266,25 +363,33 @@ export default function Wardrobe() {
                   />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
                     <button
-                      onClick={() => addToWorkbench(item)}
-                      className="bg-white text-black text-[10px] font-bold px-6 py-2 rounded-full shadow-2xl hover:bg-fashion-gold hover:text-white transition-all"
+                      onClick={() => setEditingItem(item)}
+                      className="bg-white text-black text-[10px] font-bold px-6 py-2 rounded-full shadow-2xl hover:bg-fashion-gold hover:text-white transition-all uppercase tracking-widest"
                     >
-                      BUILD
+                      Vault Details
                     </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-white/60 hover:text-red-500 transition-colors p-2"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => addToWorkbench(item)}
+                        className="bg-fashion-navy text-white p-2 rounded-full shadow-lg hover:bg-black transition-all"
+                      >
+                        <Plus size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="bg-white/20 backdrop-blur-md text-white p-2 rounded-full shadow-lg hover:bg-red-500 transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   <div
                     className="absolute top-4 right-4 w-5 h-5 rounded-full border-2 border-white shadow-md"
                     style={{ backgroundColor: item.color_primary }}
                   />
-                  {item.pattern && item.pattern !== "solid" && (
-                    <div className="absolute top-4 left-4 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-full text-[7px] font-bold uppercase tracking-widest text-fashion-charcoal border border-black/5 shadow-sm">
-                      {item.pattern}
+                  {item.sustainability_score > 70 && (
+                    <div className="absolute top-4 left-4 px-2 py-0.5 bg-emerald-500 text-white rounded-full text-[7px] font-bold uppercase tracking-widest shadow-sm">
+                      Eco Choice
                     </div>
                   )}
                 </div>
@@ -384,6 +489,117 @@ export default function Wardrobe() {
 
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingItem && (
+          <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[40px] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+            >
+              {/* Image Section */}
+              <div className="relative w-full md:w-1/2 aspect-square md:aspect-auto bg-fashion-bg">
+                <Image src={editingItem.image_url} alt={editingItem.name} fill className="object-cover" />
+                <div className="absolute top-6 left-6 flex flex-col gap-2">
+                   <div className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-[10px] font-bold uppercase tracking-widest text-fashion-charcoal">
+                     {editingItem.category}
+                   </div>
+                   {editingItem.sustainability_score > 0 && (
+                     <div className={`px-4 py-2 rounded-full shadow-sm text-[10px] font-bold uppercase tracking-widest text-white ${editingItem.sustainability_score > 70 ? 'bg-emerald-500' : 'bg-fashion-gold'}`}>
+                       Impact: {editingItem.sustainability_score}
+                     </div>
+                   )}
+                </div>
+              </div>
+
+              {/* Form Section */}
+              <div className="flex-1 overflow-y-auto p-8 md:p-12">
+                <div className="flex justify-between items-start mb-10">
+                  <div>
+                    <h2 className="text-4xl font-serif italic text-fashion-charcoal mb-2">Vault Details</h2>
+                    <p className="text-[10px] font-bold tracking-[0.3em] text-fashion-muted uppercase">Management Tool</p>
+                  </div>
+                  <button onClick={() => setEditingItem(null)} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={20}/></button>
+                </div>
+
+                <form onSubmit={handleUpdateItem} className="space-y-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Item Name</label>
+                    <input 
+                      value={editingItem.name} 
+                      onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                      className="w-full bg-fashion-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-fashion-gold transition-all font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Brand</label>
+                      <input 
+                        placeholder="e.g. Prada"
+                        value={editingItem.brand || ""} 
+                        onChange={(e) => setEditingItem({...editingItem, brand: e.target.value})}
+                        className="w-full bg-fashion-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-fashion-gold transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Material</label>
+                      <input 
+                        placeholder="e.g. Silk"
+                        value={editingItem.material || ""} 
+                        onChange={(e) => setEditingItem({...editingItem, material: e.target.value})}
+                        className="w-full bg-fashion-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-fashion-gold transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Season</label>
+                    <div className="flex flex-wrap gap-2">
+                      {SEASONS.map(s => (
+                        <button 
+                          key={s} type="button"
+                          onClick={() => setEditingItem({...editingItem, season: s})}
+                          className={`px-5 py-2.5 rounded-full text-[10px] font-bold tracking-widest transition-all ${editingItem.season === s ? 'bg-fashion-charcoal text-white' : 'bg-fashion-bg text-fashion-muted hover:bg-black/5'}`}
+                        >
+                          {s.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Occasions</label>
+                    <div className="flex flex-wrap gap-2">
+                      {OCCASIONS.map(o => (
+                        <button 
+                          key={o} type="button"
+                          onClick={() => toggleOccasion(o)}
+                          className={`px-5 py-2.5 rounded-full text-[10px] font-bold tracking-widest transition-all ${editingItem.occasion_tags?.includes(o) ? 'bg-fashion-gold text-white' : 'bg-fashion-bg text-fashion-muted hover:bg-black/5'}`}
+                        >
+                          {o.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 flex gap-4">
+                    <button 
+                      type="submit" 
+                      disabled={isUpdating}
+                      className="flex-1 bg-fashion-charcoal text-white py-5 rounded-full font-bold text-xs tracking-[0.2em] hover:bg-black transition-all shadow-xl disabled:opacity-50"
+                    >
+                      {isUpdating ? "UPDATING VAULT..." : "SAVE TO VAULT"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
