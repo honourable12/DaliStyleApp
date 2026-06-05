@@ -111,14 +111,48 @@ class ClothingItem(Base):
     occasion_tags = Column(JSON, default=list)  # ["Work", "Casual", etc.]
     purchase_date = Column(DateTime(timezone=True), nullable=True)
 
+    is_shoppable = Column(Boolean, default=False)
+    purchase_url = Column(String, nullable=True)
+    price = Column(Integer, nullable=True)
+
     partner_id = Column(
         UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True, index=True
     )
-
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
-    owner = relationship("User", back_populates="items")
-
     metadata_ai = Column(JSON, nullable=True)
+
+    owner = relationship("User", back_populates="items")
+    partner = relationship("Partner")
+
+
+class FeedPost(Base):
+    __tablename__ = "feed_posts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    outfit_id = Column(UUID(as_uuid=True), ForeignKey("outfits.id"), nullable=True)
+    item_id = Column(Integer, ForeignKey("clothing_items.id"), nullable=True)
+
+    caption = Column(String, nullable=True)
+    post_type = Column(String, default="outfit")
+    is_featured = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+    outfit = relationship("Outfit")
+    item = relationship("ClothingItem")
+    likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
+
+
+class Like(Base):
+    __tablename__ = "likes"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    post_id = Column(UUID(as_uuid=True), ForeignKey("feed_posts.id"), index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("FeedPost", back_populates="likes")
 
 
 class Outfit(Base):

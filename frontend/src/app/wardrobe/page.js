@@ -105,6 +105,9 @@ export default function Wardrobe() {
         material: editingItem.material,
         season: editingItem.season,
         occasion_tags: editingItem.occasion_tags,
+        is_shoppable: editingItem.is_shoppable,
+        purchase_url: editingItem.purchase_url,
+        price: editingItem.price
       });
       mutate('/wardrobe/items');
       setEditingItem(null);
@@ -585,6 +588,48 @@ export default function Wardrobe() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Smart Shopping Section */}
+                  <div className="pt-6 border-t border-black/5 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-fashion-charcoal">Smart Shopping</h4>
+                        <p className="text-[8px] text-fashion-muted">Enable partner brand links</p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setEditingItem({...editingItem, is_shoppable: !editingItem.is_shoppable})}
+                        className={`w-12 h-6 rounded-full transition-all relative ${editingItem.is_shoppable ? 'bg-emerald-500' : 'bg-fashion-bg'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editingItem.is_shoppable ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    {editingItem.is_shoppable && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Price (Cents)</label>
+                            <input 
+                              type="number"
+                              value={editingItem.price || ""} 
+                              onChange={(e) => setEditingItem({...editingItem, price: parseInt(e.target.value)})}
+                              className="w-full bg-fashion-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-fashion-gold transition-all"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Affiliate Link</label>
+                            <input 
+                              value={editingItem.purchase_url || ""} 
+                              onChange={(e) => setEditingItem({...editingItem, purchase_url: e.target.value})}
+                              className="w-full bg-fashion-bg border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-fashion-gold transition-all"
+                              placeholder="https://brand.com/..."
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
 
                   <div className="pt-6 flex gap-4">

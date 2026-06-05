@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import { Sparkles, RefreshCw, Save, Info, CloudRain, Sun, Thermometer, TrendingUp, Briefcase, Coffee, Music, ShieldAlert } from "lucide-react";
+import { Sparkles, RefreshCw, Save, Info, CloudRain, Sun, Thermometer, TrendingUp, Briefcase, Coffee, Music, ShieldAlert, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
@@ -85,6 +85,24 @@ export default function DailyLook() {
       showStatus("success", "Saved to Lookbook!");
     } catch (err) {
       showStatus("error", "Failed to save look.");
+    }
+  };
+
+  const handleShareLook = async (look) => {
+    try {
+      const res = await client.post("/style/outfits", {
+        occasion: `${occasion} Studio Look`,
+        clothing_ids: look.items.map(i => i.id),
+        llm_reason: look.stylist_note
+      });
+      
+      await client.post("/social/share", {
+        outfit_id: res.data.id,
+        caption: `My curated ${occasion} look from the Daily Style Studio.`
+      });
+      showStatus("success", "Shared to Style Feed!");
+    } catch (err) {
+      showStatus("error", "Failed to share look.");
     }
   };
 
@@ -248,16 +266,22 @@ export default function DailyLook() {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <button 
                 onClick={() => handleSaveLook(focusedLook)} 
-                className="flex-1 flex items-center justify-center gap-3 py-5 bg-fashion-charcoal text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-2xl"
+                className="w-full flex items-center justify-center gap-3 py-5 bg-fashion-charcoal text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl"
               >
                 <Save size={16} /> SAVE TO LOOKBOOK
               </button>
               <button 
+                onClick={() => handleShareLook(focusedLook)} 
+                className="w-full flex items-center justify-center gap-3 py-5 bg-fashion-gold text-white rounded-full font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl"
+              >
+                <Share2 size={16} /> SHARE TO FEED
+              </button>
+              <button 
                 onClick={() => mutate(`/style/daily-look?vibe=${occasion}&item_count=${complexity}`)} 
-                className="w-20 flex items-center justify-center border border-black/10 text-fashion-charcoal rounded-full hover:bg-fashion-bg transition-all bg-white shadow-lg"
+                className="w-full flex items-center justify-center py-4 border border-black/10 text-fashion-charcoal rounded-full hover:bg-fashion-bg transition-all bg-white shadow-lg"
               >
                 <RefreshCw size={20} className={isValidating ? 'animate-spin' : ''} />
               </button>
