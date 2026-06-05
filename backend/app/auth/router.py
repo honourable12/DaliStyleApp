@@ -6,6 +6,7 @@ from jose import JWTError
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import time
+import os
 from uuid import UUID
 
 from app.database import get_db
@@ -73,6 +74,8 @@ WINDOW_SECONDS = 300
 
 
 def _check_rate_limit(identifier: str) -> None:
+    if os.getenv("TESTING") == "True":
+        return
     now = time.time()
     attempts = _login_attempts.get(identifier, [])
     attempts = [t for t in attempts if now - t < WINDOW_SECONDS]

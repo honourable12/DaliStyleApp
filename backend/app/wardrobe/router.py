@@ -332,6 +332,7 @@ def update_item(
     return item
 
     
+@router.post("/upload", response_model=ClothingResponse)
 async def upload_item(
     background_tasks: BackgroundTasks,
     name: str = Form(...),

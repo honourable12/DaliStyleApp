@@ -17,6 +17,9 @@ export default function StyleFeed() {
   });
 
   const [status, setStatus] = useState({ type: "", message: "" });
+  const [commentingPostId, setCommentingPostId] = useState(null);
+  const [commentContent, setCommentContent] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const showStatus = (type, message) => {
     setStatus({ type, message });
@@ -26,9 +29,27 @@ export default function StyleFeed() {
   const handleLike = async (postId) => {
     try {
       await client.post(`/social/like/${postId}`);
-      mutate('/social/feed'); // Optimistic update would be better, but this is safer for MVP
+      mutate('/social/feed');
     } catch (err) {
       showStatus("error", "Failed to interact.");
+    }
+  };
+
+  const handleAddComment = async (e, postId) => {
+    e.preventDefault();
+    if (!commentContent.trim()) return;
+    
+    setIsSubmittingComment(true);
+    try {
+      await client.post(`/social/posts/${postId}/comments`, { content: commentContent });
+      setCommentContent("");
+      setCommentingPostId(null);
+      mutate('/social/feed');
+      showStatus("success", "Comment added.");
+    } catch (err) {
+      showStatus("error", "Failed to comment.");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -50,7 +71,7 @@ export default function StyleFeed() {
         <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em] uppercase">COMMUNITY TRENDS & CURATED PIECES</p>
       </section>
 
-      <div className="space-y-16">
+      <div className="space-y-24">
         {posts.map((post) => (
           <motion.article 
             key={post.id}
@@ -59,7 +80,7 @@ export default function StyleFeed() {
             viewport={{ once: true }}
             className="group space-y-6"
           >
-            {/* Post Header */}
+            {/* ... rest of post header and content remains same ... */}
             <div className="flex items-center justify-between px-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-fashion-gold/10 text-fashion-gold flex items-center justify-center border border-fashion-gold/20">
@@ -75,7 +96,6 @@ export default function StyleFeed() {
               </button>
             </div>
 
-            {/* Post Content */}
             <div className="relative rounded-[40px] overflow-hidden bg-white border border-black/5 shadow-2xl transition-all duration-700 group-hover:shadow-fashion-gold/10">
               {post.post_type === "outfit" ? (
                 <div className="grid grid-cols-2 gap-1 bg-fashion-bg">
@@ -121,7 +141,6 @@ export default function StyleFeed() {
               )}
             </div>
 
-            {/* Post Actions */}
             <div className="px-4 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <button 
@@ -131,9 +150,12 @@ export default function StyleFeed() {
                   <Heart size={22} fill={post.has_liked ? "currentColor" : "none"} />
                   <span className="text-[10px] font-bold tracking-widest">{post.likes_count}</span>
                 </button>
-                <button className="text-fashion-muted hover:text-fashion-charcoal transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => setCommentingPostId(commentingPostId === post.id ? null : post.id)}
+                  className="text-fashion-muted hover:text-fashion-charcoal transition-colors flex items-center gap-2"
+                >
                   <MessageCircle size={22} />
-                  <span className="text-[10px] font-bold tracking-widest italic">CHIC</span>
+                  <span className="text-[10px] font-bold tracking-widest italic">{post.comments?.length || 0} CHIC</span>
                 </button>
                 <button className="text-fashion-muted hover:text-fashion-charcoal transition-colors">
                   <Share2 size={22} />
@@ -147,15 +169,49 @@ export default function StyleFeed() {
               )}
             </div>
 
-            {/* Caption */}
-            {post.caption && (
-              <div className="px-4">
+            {/* Caption & Comments */}
+            <div className="px-4 space-y-4">
+              {post.caption && (
                 <p className="text-sm font-light leading-relaxed text-fashion-muted">
                   <span className="font-bold text-fashion-charcoal mr-2 uppercase text-[10px] tracking-widest">{post.user.email.split('@')[0]}</span>
                   {post.caption}
                 </p>
+              )}
+
+              {/* Comments Section */}
+              <div className="space-y-3 pt-2">
+                {post.comments?.map((comment) => (
+                  <div key={comment.id} className="text-xs font-light text-fashion-muted">
+                    <span className="font-bold text-fashion-charcoal mr-2 uppercase text-[9px] tracking-widest">{comment.user.email.split('@')[0]}</span>
+                    {comment.content}
+                  </div>
+                ))}
               </div>
-            )}
+
+              {/* Comment Input */}
+              {commentingPostId === post.id && (
+                <motion.form 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onSubmit={(e) => handleAddComment(e, post.id)}
+                  className="flex gap-3 pt-2"
+                >
+                  <input 
+                    autoFocus
+                    placeholder="Add a chic comment..."
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    className="flex-1 bg-fashion-bg border-none rounded-full px-5 py-2 text-xs focus:ring-1 focus:ring-fashion-gold"
+                  />
+                  <button 
+                    disabled={isSubmittingComment || !commentContent.trim()}
+                    className="text-fashion-gold font-bold text-[10px] tracking-widest uppercase disabled:opacity-50"
+                  >
+                    POST
+                  </button>
+                </motion.form>
+              )}
+            </div>
           </motion.article>
         ))}
       </div>

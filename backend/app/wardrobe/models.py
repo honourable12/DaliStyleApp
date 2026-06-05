@@ -142,6 +142,20 @@ class FeedPost(Base):
     outfit = relationship("Outfit")
     item = relationship("ClothingItem")
     likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+    post_id = Column(UUID(as_uuid=True), ForeignKey("feed_posts.id"), index=True)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+    post = relationship("FeedPost", back_populates="comments")
 
 
 class Like(Base):

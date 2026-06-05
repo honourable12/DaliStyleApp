@@ -7,9 +7,10 @@ from sqlalchemy.orm import sessionmaker
 
 # Set testing environment variable BEFORE imports
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["TESTING"] = "True"
 
 from app.database import Base, get_db
-from app.main import app as fastapi_app
+from main import app as fastapi_app
 
 # Create test engine
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -26,8 +27,12 @@ def setup_database():
     yield
     # Drop tables after session
     Base.metadata.drop_all(bind=engine)
+    engine.dispose() # Ensure connections are closed
     if os.path.exists("./test.db"):
-        os.remove("./test.db")
+        try:
+            os.remove("./test.db")
+        except PermissionError:
+            pass
 
 
 @pytest.fixture
@@ -71,3 +76,29 @@ def client(db):
     fastapi_app.dependency_overrides.clear()
     app.database.SessionLocal = original_db_session_local
     app.auth.middleware.SessionLocal = original_middleware_session_local
+
+
+@pytest.fixture
+def test_user(db):
+    from app.wardrobe.models import User
+    from app.auth.utils import get_password_hash
+    user = User(
+        email="test@example.com",
+        hashed_password=get_password_hash("password123"),
+        is_active=True,
+        skin_type="MST-5"
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture
+def auth_headers(client):
+    response = client.post(
+        "/api/auth/login",
+        data={"username": "test@example.com", "password": "password123"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

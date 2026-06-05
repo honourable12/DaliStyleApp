@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.database import get_db
 from app.auth.router import get_current_user
-from app.wardrobe.models import User, ClothingItem, Outfit, FeedPost, Like
+from app.wardrobe.models import User, ClothingItem, Outfit, FeedPost, Like, Comment
 from app.wardrobe.s3 import get_image_url
 
 router = APIRouter(prefix="/social", tags=["social"])
@@ -36,6 +36,14 @@ class OutfitMinResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CommentResponse(BaseModel):
+    id: uuid.UUID
+    user: UserMinResponse
+    content: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
 class FeedPostResponse(BaseModel):
     id: uuid.UUID
     user: UserMinResponse
@@ -46,6 +54,7 @@ class FeedPostResponse(BaseModel):
     is_featured: bool
     likes_count: int
     has_liked: bool
+    comments: List[CommentResponse] = []
     created_at: datetime
     class Config:
         from_attributes = True
@@ -54,6 +63,9 @@ class ShareRequest(BaseModel):
     outfit_id: Optional[uuid.UUID] = None
     item_id: Optional[int] = None
     caption: Optional[str] = None
+
+class CommentCreate(BaseModel):
+    content: str
 
 @router.get("/feed", response_model=List[FeedPostResponse])
 def get_style_feed(
@@ -67,8 +79,6 @@ def get_style_feed(
         # Resolve images for outfit items
         outfit_data = None
         if post.outfit:
-            # We need to manually resolve URLs for the clothing items in the JSON list
-            # For simplicity in this mock-heavy MVP, we'll fetch the actual items
             db_items = db.query(ClothingItem).filter(ClothingItem.id.in_(post.outfit.clothing_ids)).all()
             items_res = []
             for i in db_items:
@@ -109,9 +119,46 @@ def get_style_feed(
             "is_featured": post.is_featured,
             "likes_count": len(post.likes),
             "has_liked": has_liked,
+            "comments": post.comments,
             "created_at": post.created_at
         })
     return results
+
+@router.post("/posts/{post_id}/comments", response_model=CommentResponse)
+def add_comment(
+    post_id: uuid.UUID,
+    comment_in: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    post = db.query(FeedPost).filter(FeedPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    new_comment = Comment(
+        user_id=current_user.id,
+        post_id=post_id,
+        content=comment_in.content
+    )
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+    return new_comment
+
+@router.delete("/comments/{comment_id}")
+def delete_comment(
+    comment_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.user_id == current_user.id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found or unauthorized")
+    
+    db.delete(comment)
+    db.commit()
+    return {"message": "Comment deleted"}
+
 
 @router.post("/share")
 def share_to_feed(
