@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # 1. Add fields to clothing_items
     with op.batch_alter_table('clothing_items', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('is_shoppable', sa.Boolean(), server_default=sa.text('0'), nullable=True))
+        batch_op.add_column(sa.Column('is_shoppable', sa.Boolean(), server_default=sa.text('false'), nullable=True))
         batch_op.add_column(sa.Column('purchase_url', sa.String(), nullable=True))
         batch_op.add_column(sa.Column('price', sa.Integer(), nullable=True))
 
@@ -32,7 +32,7 @@ def upgrade() -> None:
         sa.Column('item_id', sa.Integer(), nullable=True),
         sa.Column('caption', sa.String(), nullable=True),
         sa.Column('post_type', sa.String(), server_default='outfit', nullable=True),
-        sa.Column('is_featured', sa.Boolean(), server_default=sa.text('0'), nullable=True),
+        sa.Column('is_featured', sa.Boolean(), server_default=sa.text('false'), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
         sa.ForeignKeyConstraint(['item_id'], ['clothing_items.id'], ),
         sa.ForeignKeyConstraint(['outfit_id'], ['outfits.id'], ),
