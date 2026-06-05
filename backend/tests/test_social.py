@@ -1,4 +1,3 @@
-import pytest
 import uuid
 from app.wardrobe.models import User, ClothingItem, Outfit, FeedPost, Comment
 
@@ -22,7 +21,6 @@ def test_share_outfit_to_feed(client, db):
     user = db.query(User).filter(User.email == "share@test.com").first()
 
     # 2. Create items
-    from app.wardrobe.models import ClothingItem, Outfit
     item1 = ClothingItem(name="Test Top", category="top", color_primary="#000000", image_url="test1.jpg", owner_id=user.id)
     item2 = ClothingItem(name="Test Bottom", category="bottom", color_primary="#FFFFFF", image_url="test2.jpg", owner_id=user.id)
     db.add_all([item1, item2])
@@ -59,7 +57,6 @@ def test_like_post(client, db):
     user = db.query(User).filter(User.email == "like@test.com").first()
 
     # 2. Setup Post
-    from app.wardrobe.models import FeedPost
     post = FeedPost(user_id=user.id, caption="Like me", post_type="outfit")
     db.add(post)
     db.commit()
@@ -81,7 +78,6 @@ def test_comment_on_post(client, db):
     user = db.query(User).filter(User.email == "comment@test.com").first()
 
     # 2. Setup Post
-    from app.wardrobe.models import FeedPost
     post = FeedPost(user_id=user.id, caption="Comment on me", post_type="outfit")
     db.add(post)
     db.commit()
@@ -104,7 +100,6 @@ def test_delete_comment(client, db):
     user = db.query(User).filter(User.email == "del@test.com").first()
 
     # 2. Setup Post & Comment
-    from app.wardrobe.models import FeedPost, Comment
     post = FeedPost(user_id=user.id, caption="Post", post_type="outfit")
     db.add(post)
     db.commit()

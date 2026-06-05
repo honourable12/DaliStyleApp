@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.database import get_db
 from app.auth.router import get_current_user
-from app.wardrobe.models import User, ClothingItem, Outfit, FeedPost, Like, Comment
+from app.wardrobe.models import User, ClothingItem, FeedPost, Like, Comment
 from app.wardrobe.s3 import get_image_url
 
 router = APIRouter(prefix="/social", tags=["social"])
@@ -107,7 +107,7 @@ def get_style_feed(
                 "price": post.item.price
             }
 
-        has_liked = any(l.user_id == current_user.id for l in post.likes)
+        has_liked = any(like.user_id == current_user.id for like in post.likes)
 
         results.append({
             "id": post.id,
