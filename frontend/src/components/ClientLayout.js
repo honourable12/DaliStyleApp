@@ -36,7 +36,7 @@ export default function ClientLayout({ children }) {
       <header className="sticky top-0 md:top-5 z-50 px-0 md:px-5">
         <nav className="mx-auto max-w-6xl md:glass-card bg-white md:bg-white/80 px-6 py-4 flex items-center justify-between shadow-sm md:shadow-xl border-b md:border border-black/5">
           <Link href="/" className="flex items-center gap-2 group">
-            <Logo className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" color="#C5A059" />
+            <Logo className="w-12 h-12 group-hover:scale-110 transition-transform duration-500" color="#C5A059" />
             <span className="font-serif text-xl tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
               Daily Style
             </span>

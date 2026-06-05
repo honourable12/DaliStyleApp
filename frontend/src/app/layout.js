@@ -10,6 +10,10 @@ export const metadata = {
   title: "DAILY STYLE | AI Stylist",
   description: "Your personalized AI fashion assistant",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
