@@ -155,6 +155,120 @@ def search_images(query: str, max_results: int = 5):
         return []
 
 
+def download_image(url: str, timeout: int = 5) -> bytes:
+    """Safely downloads an image from a URL."""
+    try:
+        res = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        if res.status_code == 200:
+            return res.content
+    except Exception:
+        pass
+    return None
+
+
+def calculate_cleanliness_score(img_rgb: np.ndarray) -> float:
+    """
+    Calculates a score (0-1) indicating how 'clean' or professional an image is.
+    Heuristics: solid background, centered content, high brightness.
+    """
+    h, w = img_rgb.shape[:2]
+    
+    # 1. Background Uniformity (Check corners)
+    corners = [
+        img_rgb[0:10, 0:10],
+        img_rgb[0:10, w - 10 : w],
+        img_rgb[h - 10 : h, 0:10],
+        img_rgb[h - 10 : h, w - 10 : w],
+    ]
+    avg_corners = [np.mean(c, axis=(0, 1)) for c in corners]
+    corner_std = np.std(avg_corners, axis=0).mean()
+    
+    # Low standard deviation between corners means uniform background
+    bg_score = 1.0 - min(1.0, corner_std / 50.0)
+    
+    # 2. Brightness (Prefer brighter, professional lighting)
+    brightness = np.mean(img_rgb) / 255.0
+    brightness_score = 1.0 - abs(0.8 - brightness)  # Target 0.8 brightness
+    
+    # 3. White background bonus
+    is_white_bg = np.all(np.mean(avg_corners, axis=0) > 240)
+    white_bg_bonus = 0.2 if is_white_bg else 0.0
+    
+    return min(1.0, (bg_score * 0.6 + brightness_score * 0.4) + white_bg_bonus)
+
+
+def find_best_clean_replacement(category: str, color_name: str, pattern: str = "solid") -> dict:
+    """
+    Searches for clothing items and uses CLIP to pick the most 'professional studio' looking one.
+    """
+    _lazy_load_heavy_models()
+    query = find_better_image_query(category, color_name, pattern)
+    urls = search_images(query, max_results=8)
+    
+    best_image_bytes = None
+    max_score = -1.0
+    best_url = None
+
+    # We want a "professional studio product photo"
+    target_prompt = "a professional studio product photo of a piece of clothing on a white background"
+    _text_inputs = _clip_processor(text=[target_prompt], return_tensors="pt", padding=True)
+    with _torch.no_grad():
+        target_raw = _clip_model.get_text_features(**_text_inputs)
+        target_emb = _get_tensor(target_raw, is_text=True)
+        if target_emb.shape[-1] == 768:
+            target_emb = _clip_model.text_projection(target_emb)
+        target_emb = target_emb / target_emb.norm(dim=-1, keepdim=True)
+
+    for url in urls:
+        img_bytes = download_image(url)
+        if not img_bytes:
+            continue
+            
+        try:
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                continue
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            # 1. Heuristic cleanliness
+            h_score = calculate_cleanliness_score(img_rgb)
+            if h_score < 0.4: # Filter out obviously bad images early
+                continue
+                
+            # 2. CLIP match for "professional photo"
+            pil_img = Image.fromarray(cv2.resize(img_rgb, (224, 224)))
+            inputs = _clip_processor(images=pil_img, return_tensors="pt")
+            with _torch.no_grad():
+                img_raw = _clip_model.get_image_features(**inputs)
+                img_emb = _get_tensor(img_raw, is_text=False)
+                if img_emb.shape[-1] == 768:
+                    img_emb = _clip_model.visual_projection(img_emb)
+                img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+                
+                # Similarity to target prompt
+                clip_score = (img_emb @ target_emb.T).item()
+            
+            total_score = h_score * 0.3 + clip_score * 0.7
+            
+            if total_score > max_score:
+                max_score = total_score
+                best_image_bytes = img_bytes
+                best_url = url
+                
+        except Exception as e:
+            print(f"Scoring error for {url}: {e}")
+            continue
+
+    if best_image_bytes:
+        return {
+            "image_b64": base64.b64encode(best_image_bytes).decode("utf-8"),
+            "url": best_url,
+            "score": max_score
+        }
+    return None
+
+
 # PIPELINE STAGE 1: FAST COLOR (SMART FILTERING)
 def analyze_clothing_fast(image_bytes: bytes) -> dict:
     provider = os.getenv("HEAVY_AI_PROVIDER", "local").lower()

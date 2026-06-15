@@ -7,6 +7,7 @@ from clothing import (
     analyze_clothing_fast,
     analyze_clothing_heavy,
     search_images,
+    find_best_clean_replacement,
 )
 from skin_tone import analyze_skin_tone
 from bootloader import sync_models, upload_model
@@ -61,6 +62,40 @@ async def find_clothing(file: UploadFile = File(...)):
         "count": len(results),
         "message": f"Identified {len(results)} items and found corresponding high-quality images.",
     }
+
+
+@app.post("/find-clean-replacement")
+async def find_clean_replacement_endpoint(file: UploadFile = File(...)):
+    """
+    Analyzes an image and finds a single 'clean' professional replacement if the original is messy.
+    """
+    contents = await file.read()
+    fast_analysis = analyze_clothing_fast(contents)
+    
+    # If already a professional shop photo, return original analysis
+    if fast_analysis.get("is_clean_background") and fast_analysis.get("is_clothing"):
+        return {"status": "already_clean", "analysis": fast_analysis}
+        
+    # Otherwise find replacement
+    heavy = analyze_clothing_heavy(contents)
+    if not heavy:
+        return {"status": "error", "message": "Could not analyze original image"}
+        
+    best_det = heavy[0]
+    replacement = find_best_clean_replacement(
+        best_det["category"], 
+        best_det["primary_name"], 
+        best_det.get("pattern", "solid")
+    )
+    
+    if replacement:
+        return {
+            "status": "replaced",
+            "original_analysis": best_det,
+            "replacement": replacement
+        }
+    
+    return {"status": "no_replacement_found", "analysis": best_det}
 
 
 @app.post("/analyze-skin")

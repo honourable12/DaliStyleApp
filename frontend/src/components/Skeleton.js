@@ -87,3 +87,29 @@ export const ProfileSkeleton = () => (
     </div>
   </div>
 );
+
+export const DashboardSkeleton = () => (
+  <div className="space-y-12">
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-32 rounded-full" />
+        <Skeleton className="h-16 w-64 md:w-96 rounded-xl" />
+      </div>
+      <Skeleton className="h-14 w-48 rounded-full" />
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="lg:col-span-8 space-y-8">
+        <Skeleton className="h-96 w-full rounded-[40px]" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Skeleton className="h-64 w-full rounded-[40px]" />
+          <Skeleton className="h-64 w-full rounded-[40px]" />
+        </div>
+      </div>
+      <div className="lg:col-span-4 space-y-8">
+        <Skeleton className="h-[450px] w-full rounded-[40px]" />
+        <Skeleton className="h-48 w-full rounded-[40px]" />
+      </div>
+    </div>
+  </div>
+);

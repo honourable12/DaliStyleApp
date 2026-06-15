@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Camera, RefreshCw, Sparkles, User, Info, Plus, ChevronRight, X, Shirt } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
@@ -10,6 +11,9 @@ import { StatusToast } from "@/components/StatusToast";
 const fetcher = url => client.get(url).then(res => res.data);
 
 export default function TryOnStudio() {
+  const searchParams = useSearchParams();
+  const initialItemId = searchParams.get('item_id');
+  
   const [activeScan, setActiveScan] = useState(null);
   const [uploadingScan, setUploadingScan] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
@@ -19,6 +23,15 @@ export default function TryOnStudio() {
 
   const { data: items = [] } = useSWR('/wardrobe/items', fetcher);
   const { data: scans = [] } = useSWR('/wardrobe/body-scans', fetcher);
+
+  useEffect(() => {
+    if (initialItemId && items.length > 0) {
+      const item = items.find(i => i.id.toString() === initialItemId);
+      if (item) {
+        prepareItemForTryOn(item);
+      }
+    }
+  }, [initialItemId, items]);
 
   const fileInputRef = useRef(null);
 

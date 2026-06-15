@@ -1,7 +1,8 @@
 "use client";
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Plus, LayoutPanelLeft, X, Trash2, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, LayoutPanelLeft, X, Trash2, Search, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from 'swr';
 import client from "@/api/client";
@@ -56,6 +57,7 @@ const SEASONS = ["Spring", "Summer", "Autumn", "Winter", "All-Season"];
 const OCCASIONS = ["Casual", "Work", "Date Night", "Evening", "Sport", "Formal", "Vacation"];
 
 export default function Wardrobe() {
+  const router = useRouter();
   const { data: items = [], isLoading } = useSWR('/wardrobe/items', fetcher, {
     revalidateOnFocus: false,
     revalidateIfStale: true,
@@ -161,6 +163,55 @@ export default function Wardrobe() {
     } finally { 
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = ""; 
+    }
+  };
+
+  const [isFindingReplacement, setIsFindingReplacement] = useState(false);
+  const [discoveredReplacement, setDiscoveredReplacement] = useState(null);
+
+  const handleFindReplacement = async () => {
+    if (!editingItem) return;
+    setIsFindingReplacement(true);
+    showStatus("info", "Searching for professional studio match...");
+    
+    try {
+      // Get original blob to send to endpoint
+      const res = await fetch(editingItem.image_url);
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append("file", blob, "original.jpg");
+
+      const searchRes = await client.post("/wardrobe/engine/clean-replacement", formData);
+      if (searchRes.data.status === "replaced") {
+        setDiscoveredReplacement(searchRes.data.replacement);
+        showStatus("success", "Found a professional match!");
+      } else if (searchRes.data.status === "already_clean") {
+        showStatus("info", "This image is already professional quality.");
+      } else {
+        showStatus("error", "No high-quality replacement found.");
+      }
+    } catch (err) {
+      showStatus("error", "Discovery failed.");
+    } finally {
+      setIsFindingReplacement(false);
+    }
+  };
+
+  const handleApplyReplacement = async () => {
+    if (!editingItem || !discoveredReplacement) return;
+    setIsFindingReplacement(true);
+    try {
+      const res = await client.post(`/wardrobe/items/${editingItem.id}/apply-clean-replacement`, {
+        image_b64: discoveredReplacement.image_b64
+      });
+      setEditingItem({ ...editingItem, image_url: res.data.image_url });
+      setDiscoveredReplacement(null);
+      mutate('/wardrobe/items');
+      showStatus("success", "Vault updated with clean image!");
+    } catch (err) {
+      showStatus("error", "Failed to apply replacement.");
+    } finally {
+      setIsFindingReplacement(false);
     }
   };
 
@@ -373,6 +424,13 @@ export default function Wardrobe() {
                     </button>
                     <div className="flex gap-2">
                       <button
+                        onClick={() => router.push(`/try-on?item_id=${item.id}`)}
+                        className="bg-fashion-gold text-white p-2 rounded-full shadow-lg hover:bg-black transition-all"
+                        title="Try this on"
+                      >
+                        <Camera size={16} />
+                      </button>
+                      <button
                         onClick={() => addToWorkbench(item)}
                         className="bg-fashion-navy text-white p-2 rounded-full shadow-lg hover:bg-black transition-all"
                       >
@@ -505,8 +563,76 @@ export default function Wardrobe() {
               className="bg-white rounded-[40px] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col md:flex-row shadow-2xl"
             >
               {/* Image Section */}
-              <div className="relative w-full md:w-1/2 aspect-square md:aspect-auto bg-fashion-bg">
-                <Image src={editingItem.image_url} alt={editingItem.name} fill className="object-cover" />
+              <div className="relative w-full md:w-1/2 aspect-square md:aspect-auto bg-fashion-bg group">
+                <AnimatePresence mode="wait">
+                  {discoveredReplacement ? (
+                    <motion.div 
+                      key="replacement"
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }}
+                      className="relative w-full h-full"
+                    >
+                      <img 
+                        src={`data:image/jpeg;base64,${discoveredReplacement.image_b64}`} 
+                        className="w-full h-full object-cover" 
+                        alt="Discovered replacement"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                        <div className="space-y-2">
+                           <p className="text-white text-[10px] font-bold uppercase tracking-[0.4em]">Professional Match Found</p>
+                           <p className="text-white/70 text-[8px] uppercase tracking-widest">Score: {Math.round(discoveredReplacement.score * 100)}% Quality</p>
+                        </div>
+                        <div className="flex gap-4">
+                           <button 
+                             onClick={handleApplyReplacement}
+                             disabled={isFindingReplacement}
+                             className="bg-emerald-500 text-white px-8 py-3 rounded-full text-[10px] font-bold tracking-widest uppercase hover:bg-emerald-600 transition-all shadow-xl"
+                           >
+                             APPLY CHANGE
+                           </button>
+                           <button 
+                             onClick={() => setDiscoveredReplacement(null)}
+                             className="bg-white/20 backdrop-blur-md text-white px-8 py-3 rounded-full text-[10px] font-bold tracking-widest uppercase hover:bg-white/40 transition-all"
+                           >
+                             CANCEL
+                           </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="original"
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }}
+                      className="relative w-full h-full"
+                    >
+                      <Image src={editingItem.image_url} alt={editingItem.name} fill className="object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                         <button 
+                           type="button"
+                           onClick={handleFindReplacement}
+                           disabled={isFindingReplacement}
+                           className="bg-white text-fashion-charcoal px-8 py-4 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                         >
+                           {isFindingReplacement ? (
+                             <>
+                               <div className="w-3 h-3 border-2 border-fashion-gold border-t-transparent rounded-full animate-spin" />
+                               SEARCHING...
+                             </>
+                           ) : (
+                             <>
+                               <Sparkles size={14} className="text-fashion-gold" />
+                               REFINE IMAGE
+                             </>
+                           )}
+                         </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="absolute top-6 left-6 flex flex-col gap-2">
                    <div className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-[10px] font-bold uppercase tracking-widest text-fashion-charcoal">
                      {editingItem.category}

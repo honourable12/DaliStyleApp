@@ -141,6 +141,29 @@ async def headless_analyze_skin(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/engine/clean-replacement")
+async def find_clean_replacement(
+    file: UploadFile = File(...), auth=Depends(get_any_auth)
+):
+    """Communicates with AI service to find a professional studio image for a messy upload."""
+    file_content = await file.read()
+    validate_image(file, file_content)
+    try:
+        res = requests.post(
+            f"{AI_SERVICE_URL}/find-clean-replacement",
+            files={"file": (file.filename, file_content, file.content_type)},
+            timeout=120,
+        )
+        if res.status_code == 200:
+            return res.json()
+        else:
+            raise HTTPException(
+                status_code=res.status_code, detail="Clean discovery failed"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Service error: {str(e)}")
+
+
 def process_heavy_ai(
     item_id: int, image_bytes: bytes, filename: str, content_type: str
 ):
@@ -149,6 +172,36 @@ def process_heavy_ai(
         item = db.query(ClothingItem).filter(ClothingItem.id == item_id).first()
         if not item:
             return
+
+        # 1. Automatic Discovery of Clean Replacement
+        try:
+            # We call the clean-replacement logic directly in the background
+            res = requests.post(
+                f"{AI_SERVICE_URL}/find-clean-replacement",
+                files={"file": (filename, image_bytes, content_type)},
+                timeout=120,
+            )
+            if res.status_code == 200:
+                data = res.json()
+                if data.get("status") == "replaced":
+                    replacement = data["replacement"]
+                    clean_bytes = base64.b64decode(replacement["image_b64"])
+                    # Overwrite messy original with clean studio shot
+                    upload_file_to_s3(clean_bytes, item.image_url, "image/jpeg")
+                    logger.info(f"Auto-replaced messy image for item {item_id} with clean version from {replacement.get('url')}")
+                    
+                    # Use the analysis from the original detection to set initial metadata
+                    # (The AI service find-clean-replacement returns original_analysis)
+                    analysis = data.get("original_analysis", {})
+                    item.category = analysis.get("category", item.category)
+                    item.pattern = analysis.get("pattern", "solid")
+                    item.metadata_ai = analysis
+                    db.commit()
+                    return # Exit early as we've successfully replaced and tagged
+        except Exception as e:
+            logger.error(f"Auto-replacement background error: {e}")
+
+        # 2. Fallback to standard heavy analysis if replacement failed or wasn't needed
         response = requests.post(
             f"{AI_SERVICE_URL}/analyze-clothing-heavy",
             files={"file": (filename, image_bytes, content_type)},
@@ -160,8 +213,8 @@ def process_heavy_ai(
             if not detections:
                 return
 
-            # Use the best match for the primary item
             data = detections[0]
+            # Even if not 'replaced' from web, we apply the background-removed version from heavy AI
             processed_b64 = data.get("processed_image_b64")
             if processed_b64:
                 clean_bytes = base64.b64decode(processed_b64)
@@ -169,10 +222,10 @@ def process_heavy_ai(
 
             item.category = data.get("category", item.category)
             item.pattern = data.get("pattern", "solid")
-            item.metadata_ai = data  # Store all AI results including pattern
+            item.metadata_ai = data
             db.commit()
     except Exception as e:
-        print(f" AI error: {e}")
+        logger.error(f"AI background task error: {e}")
     finally:
         db.close()
 
@@ -496,6 +549,39 @@ def delete_item(
     db.delete(item)
     db.commit()
     return {"message": "Deleted"}
+
+
+@router.post("/items/{item_id}/apply-clean-replacement")
+async def apply_clean_replacement(
+    item_id: int,
+    replacement_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Replaces an existing item's image with a base64 encoded 'clean' replacement."""
+    item = db.query(ClothingItem).filter(ClothingItem.id == item_id, ClothingItem.owner_id == current_user.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    image_b64 = replacement_data.get("image_b64")
+    if not image_b64:
+        raise HTTPException(status_code=400, detail="Missing replacement image")
+
+    try:
+        clean_bytes = base64.b64decode(image_b64)
+        # Upload to same S3 path to overwrite (or we could create new, but overwrite is cleaner for 'replacement')
+        upload_file_to_s3(clean_bytes, item.image_url, "image/jpeg")
+        
+        # Trigger heavy AI again on the clean image to refine metadata
+        # (Optional but recommended for better tagging)
+        item.category = replacement_data.get("category", item.category)
+        item.pattern = replacement_data.get("pattern", item.pattern)
+        db.commit()
+        
+        return {"message": "Success", "image_url": get_image_url(item.image_url)}
+    except Exception as e:
+        logger.error(f"Failed to apply clean replacement: {e}")
+        raise HTTPException(status_code=500, detail="Replacement failed")
 
 
 @router.get("/health")
