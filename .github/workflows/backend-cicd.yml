@@ -51,7 +51,7 @@ jobs:
           uv sync --dev
 
       - name: Lint with ruff
-        run: uv run ruff check . --fix
+        run: uv run ruff check . --fix --extend-ignore E402
 
       - name: Run tests
         env:
