@@ -1,9 +1,13 @@
 import colorsys
 import requests
+import logging
 from typing import List, Tuple, Optional
 from cachetools import TTLCache, cached
 
+logger = logging.getLogger(__name__)
+
 weather_cache = TTLCache(maxsize=100, ttl=1800)
+_weather_session = requests.Session()
 
 
 @cached(cache=weather_cache)
@@ -12,7 +16,7 @@ def get_cached_weather(lat: float, lon: float) -> str:
     lon_r = round(lon, 2)
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat_r}&longitude={lon_r}&current_weather=true"
-        response = requests.get(url, timeout=3)
+        response = _weather_session.get(url, timeout=2)
         if response.status_code == 200:
             data = response.json()
             temp = data["current_weather"]["temperature"]
@@ -24,8 +28,9 @@ def get_cached_weather(lat: float, lon: float) -> str:
             if temp > 25:
                 return "Sunny"
             return "Clear"
+        logger.warning(f"Weather API returned {response.status_code}")
     except Exception as e:
-        print(f"Weather API error: {e}")
+        logger.warning(f"Weather API error: {e}")
     return "Clear"
 
 

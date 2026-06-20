@@ -336,13 +336,19 @@ async def get_item_try_on_mask(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Download from S3
-    from app.wardrobe.s3 import s3_client
-    BUCKET = os.getenv("S3_BUCKET", "daily-style-vault")
-    try:
-        obj = s3_client.get_object(Bucket=BUCKET, Key=item.image_url)
-        img_bytes = obj['Body'].read()
+    from app.wardrobe.s3 import get_object_bytes
+    img_bytes = get_object_bytes(item.image_url)
+    if not img_bytes:
+        logger.error(
+            f"Try-on mask: could not fetch image bytes for item {item_id} "
+            f"(image_url={item.image_url}, storage={os.getenv('STORAGE_TYPE', 'local')})"
+        )
+        raise HTTPException(
+            status_code=404,
+            detail="Item image not found in storage. Re-upload the item to fix this.",
+        )
 
+    try:
         files = {"file": ("item.jpg", img_bytes, "image/jpeg")}
         response = requests.post(f"{AI_SERVICE_URL}/analyze-clothing-heavy", files=files, timeout=20)
         detections = response.json().get("detections", [])
@@ -351,6 +357,8 @@ async def get_item_try_on_mask(
             raise HTTPException(status_code=400, detail="Could not isolate item.")
             
         return {"transparent_b64": detections[0]["processed_image_b64"], "category": detections[0]["category"]}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Try-on mask error: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate try-on mask.")

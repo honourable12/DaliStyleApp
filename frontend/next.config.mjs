@@ -24,6 +24,21 @@ const nextConfig = {
           hostname: '127.0.0.1',
           port: '4566',
         },
+        {
+          protocol: 'http',
+          hostname: 'localhost',
+          port: '8000',
+        },
+        {
+          protocol: 'http',
+          hostname: '127.0.0.1',
+          port: '8000',
+        },
+        {
+          protocol: 'http',
+          hostname: 'backend',
+          port: '8000',
+        },
       ],
     },
     async rewrites() {

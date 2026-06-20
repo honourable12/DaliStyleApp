@@ -132,7 +132,7 @@ export default function Onboarding() {
               <div className="space-y-4">
                  <h1 className="text-5xl md:text-7xl font-serif text-fashion-charcoal italic">The Canvas</h1>
                  <p className="text-fashion-muted text-sm max-w-md mx-auto leading-relaxed">
-                    Our AI needs to understand your unique skin tone to recommend the perfect color harmonies for your wardrobe.
+                    Our AI needs to understand your unique skin tone to recommend the perfect color harmonies for your wardrobe - and to match a default model in the fitting room. No full-body photo required.
                  </p>
               </div>
 
@@ -161,7 +161,7 @@ export default function Onboarding() {
                  
                  <div className="flex items-center gap-3 text-fashion-muted">
                     <Info size={14} />
-                    <p className="text-[10px] font-medium uppercase tracking-widest">Natural light works best</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest">A quick face selfie - no full-body photo needed</p>
                  </div>
               </div>
 
