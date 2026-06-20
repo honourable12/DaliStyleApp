@@ -11,13 +11,14 @@ body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
 @layer components {
   .glass-card {
     @apply bg-white/80 backdrop-blur-md border border-white/20 rounded-xl shadow-sm;
   }
-  
+
   .nav-pill {
     @apply px-5 py-2 rounded-full text-sm font-medium transition-all duration-300;
   }
@@ -25,9 +26,93 @@ body {
   .nav-pill-active {
     @apply bg-white text-fashion-charcoal shadow-sm;
   }
-  
+
   .nav-pill-inactive {
     @apply text-fashion-muted hover:text-fashion-charcoal;
+  }
+
+  .t-eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.3em];
+  }
+  .t-meta {
+    @apply text-[11px] font-bold uppercase tracking-[0.2em];
+  }
+  .t-label {
+    @apply text-xs font-bold uppercase tracking-[0.15em];
+  }
+  .t-body {
+    @apply text-sm font-light leading-relaxed;
+  }
+  .t-body-sm {
+    @apply text-[13px] font-light leading-relaxed;
+  }
+  .t-input {
+    @apply text-base;
+  }
+  .t-stat {
+    @apply text-3xl font-serif italic;
+  }
+  .t-display {
+    @apply text-5xl md:text-7xl font-serif italic leading-tight;
+  }
+
+  .accent-gold {
+    --accent: theme('colors.fashion.gold');
+    --accent-soft: rgba(197, 160, 89, 0.1);
+  }
+  .accent-navy {
+    --accent: theme('colors.fashion.navy');
+    --accent-soft: rgba(27, 38, 59, 0.1);
+  }
+  .accent-emerald {
+    --accent: #10b981;
+    --accent-soft: rgba(16, 185, 129, 0.1);
+  }
+  .accent-rose {
+    --accent: #f43f5e;
+    --accent-soft: rgba(244, 63, 94, 0.1);
+  }
+  .accent-violet {
+    --accent: #8b5cf6;
+    --accent-soft: rgba(139, 92, 246, 0.1);
+  }
+
+  .btn-primary {
+    @apply bg-fashion-charcoal text-white px-8 py-4 rounded-full font-bold
+           text-xs tracking-[0.2em] uppercase hover:bg-black transition-all
+           flex items-center justify-center gap-2 shadow-lg disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply text-white px-8 py-4 rounded-full font-bold text-xs tracking-[0.2em]
+           uppercase transition-all flex items-center justify-center gap-2
+           shadow-lg disabled:opacity-50;
+    background-color: var(--accent, theme('colors.fashion.gold'));
+  }
+  .btn-ghost {
+    @apply bg-white/60 backdrop-blur px-8 py-4 rounded-full font-bold text-xs
+           tracking-[0.2em] uppercase border border-black/5 hover:bg-white
+           transition-all text-fashion-charcoal shadow-sm;
+  }
+
+  .count-up {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pressable {
+    @apply transition-transform duration-200 active:scale-[0.98];
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 14px;
+    top: -20px;
+    opacity: 0;
+    animation: confetti-fall 2.4s ease-out forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
   }
 }
 
@@ -39,4 +124,17 @@ body {
 
 .animate-scan {
   animation: scan 3s linear infinite;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.next-image-fill {
+  position: relative;
+  overflow: hidden;
 }

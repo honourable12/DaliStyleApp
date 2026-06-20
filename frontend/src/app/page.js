@@ -1,274 +1,376 @@
 "use client";
-import { ArrowRight, Sparkles, Shirt, Camera, Zap, Palette, ShieldCheck, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Sparkles, Shirt, Camera, Palette, Zap, CheckCircle2, Clock, Heart, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const SAMPLE_LOOKS = [
+  {
+    skin_tone: "Medium",
+    hex: "#d7bd96",
+    occasion: "Casual Friday",
+    note: "Earthy terracotta with cream denim — relaxed confidence for the day.",
+    items: [
+      { name: "Linen Blazer", color: "#a8623c", category: "Outerwear" },
+      { name: "Cream Jeans", color: "#e8dcc4", category: "Bottom" },
+      { name: "Leather Loafers", color: "#3a2818", category: "Shoes" },
+    ],
+    harmony: 94,
+  },
+  {
+    skin_tone: "Light Medium",
+    hex: "#f7ead0",
+    occasion: "Evening Out",
+    note: "Deep emerald against your warm undertone — quiet drama for tonight.",
+    items: [
+      { name: "Silk Blouse", color: "#0f5132", category: "Top" },
+      { name: "Tailored Trousers", color: "#1a1a1a", category: "Bottom" },
+      { name: "Gold Heels", color: "#c5a059", category: "Shoes" },
+    ],
+    harmony: 97,
+  },
+  {
+    skin_tone: "Dark",
+    hex: "#604134",
+    occasion: "Work Mode",
+    note: "Crisp ivory + navy — clean authority that flatters deep skin tones.",
+    items: [
+      { name: "Ivory Sweater", color: "#f4ede0", category: "Top" },
+      { name: "Navy Trousers", color: "#1b263b", category: "Bottom" },
+      { name: "White Sneakers", color: "#ffffff", category: "Shoes" },
+    ],
+    harmony: 91,
+  },
+];
 
 export default function Home() {
-  const [demoStep, setDemoStep] = useState(0);
+  const [activeLook, setActiveLook] = useState(0);
 
-  const demoSteps = [
-    {
-      title: "Analyze Your Canvas",
-      description: "Our AI maps your unique skin tone using the Monk Scale to establish your base palette.",
-      icon: <Palette size={32} />,
-      color: "bg-fashion-gold",
-      preview: "https://images.unsplash.com/photo-1523450031158-d6a8ff1e49fb?q=80&w=800",
-      badge: "SKIN TONE: MST 04"
-    },
-    {
-      title: "Digitize Your Vault",
-      description: "Scan your favorite pieces. AI automatically identifies texture, brand, and color harmony.",
-      icon: <Shirt size={32} />,
-      color: "bg-fashion-navy",
-      preview: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=800",
-      badge: "ITEM: RAW SILK BLAZER"
-    },
-    {
-      title: "Style Your Day",
-      description: "Wake up to a perfectly curated look based on your schedule, weather, and personal persona.",
-      icon: <Sparkles size={32} />,
-      color: "bg-fashion-charcoal",
-      preview: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800",
-      badge: "HARMONY: 98% MATCH"
-    }
-  ];
+  useEffect(() => {
+    const t = setInterval(() => {
+      setActiveLook((prev) => (prev + 1) % SAMPLE_LOOKS.length);
+    }, 4500);
+    return () => clearInterval(t);
+  }, []);
+
+  const look = SAMPLE_LOOKS[activeLook];
 
   return (
-    <div className="space-y-32 py-10 overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative h-[85vh] flex flex-col items-center justify-center text-center space-y-8 overflow-hidden rounded-[60px] glass-card shadow-2xl border border-white/20">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070')] bg-cover bg-center opacity-10 scale-110 hover:scale-100 transition-transform duration-[2000ms]" />
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 space-y-8 px-6"
-        >
-          <div className="flex items-center justify-center gap-3 text-fashion-gold">
-            <Sparkles size={16} className="animate-pulse" />
-            <span className="uppercase tracking-[0.6em] text-[10px] font-bold">The Next Era of Style</span>
+    <div className="overflow-hidden">
+      <section className="relative min-h-[92vh] flex flex-col">
+        <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-6">
+          <div className="flex items-center gap-2">
+            <Sparkles size={20} className="text-fashion-gold" />
+            <span className="font-serif text-lg tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
+              Daily Style
+            </span>
           </div>
-          
-          <h1 className="text-7xl md:text-[10rem] font-serif leading-[0.85] text-fashion-charcoal tracking-tighter">
-            Elevate Your <br /> 
-            <span className="italic">Everyday</span>
-          </h1>
-          
-          <p className="max-w-2xl mx-auto text-fashion-muted text-xl font-light leading-relaxed">
-            AI-powered wardrobe management that masters color theory, 
-            understands your skin tone, and curates your digital twin.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-6 justify-center pt-10">
-            <Link href="/auth" className="bg-fashion-charcoal text-white px-12 py-6 rounded-full font-bold text-[10px] tracking-[0.3em] hover:bg-black transition-all flex items-center justify-center gap-3 group shadow-2xl">
-              GET STARTED <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-            </Link>
-            <Link href="/wardrobe" className="bg-white/50 backdrop-blur-xl px-12 py-6 rounded-full font-bold text-[10px] tracking-[0.3em] border border-black/5 hover:bg-white transition-all text-fashion-charcoal shadow-xl">
-              PREVIEW CLOSET
-            </Link>
-          </div>
-        </motion.div>
+          <Link href="/auth" className="t-meta text-fashion-muted hover:text-fashion-charcoal transition-colors">
+            Sign In
+          </Link>
+        </nav>
 
-        {/* Abstract Floating Elements */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-fashion-gold/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-64 h-64 bg-fashion-navy/5 rounded-full blur-3xl animate-pulse delay-700" />
-      </section>
+        <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 px-6 md:px-12 pb-12 items-center max-w-7xl mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8 order-2 lg:order-1"
+          >
+            <div className="inline-flex items-center gap-2 bg-fashion-gold/10 px-4 py-2 rounded-full">
+              <Zap size={14} className="text-fashion-gold" />
+              <span className="t-eyebrow text-fashion-gold">Your stylist. In 10 seconds.</span>
+            </div>
 
-      {/* Interactive Walkthrough Section */}
-      <section className="max-w-7xl mx-auto px-4 space-y-20">
-         <div className="text-center space-y-4">
-            <h2 className="text-4xl md:text-6xl font-serif text-fashion-charcoal italic">Experience the Process</h2>
-            <p className="text-fashion-muted text-sm uppercase tracking-[0.4em] font-bold">How Daily Style Transforms You</p>
-         </div>
+            <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-fashion-charcoal tracking-tighter leading-[0.9]">
+              Look good.
+              <br />
+              <span className="italic">Feel confident.</span>
+              <br />
+              Every day.
+            </h1>
 
-         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Steps Navigation */}
-            <div className="lg:col-span-5 space-y-6">
-               {demoSteps.map((step, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setDemoStep(idx)}
-                    className={`w-full text-left p-8 rounded-[32px] transition-all border ${
-                      demoStep === idx 
-                        ? "bg-white border-fashion-gold shadow-2xl scale-[1.02]" 
-                        : "bg-transparent border-transparent hover:border-black/5 opacity-50"
-                    }`}
+            <p className="t-body text-fashion-muted text-lg max-w-md">
+              AI curates a daily outfit from <em>your</em> closet, matched to your skin tone,
+              the weather, and your plans. No more standing in front of the mirror at 8am.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Link href="/auth" className="btn-primary group">
+                Get your first look
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <div className="flex items-center gap-3 text-fashion-muted">
+                <div className="flex -space-x-2">
+                  {["#d7bd96", "#f7ead0", "#604134", "#a07850"].map((c, i) => (
+                    <div
+                      key={i}
+                      className="w-8 h-8 rounded-full border-2 border-fashion-bg shadow-sm"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <span className="t-meta">Free · 30 seconds to set up</span>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="order-1 lg:order-2 relative"
+          >
+            <div className="relative bg-white rounded-[40px] shadow-2xl border border-black/5 overflow-hidden max-w-md mx-auto">
+              <div className="flex items-center justify-between p-5 border-b border-black/5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-7 h-7 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: look.hex }}
+                  />
+                  <div>
+                    <p className="t-eyebrow text-fashion-muted">{look.skin_tone}</p>
+                  </div>
+                </div>
+                <div className="bg-fashion-gold/10 px-3 py-1.5 rounded-full">
+                  <span className="t-meta text-fashion-gold">{look.occasion}</span>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeLook}
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-3"
                   >
-                     <div className="flex items-center gap-6">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white ${step.color} shadow-lg`}>
-                           {step.icon}
-                        </div>
-                        <div>
-                           <h3 className="text-2xl font-serif italic text-fashion-charcoal mb-1">{step.title}</h3>
-                           <p className="text-xs text-fashion-muted leading-relaxed max-w-xs">{step.description}</p>
-                        </div>
-                     </div>
-                  </button>
-               ))}
-            </div>
-
-            {/* Step Preview Canvas */}
-            <div className="lg:col-span-7">
-               <div className="glass-card bg-white p-4 rounded-[60px] shadow-2xl relative overflow-hidden border border-black/5 aspect-[16/10]">
-                  <AnimatePresence mode="wait">
-                     <motion.div
-                       key={demoStep}
-                       initial={{ opacity: 0, scale: 0.95 }}
-                       animate={{ opacity: 1, scale: 1 }}
-                       exit={{ opacity: 0, scale: 1.05 }}
-                       transition={{ duration: 0.5 }}
-                       className="relative w-full h-full rounded-[40px] overflow-hidden"
-                     >
-                        <Image 
-                           src={demoSteps[demoStep].preview} 
-                           alt="Demo Preview" 
-                           fill 
-                           className="object-cover"
+                    {look.items.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-4 p-3 bg-fashion-bg rounded-2xl"
+                      >
+                        <div
+                          className="w-12 h-12 rounded-xl shadow-sm border border-black/5"
+                          style={{ backgroundColor: item.color }}
                         />
-                        <div className="absolute inset-0 bg-black/20" />
-                        
-                        {/* Dynamic UI Overlay Simulating AI */}
-                        <div className="absolute top-8 left-8 flex items-center gap-3">
-                           <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                              <CheckCircle2 size={14} className="text-emerald-500" />
-                              <span className="text-[10px] font-bold tracking-widest uppercase text-fashion-charcoal">
-                                 {demoSteps[demoStep].badge}
-                              </span>
-                           </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-fashion-charcoal">{item.name}</p>
+                          <p className="t-eyebrow text-fashion-muted">{item.category}</p>
                         </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
 
-                        <div className="absolute bottom-8 right-8">
-                           <div className="w-16 h-16 rounded-full border-4 border-white/30 border-t-white animate-spin" />
-                        </div>
-                     </motion.div>
-                  </AnimatePresence>
-               </div>
-            </div>
-         </div>
-      </section>
-
-      {/* Feature Grid */}
-      <section className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-         <div className="space-y-10 order-2 lg:order-1">
-            <div className="space-y-4">
-               <h2 className="text-5xl md:text-7xl font-serif text-fashion-charcoal italic leading-tight">The Digital <br /> Stylist Studio</h2>
-               <p className="text-fashion-muted text-lg font-light leading-relaxed">
-                  Experience the precision of the Monk Skin Tone Scale. Our AI analyzes your unique features to find the exact color harmonies that make you glow.
-               </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-fashion-navy text-white flex items-center justify-center shadow-lg">
-                     <Palette size={24} />
+              <div className="bg-fashion-charcoal text-white p-5">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <Sparkles size={16} className="text-fashion-gold shrink-0 mt-1" />
+                  <p className="text-sm font-serif italic leading-snug flex-1">"{look.note}"</p>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                  <span className="t-meta text-white/50">Color harmony</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        key={`bar-${activeLook}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${look.harmony}%` }}
+                        transition={{ duration: 0.8, delay: 0.3 }}
+                        className="h-full bg-fashion-gold"
+                      />
+                    </div>
+                    <span className="text-sm font-bold text-fashion-gold">{look.harmony}%</span>
                   </div>
-                  <h4 className="text-xl font-serif italic text-fashion-charcoal">Skin Tone Mapping</h4>
-                  <p className="text-fashion-muted text-xs leading-relaxed uppercase tracking-widest font-bold">Monk Scale Integrated</p>
-               </div>
-               <div className="space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-fashion-gold text-white flex items-center justify-center shadow-lg">
-                     <Zap size={24} />
-                  </div>
-                  <h4 className="text-xl font-serif italic text-fashion-charcoal">Real-time Harmony</h4>
-                  <p className="text-fashion-muted text-xs leading-relaxed uppercase tracking-widest font-bold">100+ Color Combinations</p>
-               </div>
+                </div>
+              </div>
             </div>
-         </div>
 
-         <div className="relative order-1 lg:order-2">
-            <div className="relative aspect-[4/5] rounded-[60px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] group border-8 border-white">
-               <Image 
-                 src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1920" 
-                 alt="Style Preview" 
-                 fill 
-                 className="object-cover transition-transform duration-[3000ms] group-hover:scale-110" 
-               />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-12 space-y-4">
-                  <div className="flex gap-2">
-                     <div className="w-6 h-6 rounded-full bg-[#E6CDBE] border-2 border-white shadow-md" />
-                     <div className="w-6 h-6 rounded-full bg-[#3D2B1F] border-2 border-white shadow-md" />
-                     <div className="w-6 h-6 rounded-full bg-[#C5A059] border-2 border-white shadow-md" />
-                  </div>
-                  <p className="text-white text-xs font-bold uppercase tracking-[0.4em]">Harmonizing for Evening Vibe</p>
-               </div>
+            <div className="flex justify-center gap-2 mt-6">
+              {SAMPLE_LOOKS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveLook(i)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    activeLook === i ? "w-8 bg-fashion-charcoal" : "w-1.5 bg-fashion-charcoal/20"
+                  }`}
+                  aria-label={`Show look ${i + 1}`}
+                />
+              ))}
             </div>
-            {/* Floating UI Badges */}
-            <div className="absolute -top-10 -right-10 bg-white p-8 rounded-[32px] shadow-2xl space-y-2 hidden md:block animate-bounce-slow">
-               <p className="text-[10px] font-bold text-fashion-gold uppercase tracking-widest">Confidence Score</p>
-               <p className="text-4xl font-serif italic text-fashion-charcoal">98%</p>
-            </div>
-         </div>
-      </section>
-
-      {/* Feature Grid */}
-      <section className="bg-fashion-charcoal text-white py-32 rounded-[60px] px-4 overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-24 opacity-5 pointer-events-none">
-           <Sparkles size={400} />
+          </motion.div>
         </div>
+      </section>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 relative z-10">
-          <div className="space-y-8 text-center p-8">
-            <div className="w-20 h-20 bg-white/10 backdrop-blur rounded-[28px] flex items-center justify-center shadow-xl mx-auto rotate-3 hover:rotate-0 transition-all group cursor-help">
-              <Camera size={32} className="text-fashion-gold group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="space-y-4">
-               <h3 className="text-3xl font-serif italic">Skin Analysis</h3>
-               <p className="text-white/60 font-light leading-relaxed text-sm">
-                 Our proprietary AI identifies your unique undertones to curate a palette that enhances your natural beauty.
-               </p>
-            </div>
+      <section className="bg-white py-20 md:py-32 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center space-y-4 mb-16">
+            <p className="t-eyebrow text-fashion-gold">Three steps to your daily look</p>
+            <h2 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+              No stylist needed.
+              <br />
+              Just your phone.
+            </h2>
           </div>
 
-          <div className="space-y-8 text-center p-8">
-            <div className="w-20 h-20 bg-white/10 backdrop-blur rounded-[28px] flex items-center justify-center shadow-xl mx-auto -rotate-3 hover:rotate-0 transition-all group cursor-help">
-              <Shirt size={32} className="text-fashion-gold group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="space-y-4">
-               <h3 className="text-3xl font-serif italic">Digital Vault</h3>
-               <p className="text-white/60 font-light leading-relaxed text-sm">
-                 Digitize your entire wardrobe. AI automatically tags materials, brands, and seasons for effortless styling.
-               </p>
-            </div>
-          </div>
-
-          <div className="space-y-8 text-center p-8">
-            <div className="w-20 h-20 bg-white/10 backdrop-blur rounded-[28px] flex items-center justify-center shadow-xl mx-auto rotate-6 hover:rotate-0 transition-all group cursor-help">
-              <Sparkles size={32} className="text-fashion-gold group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="space-y-4">
-               <h3 className="text-3xl font-serif italic">AI Studio</h3>
-               <p className="text-white/60 font-light leading-relaxed text-sm">
-                 Wake up to a tailored outfit recommendation every morning, optimized for your schedule and local weather.
-               </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                num: "01",
+                icon: <Camera size={24} />,
+                title: "Snap a selfie",
+                desc: "Our AI reads your skin tone on the Monk Scale in seconds. No full-body photo needed.",
+                accent: "bg-fashion-gold",
+              },
+              {
+                num: "02",
+                icon: <Shirt size={24} />,
+                title: "Add your closet",
+                desc: "Photograph 3+ pieces. AI auto-tags color, category, and material for instant styling.",
+                accent: "bg-fashion-navy",
+              },
+              {
+                num: "03",
+                icon: <Sparkles size={24} />,
+                title: "Get styled daily",
+                desc: "Wake up to a curated outfit — color-matched to you, optimized for weather and occasion.",
+                accent: "bg-fashion-charcoal",
+              },
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="relative space-y-5 p-8 bg-fashion-bg rounded-[32px]"
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`w-12 h-12 rounded-2xl ${step.accent} text-white flex items-center justify-center shadow-lg`}
+                  >
+                    {step.icon}
+                  </div>
+                  <span className="font-serif text-5xl italic text-fashion-charcoal/10">
+                    {step.num}
+                  </span>
+                </div>
+                <h3 className="text-2xl font-serif italic text-fashion-charcoal">{step.title}</h3>
+                <p className="t-body-sm text-fashion-muted">{step.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Final Call to Action */}
-      <section className="text-center py-20">
-        <div className="max-w-3xl mx-auto space-y-12 px-6">
-           <div className="space-y-4">
-              <ShieldCheck className="mx-auto text-fashion-gold" size={40} />
-              <h2 className="text-5xl md:text-7xl font-serif text-fashion-charcoal italic">The Studio is Open.</h2>
-              <p className="text-fashion-muted text-lg font-light leading-relaxed">
-                 Join thousands of fashion enthusiasts who have transformed their relationship with their wardrobe.
-              </p>
-           </div>
-           <Link href="/auth" className="inline-flex bg-fashion-charcoal text-white px-16 py-7 rounded-full font-bold text-xs tracking-[0.4em] hover:bg-black transition-all shadow-2xl uppercase">
-              Begin Your Journey
-           </Link>
+      <section className="py-20 md:py-32 px-6 bg-fashion-bg">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center space-y-4 mb-16">
+            <div className="flex justify-center gap-1 mb-2">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={20} className="text-fashion-gold fill-fashion-gold" />
+              ))}
+            </div>
+            <p className="t-eyebrow text-fashion-muted">Loved by people who hate morning decisions</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                quote: "I used to spend 20 minutes deciding what to wear. Now it's 20 seconds and I look better.",
+                author: "Philip",
+                role: "Marketing lead",
+                skin: "#a07850",
+              },
+              {
+                quote: "The skin tone matching is unreal. Colors I never thought to wear suddenly make sense.",
+                author: "Richmond",
+                role: "Software engineer",
+                skin: "#604134",
+              },
+              {
+                quote: "I have a closet full of clothes and nothing to wear. This fixed that. Finally.",
+                author: "Kelvin",
+                role: "Med student",
+                skin: "#d7bd96",
+              },
+            ].map((t, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white p-8 rounded-[32px] shadow-sm border border-black/5 space-y-6"
+              >
+                <p className="text-lg font-serif italic text-fashion-charcoal leading-snug">
+                  "{t.quote}"
+                </p>
+                <div className="flex items-center gap-3 pt-4 border-t border-black/5">
+                  <div
+                    className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: t.skin }}
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-fashion-charcoal">{t.author}</p>
+                    <p className="t-eyebrow text-fashion-muted">{t.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-16 flex flex-wrap items-center justify-center gap-8 md:gap-12 text-fashion-muted">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-fashion-gold" />
+              <span className="t-meta">30-second setup</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Heart size={18} className="text-rose-500" />
+              <span className="t-meta">No credit card</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Palette size={18} className="text-fashion-navy" />
+              <span className="t-meta">Monk Skin Tone Scale</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Visual Quote */}
-      <footer className="text-center py-20 border-t border-black/5 opacity-50">
-        <p className="font-serif text-3xl italic text-fashion-charcoal max-w-4xl mx-auto leading-tight">
-          "Style is a way to say who you are without having to speak."
-        </p>
-        <p className="mt-8 uppercase tracking-[0.4em] text-[10px] font-bold text-fashion-muted">— RACHEL ZOE</p>
+      <section className="py-20 md:py-32 px-6">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <h2 className="font-serif text-5xl md:text-7xl italic text-fashion-charcoal leading-tight">
+            Your best look
+            <br />
+            is already in your closet.
+          </h2>
+          <p className="t-body text-fashion-muted text-lg max-w-xl mx-auto">
+            Stop guessing. Start styling. Get your first AI-curated outfit in under a minute.
+          </p>
+          <Link
+            href="/auth"
+            className="btn-primary inline-flex group text-base px-12 py-5"
+          >
+            Get your first look
+            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+      </section>
+
+      <footer className="border-t border-black/5 py-12 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-fashion-gold" />
+            <span className="t-meta text-fashion-charcoal">Daily Style</span>
+          </div>
+          <p className="t-eyebrow text-fashion-muted">
+            Style is a way to say who you are without having to speak.
+          </p>
+        </div>
       </footer>
     </div>
   );

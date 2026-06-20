@@ -396,6 +396,31 @@ export default function Wardrobe() {
 
         {isLoading && items.length === 0 ? (
           <WardrobeSkeleton />
+        ) : filteredItems.length === 0 ? (
+          /* ===== EMPTY STATE - friendly guidance instead of a blank grid ===== */
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+            <div className="w-20 h-20 rounded-full bg-fashion-gold/10 text-fashion-gold flex items-center justify-center mb-6">
+              <Plus size={36} />
+            </div>
+            <h3 className="font-serif text-3xl italic text-fashion-charcoal mb-2">
+              {items.length === 0 ? "Your vault is empty" : "No items match this filter"}
+            </h3>
+            <p className="t-body text-fashion-muted max-w-sm mb-8">
+              {items.length === 0
+                ? "Add your first piece and our AI will instantly tag its color, category, and material. Get styled in minutes."
+                : "Try a different category or add a new piece to get started."}
+            </p>
+            {items.length === 0 && (
+              <button
+                onClick={() => fileInputRef.current.click()}
+                disabled={uploading}
+                className="btn-primary group disabled:opacity-50"
+              >
+                {uploading ? "Uploading..." : "Add your first piece"}
+                {!uploading && <Plus size={16} className="group-hover:rotate-90 transition-transform" />}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2">
             {filteredItems.map((item, idx) => (
