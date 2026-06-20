@@ -17,9 +17,20 @@ S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
 # The endpoint accessible from the browser (e.g., localhost instead of floci)
 S3_EXTERNAL_ENDPOINT_URL = os.getenv("S3_EXTERNAL_ENDPOINT_URL", S3_ENDPOINT_URL)
 
-
 LOCAL_STORAGE_DIR = Path(os.getenv("LOCAL_STORAGE_DIR", "./local_storage"))
-LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_local_dir() -> bool:
+    """Create LOCAL_STORAGE_DIR if it doesn't exist. Returns True on
+    success, False on failure (e.g. read-only filesystem). Never raises."""
+    try:
+        LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        return True
+    except OSError:
+        return False
+    except Exception:
+        return False
+
 
 LOCAL_PUBLIC_BASE_URL = os.getenv(
     "LOCAL_PUBLIC_BASE_URL", "http://localhost:8000"
@@ -70,7 +81,7 @@ if STORAGE_TYPE == "s3":
         logger.error(f"❌ Unexpected error initializing S3: {e}")
 else:
     logger.info(
-        f" LOCAL MODE: files will be stored under {LOCAL_STORAGE_DIR.resolve()}"
+        f"📁 LOCAL MODE: files will be stored under {LOCAL_STORAGE_DIR.resolve()}"
     )
 
 
@@ -79,6 +90,12 @@ def upload_file_to_s3(
 ) -> Optional[str]:
     if STORAGE_TYPE == "local":
         try:
+            if not _ensure_local_dir():
+                logger.error(
+                    "❌ LOCAL: cannot create storage directory "
+                    f"{LOCAL_STORAGE_DIR} (read-only filesystem?). Upload aborted."
+                )
+                return None
             dest = LOCAL_STORAGE_DIR / object_name
             dest.parent.mkdir(parents=True, exist_ok=True)
             # file_data may be bytes or a file-like - handle both
@@ -148,6 +165,7 @@ def get_object_bytes(object_name: str) -> Optional[bytes]:
 
 
 def get_image_url(object_name: str) -> str:
+    """Returns a browser-accessible URL for an object."""
     if not object_name:
         return _PLACEHOLDER_URL
 

@@ -42,20 +42,22 @@ app.include_router(social_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(partner_auth_router, prefix="/api")
 
-# Serve locally-stored uploaded files at /static/<object_name>. This is
-# only used when STORAGE_TYPE=local (the dev default). In S3 mode the
-# mount is harmless but unused - get_image_url() returns presigned URLs.
-# Without this, items uploaded in local mode would have nowhere to be
-# served from (their image_url would fall back to the unsplash
-# placeholder, which broke the try-on canvas).
-from app.wardrobe.s3 import LOCAL_STORAGE_DIR  # noqa: E402
 
-LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-app.mount(
-    "/static",
-    StaticFiles(directory=str(LOCAL_STORAGE_DIR), check_dir=False),
-    name="local-static",
-)
+from app.wardrobe.s3 import LOCAL_STORAGE_DIR, _ensure_local_dir
+
+if _ensure_local_dir():
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(LOCAL_STORAGE_DIR), check_dir=False),
+        name="local-static",
+    )
+else:
+    import logging
+    logging.getLogger(__name__).warning(
+        "Skipping /static mount: LOCAL_STORAGE_DIR could not be created "
+        "(likely a read-only filesystem such as Vercel). Set STORAGE_TYPE=s3 "
+        "to use S3-backed image storage instead."
+    )
 
 # Serverless Handler
 handler = Mangum(app, lifespan="off")
