@@ -1,6 +1,8 @@
 import uvicorn
 import os
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
+from pydantic import BaseModel
+from typing import Optional
 
 from clothing import (
     _lazy_load_heavy_models,
@@ -10,6 +12,7 @@ from clothing import (
     find_best_clean_replacement,
 )
 from skin_tone import analyze_skin_tone
+from llm import generate_styling_note, get_llm_status
 from bootloader import sync_models, upload_model
 
 app = FastAPI(title="Daily Style AI Service")
@@ -119,9 +122,29 @@ async def analyze_body_segments(file: UploadFile = File(...)):
     }
 
 
+@app.post("/generate-styling-note")
+async def generate_styling_note_endpoint(
+    skin_tone_name: str = Form(...),
+    top_color: str = Form(...),
+    bottom_color: str = Form(...),
+    context: str = Form(...),
+    brand: Optional[str] = Form(None),
+    material: Optional[str] = Form(None),
+):
+    note = generate_styling_note(
+        skin_tone_name=skin_tone_name,
+        top_color=top_color,
+        bottom_color=bottom_color,
+        context=context,
+        brand=brand,
+        material=material,
+    )
+    return {"note": note}
+
+
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "llm": get_llm_status()}
 
 
 if __name__ == "__main__":
