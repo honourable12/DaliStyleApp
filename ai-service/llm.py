@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3619718d89625951b8b2d5f034fde3552ac7bcc9
 import os
 import logging
 import threading
@@ -16,7 +20,11 @@ _load_attempted = False
 _load_failed = False
 
 
+<<<<<<< HEAD
 MAX_NEW_TOKENS = 80
+=======
+MAX_NEW_TOKENS = 100
+>>>>>>> 3619718d89625951b8b2d5f034fde3552ac7bcc9
 
 
 def _is_model_available() -> bool:
