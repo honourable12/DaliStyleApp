@@ -1,0 +1,162 @@
+
+import os
+import logging
+import threading
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+LLM_MODEL_NAME = os.getenv("LLM_MODEL", "HuggingFaceTB/SmolLM2-360M-Instruct")
+LLM_CACHE_DIR = os.getenv("HF_HOME", os.getenv("MODELS_DIR", "/models"))
+
+# Lazy-loaded
+_tokenizer = None
+_model = None
+_load_lock = threading.Lock()
+_load_attempted = False
+_load_failed = False
+
+
+MAX_NEW_TOKENS = 100
+
+
+def _is_model_available() -> bool:
+    return _model is not None and _tokenizer is not None
+
+
+def _load_model() -> bool:
+    global _tokenizer, _model, _load_attempted, _load_failed
+
+    if _is_model_available():
+        return True
+    if _load_failed:
+        return False
+
+    with _load_lock:
+        if _is_model_available():
+            return True
+        if _load_failed:
+            return False
+
+        _load_attempted = True
+        try:
+            logger.info(f"Loading LLM: {LLM_MODEL_NAME} (cache: {LLM_CACHE_DIR})")
+            from transformers import AutoTokenizer, AutoModelForCausalLM
+            import torch
+
+            _tokenizer = AutoTokenizer.from_pretrained(
+                LLM_MODEL_NAME,
+                cache_dir=LLM_CACHE_DIR,
+            )
+            _model = AutoModelForCausalLM.from_pretrained(
+                LLM_MODEL_NAME,
+                cache_dir=LLM_CACHE_DIR,
+                torch_dtype=torch.float32,  # CPU only
+                device_map="cpu",
+            )
+            _model.eval()
+
+            if _tokenizer.pad_token is None:
+                _tokenizer.pad_token = _tokenizer.eos_token
+
+            logger.info(f"LLM loaded successfully: {LLM_MODEL_NAME}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to load LLM {LLM_MODEL_NAME}: {e}")
+            _load_failed = True
+            return False
+
+
+def generate_styling_note(
+    skin_tone_name: str,
+    top_color: str,
+    bottom_color: str,
+    context: str,
+    brand: Optional[str] = None,
+    material: Optional[str] = None,
+) -> str:
+    if not _load_model():
+        return _fallback_note(skin_tone_name, top_color, bottom_color, context, brand, material)
+
+    try:
+        import torch
+
+        brand_ctx = f" featuring {brand}" if brand else ""
+        material_ctx = f" crafted from {material}" if material else ""
+
+        prompt = (
+            f"You are a professional high-fashion stylist. "
+            f"The user has a '{skin_tone_name}' skin tone. "
+            f"You have curated an outfit{brand_ctx}{material_ctx}:\n"
+            f"- Top: {top_color} {context}\n"
+            f"- Bottom: {bottom_color}\n\n"
+            f"Explain in exactly 2 chic sentences why this combination works. "
+            f"Mention the color synergy with their skin tone. "
+            f"Be encouraging and sophisticated. No bullet points."
+        )
+
+        messages = [{"role": "user", "content": prompt}]
+        formatted = _tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = _tokenizer(formatted, return_tensors="pt")
+
+        with torch.no_grad():
+            outputs = _model.generate(
+                **inputs,
+                max_new_tokens=MAX_NEW_TOKENS,
+                temperature=0.7,
+                do_sample=True,
+                pad_token_id=_tokenizer.pad_token_id,
+                eos_token_id=_tokenizer.eos_token_id,
+            )
+
+        input_len = inputs["input_ids"].shape[1]
+        generated = _tokenizer.decode(
+            outputs[0][input_len:], skip_special_tokens=True
+        ).strip()
+
+        if not generated or len(generated) < 30:
+            logger.warning("LLM output too short, using fallback")
+            return _fallback_note(skin_tone_name, top_color, bottom_color, context, brand, material)
+
+        sentences = generated.split(".")
+        if len(sentences) > 2:
+            generated = ".".join(sentences[:2]).strip() + "."
+
+        return generated
+
+    except Exception as e:
+        logger.error(f"LLM generation failed: {e}")
+        return _fallback_note(skin_tone_name, top_color, bottom_color, context, brand, material)
+
+
+def _fallback_note(
+    skin_tone_name: str,
+    top_color: str,
+    bottom_color: str,
+    context: str,
+    brand: Optional[str],
+    material: Optional[str],
+) -> str:
+
+    top_c = (top_color or "this shade").replace("_", " ").lower()
+    bottom_c = (bottom_color or "a complementary tone").replace("_", " ").lower()
+    material_phrase = f" crafted from {material.lower()}" if material else ""
+    brand_phrase = f" The {brand} pairing" if brand else "This pairing"
+    occasion = context.split(" for ")[-1] if " for " in context else "everyday"
+    return (
+        f"{brand_phrase} of {top_c} and {bottom_c}{material_phrase} "
+        f"harmonises with your {skin_tone_name.lower()} skin tone, "
+        f"delivering a refined {occasion} silhouette with editorial ease."
+    )
+
+
+def get_llm_status() -> dict:
+    return {
+        "model": LLM_MODEL_NAME,
+        "loaded": _is_model_available(),
+        "load_attempted": _load_attempted,
+        "load_failed": _load_failed,
+        "cache_dir": LLM_CACHE_DIR,
+    }
