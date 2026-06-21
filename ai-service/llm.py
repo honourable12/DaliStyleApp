@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 LLM_MODEL_NAME = os.getenv("LLM_MODEL", "HuggingFaceTB/SmolLM2-360M-Instruct")
 LLM_CACHE_DIR = os.getenv("HF_HOME", os.getenv("MODELS_DIR", "/models"))
 
-# Lazy-loaded
+LLM_QUANTIZE = os.getenv("LLM_QUANTIZE", "true").lower() == "true"
+
 _tokenizer = None
 _model = None
 _load_lock = threading.Lock()
@@ -16,7 +17,7 @@ _load_attempted = False
 _load_failed = False
 
 
-MAX_NEW_TOKENS = 80
+MAX_NEW_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "50"))
 
 
 def _is_model_available() -> bool:
@@ -53,6 +54,17 @@ def _load_model() -> bool:
                 torch_dtype=torch.float32,  # CPU only
                 device_map="cpu",
             )
+            if LLM_QUANTIZE:
+                try:
+                    _model = torch.quantization.quantize_dynamic(
+                        _model,
+                        {torch.nn.Linear},
+                        dtype=torch.qint8,
+                    )
+                    logger.info("LLM quantized to INT8 (2-3x CPU speedup)")
+                except Exception as q_err:
+                    logger.warning(f"INT8 quantization failed, using fp32: {q_err}")
+
             _model.eval()
 
             if _tokenizer.pad_token is None:
@@ -104,10 +116,10 @@ def generate_styling_note(
             outputs = _model.generate(
                 **inputs,
                 max_new_tokens=MAX_NEW_TOKENS,
-                temperature=0.7,
-                do_sample=True,
+                do_sample=False,
                 pad_token_id=_tokenizer.pad_token_id,
                 eos_token_id=_tokenizer.eos_token_id,
+                use_cache=True,
             )
 
         input_len = inputs["input_ids"].shape[1]
@@ -158,4 +170,14 @@ def get_llm_status() -> dict:
         "load_attempted": _load_attempted,
         "load_failed": _load_failed,
         "cache_dir": LLM_CACHE_DIR,
+        "quantized": LLM_QUANTIZE and _is_model_available(),
+        "max_new_tokens": MAX_NEW_TOKENS,
     }
+
+
+def prewarm_model() -> None:
+    if _is_model_available() or _load_failed:
+        return
+    thread = threading.Thread(target=_load_model, name="llm-prewarm", daemon=True)
+    thread.start()
+    logger.info("LLM pre-warm started in background thread")

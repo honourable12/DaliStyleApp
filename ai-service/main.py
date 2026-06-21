@@ -12,7 +12,7 @@ from clothing import (
     find_best_clean_replacement,
 )
 from skin_tone import analyze_skin_tone
-from llm import generate_styling_note, get_llm_status
+from llm import generate_styling_note, get_llm_status, prewarm_model
 from bootloader import sync_models, upload_model
 
 app = FastAPI(title="Daily Style AI Service")
@@ -31,6 +31,8 @@ async def startup_event():
     if os.getenv("PERSIST_MODELS", "true").lower() == "true":
         for model in REQUIRED_MODELS:
             upload_model(model)
+
+    prewarm_model()
 
 
 @app.post("/analyze-clothing-fast")
@@ -131,6 +133,8 @@ async def generate_styling_note_endpoint(
     brand: Optional[str] = Form(None),
     material: Optional[str] = Form(None),
 ):
+    import time
+    start = time.time()
     note = generate_styling_note(
         skin_tone_name=skin_tone_name,
         top_color=top_color,
@@ -139,7 +143,9 @@ async def generate_styling_note_endpoint(
         brand=brand,
         material=material,
     )
-    return {"note": note}
+    elapsed = time.time() - start
+    print(f"[LLM] /generate-styling-note: {elapsed:.2f}s", flush=True)
+    return {"note": note, "elapsed_ms": int(elapsed * 1000)}
 
 
 @app.get("/health")
