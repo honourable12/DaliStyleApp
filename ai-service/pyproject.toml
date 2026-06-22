@@ -10,23 +10,13 @@ dependencies = [
     "numpy",
     "scikit-learn",
     "transformers",
-    "torch>=2.8.0",
+    "torch>=2.10.0",
     "python-multipart>=0.0.26",
     "pillow>=12.2.0",
     "ultralytics>=8.4.41",
-    "torchvision>=0.23.0",
+    "torchvision>=0.25.0",
     "requests>=2.33.1",
     "boto3>=1.43.14",
     "duckduckgo_search",
     "ruff>=0.15.16",
 ]
-
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }
-torchvision = { index = "pytorch-cpu" }
