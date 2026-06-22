@@ -186,11 +186,6 @@ def get_daily_look(
 
 @router.post("/engine/look", response_model=List[LookResponse])
 def get_headless_look(req: StylingRequest, partner: Partner = Depends(get_partner)):
-    """
-    Stateless styling engine for external partners.
-    Requires a valid X-Partner-Key in the header.
-    Applies partner-specific weights from their settings.
-    """
     wardrobe_dicts = [item.model_dump() for item in req.wardrobe]
 
     # Extract custom weights from partner settings if they exist

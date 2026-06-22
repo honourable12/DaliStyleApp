@@ -51,7 +51,7 @@ def _load_model() -> bool:
             _model = AutoModelForCausalLM.from_pretrained(
                 LLM_MODEL_NAME,
                 cache_dir=LLM_CACHE_DIR,
-                torch_dtype=torch.float32,  # CPU only
+                dtype=torch.float32,
                 device_map="cpu",
             )
             if LLM_QUANTIZE:

@@ -19,4 +19,5 @@ dependencies = [
     "boto3>=1.43.14",
     "duckduckgo_search",
     "ruff>=0.15.16",
+    "accelerate>=1.14.0",
 ]
