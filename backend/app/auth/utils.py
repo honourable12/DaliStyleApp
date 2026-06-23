@@ -94,11 +94,20 @@ def create_password_reset_token(data: dict) -> str:
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
+
+def create_magic_link_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode.update(
+        {
+            "exp": expire,
+            "iat": datetime.now(timezone.utc),
+            "type": "magic",
+        }
+    )
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
 def decode_token(token: str, expected_type: str) -> dict:
-    """
-    Decodes and validates a JWT, enforcing the expected token type.
-    Raises JWTError on any failure.
-    """
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     if payload.get("type") != expected_type:
         raise JWTError(f"Invalid token type: expected '{expected_type}'")

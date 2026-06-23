@@ -296,3 +296,61 @@ def delete_outfit(
     db.delete(o)
     db.commit()
     return {"message": "Deleted"}
+
+
+class WishlistCreate(BaseModel):
+    occasion: str
+    clothing_ids: List[int]
+    llm_reason: str
+
+
+@router.post("/wishlist", response_model=OutfitResponse)
+def add_to_wishlist(item: WishlistCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    new_outfit = Outfit(user_id=current_user.id, occasion=item.occasion, clothing_ids=item.clothing_ids, llm_reason=item.llm_reason, is_wishlist=True)
+    db.add(new_outfit)
+    db.commit()
+    db.refresh(new_outfit)
+    
+    from app.wardrobe.s3 import get_image_url
+    items_map = {}
+    db_items = db.query(ClothingItem).filter(ClothingItem.id.in_(item.clothing_ids)).all()
+
+    for i in db_items:
+        items_map[i.id] = {"id": i.id, "name": i.name, "category": i.category, "color_primary": i.color_primary, "image_url": get_image_url(i.image_url)}
+    return {"id": str(new_outfit.id), "occasion": new_outfit.occasion, "llm_reason": new_outfit.llm_reason, "created_at": new_outfit.created_at.isoformat(), "items": [items_map[iid] for iid in new_outfit.clothing_ids if iid in items_map]}
+
+
+@router.get("/wishlist", response_model=List[OutfitResponse])
+def list_wishlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    outfits = db.query(Outfit).filter(Outfit.user_id == current_user.id, Outfit.is_wishlist).order_by(Outfit.created_at.desc()).all()
+
+    if not outfits:
+        return []
+    all_item_ids = []
+
+    for o in outfits:
+        all_item_ids.extend(o.clothing_ids or [])
+    all_item_ids = list(set(all_item_ids))
+    items_map = {}
+
+    if all_item_ids:
+        db_items = db.query(ClothingItem).filter(ClothingItem.id.in_(all_item_ids)).all()
+        from app.wardrobe.s3 import get_image_url
+        for i in db_items:
+            items_map[i.id] = {"id": i.id, "name": i.name, "category": i.category, "color_primary": i.color_primary, "image_url": get_image_url(i.image_url)}
+    results = []
+
+    for o in outfits:
+        enriched_items = [items_map[iid] for iid in o.clothing_ids if iid in items_map]
+        results.append({"id": str(o.id), "occasion": o.occasion, "llm_reason": o.llm_reason, "created_at": o.created_at.isoformat(), "items": enriched_items})
+    return results
+
+
+@router.delete("/wishlist/{outfit_id}")
+def remove_from_wishlist(outfit_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    o = db.query(Outfit).filter(Outfit.id == outfit_id, Outfit.user_id == current_user.id, Outfit.is_wishlist).first()
+    if not o:
+        raise HTTPException(status_code=404, detail="Not found in wishlist")
+    db.delete(o)
+    db.commit()
+    return {"message": "Removed from wishlist"}

@@ -16,12 +16,15 @@ import {
   ChevronRight,
   Check,
   Camera,
+  Bookmark,
+  Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR, { mutate } from "swr";
 import client from "@/api/client";
 import { DailySkeleton } from "@/components/Skeleton";
 import { StatusToast } from "@/components/StatusToast";
+import { generateLookImage, downloadImage } from "@/lib/lookImage";
 
 const DAILY_TIMEOUT = 25000;
 
@@ -95,6 +98,7 @@ export default function DailyLook() {
   const [focusedLookIdx, setFocusedLookIdx] = useState(0);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [savedLooks, setSavedLooks] = useState(new Set());
+  const [wishlistedLooks, setWishlistedLooks] = useState(new Set());
   const [showCelebration, setShowCelebration] = useState(false);
   const [hasSeenFirstLook, setHasSeenFirstLook] = useState(false);
   const celebratedRef = useRef(false);
@@ -117,6 +121,9 @@ export default function DailyLook() {
     errorRetryCount: 1,
     errorRetryInterval: 2000,
   });
+
+  // Fetch user profile for skin tone (used by download-as-image)
+  const { data: user } = useSWR("/auth/me", (url) => client.get(url).then((res) => res.data), { revalidateOnFocus: false });
 
   useEffect(() => {
     if (looks.length > 0 && !celebratedRef.current && !hasSeenFirstLook) {
@@ -183,6 +190,27 @@ export default function DailyLook() {
     } catch (err) {
       showStatus("error", "Failed to save look.");
     }
+  };
+
+  const handleWishlistLook = async (look, idx) => {
+    try {
+      await client.post("/style/wishlist", {
+        occasion: `${occasion} Studio Look`,
+        clothing_ids: look.items.map((i) => i.id),
+        llm_reason: look.stylist_note,
+      }, { timeout: 15000 });
+      setWishlistedLooks((prev) => new Set(prev).add(idx));
+      showStatus("success", "Saved for later!");
+    } catch (err) { showStatus("error", "Failed to save look."); }
+  };
+
+  const handleDownloadImage = async (look) => {
+    try {
+      showStatus("info", "Generating image...");
+      const dataUrl = await generateLookImage(look, user);
+      downloadImage(dataUrl, `daily-style-${occasion.toLowerCase()}.png`);
+      showStatus("success", "Image downloaded!");
+    } catch (err) { showStatus("error", "Could not generate image."); }
   };
 
   const handleShareLook = async (look) => {
@@ -469,19 +497,36 @@ export default function DailyLook() {
                 )}
               </button>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleWishlistLook(focusedLook, focusedLookIdx)}
+                  className={`flex items-center justify-center gap-1.5 py-4 rounded-full font-bold t-meta transition-all shadow-lg pressable ${
+                    wishlistedLooks.has(focusedLookIdx)
+                      ? "bg-fashion-navy text-white"
+                      : "bg-white border border-black/10 text-fashion-charcoal hover:bg-fashion-bg"
+                  }`}
+                >
+                  <Bookmark size={14} fill={wishlistedLooks.has(focusedLookIdx) ? "currentColor" : "none"} />
+                  {wishlistedLooks.has(focusedLookIdx) ? "Saved" : "Save for later"}
+                </button>
                 <button
                   onClick={() => handleShareLook(focusedLook)}
-                  className="flex items-center justify-center gap-2 py-4 bg-fashion-gold text-white rounded-full font-bold t-label hover:bg-black transition-all shadow-lg pressable"
+                  className="flex items-center justify-center gap-1.5 py-4 bg-fashion-gold text-white rounded-full font-bold t-meta hover:bg-black transition-all shadow-lg pressable"
                 >
-                  <Share2 size={16} /> Share
+                  <Share2 size={14} /> Share to feed
+                </button>
+                <button
+                  onClick={() => handleDownloadImage(focusedLook)}
+                  className="flex items-center justify-center gap-1.5 py-4 bg-fashion-charcoal text-white rounded-full font-bold t-meta hover:bg-black transition-all shadow-lg pressable"
+                >
+                  <Download size={14} /> Download image
                 </button>
                 <button
                   onClick={() => mutate(swrKey)}
                   disabled={isValidating}
-                  className="flex items-center justify-center gap-2 py-4 border border-black/10 text-fashion-charcoal rounded-full hover:bg-fashion-bg transition-all bg-white shadow-sm disabled:opacity-50 pressable"
+                  className="flex items-center justify-center gap-1.5 py-4 border border-black/10 text-fashion-charcoal rounded-full hover:bg-fashion-bg transition-all bg-white shadow-sm disabled:opacity-50 pressable"
                 >
-                  <RefreshCw size={16} className={isValidating ? "animate-spin" : ""} />
+                  <RefreshCw size={14} className={isValidating ? "animate-spin" : ""} />
                   Regenerate
                 </button>
               </div>

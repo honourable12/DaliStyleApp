@@ -180,6 +180,7 @@ class Outfit(Base):
     occasion = Column(String, index=True)
     clothing_ids = Column(JSON)
     llm_reason = Column(String)
+    is_wishlist = Column(Boolean, default=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="outfits")

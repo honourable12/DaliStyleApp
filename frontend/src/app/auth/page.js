@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2, Sparkles, Zap } from "lucide-react";
 import client from "@/api/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +8,8 @@ import Link from "next/link";
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
@@ -52,6 +54,19 @@ export default function Auth() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMagicLink = async (e) => {
+    e.preventDefault();
+    if (!formData.email) { setError("Enter your email first."); return; }
+    setMagicLinkLoading(true);
+    setError(""); setSuccess("");
+    try {
+      await client.post("/auth/magic-link", { email: formData.email });
+      setMagicLinkSent(true);
+      setSuccess("Check your email for a sign-in link.");
+    } catch (err) { setError("Could not send link. Please try again."); }
+    finally { setMagicLinkLoading(false); }
   };
 
   return (
@@ -121,6 +136,31 @@ export default function Auth() {
             {loading ? <Loader2 className="animate-spin" size={16} /> : (isLogin ? "SIGN IN" : "CREATE ACCOUNT")}
             {!loading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
           </button>
+          {/* Divider */}
+          <div className="flex items-center gap-3 py-2">
+            <div className="flex-1 h-px bg-black/5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-fashion-muted">or</span>
+            <div className="flex-1 h-px bg-black/5" />
+          </div>
+
+          {/* Magic Link Button */}
+          <button
+            type="button"
+            onClick={handleMagicLink}
+            disabled={magicLinkLoading || magicLinkSent}
+            className="w-full bg-white border-2 border-fashion-gold/30 text-fashion-charcoal py-4 rounded-full font-bold text-xs tracking-[0.2em] uppercase hover:border-fashion-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {magicLinkLoading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : magicLinkSent ? (
+              <><Sparkles size={16} className="text-fashion-gold" /> Link sent — check your email</>
+            ) : (
+              <><Zap size={16} className="text-fashion-gold" /> Sign in with link</>
+            )}
+          </button>
+          <p className="text-center text-[9px] text-fashion-muted">
+            We'll email you a secure link to sign in instantly — no password needed.
+          </p>
         </form>
 
         <div className="text-center">

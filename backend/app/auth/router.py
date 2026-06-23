@@ -17,6 +17,7 @@ from app.auth.utils import (
     create_access_token,
     create_refresh_token,
     create_password_reset_token,
+    create_magic_link_token,
     decode_token,
     settings,
 )
@@ -249,7 +250,7 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     if user:
         reset_token = create_password_reset_token(data={"sub": user.email})
         # FOR TESTING
-        print("🔑 PASSWORD RESET REQUEST")
+        print(" PASSWORD RESET REQUEST")
         print(f"Link: http://localhost:3000/auth/reset-password?token={reset_token}")
 
     return {"message": "If that email is registered, a reset link has been sent."}
@@ -275,3 +276,47 @@ def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Password updated successfully. You can now sign in."}
+
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
+
+
+class MagicLinkVerify(BaseModel):
+    token: str
+
+
+@router.post("/magic-link")
+def request_magic_link(body: MagicLinkRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email.lower()).first()
+    if user:
+        magic_token = create_magic_link_token(data={"sub": user.email})
+        print(" MAGIC LINK REQUEST")
+        print(f"Link: http://localhost:3000/auth/magic?token={magic_token}")
+    return {"message": "If that email is registered, a magic link has been sent."}
+
+
+@router.post("/magic-link/verify", response_model=Token)
+def verify_magic_link(body: MagicLinkVerify, db: Session = Depends(get_db)):
+    try:
+        payload = decode_token(body.token, expected_type="magic")
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=400, detail="Invalid magic link")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Magic link has expired or is invalid")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        import secrets
+        random_password = secrets.token_urlsafe(32)
+        user = User(email=email.lower(), hashed_password=get_password_hash(random_password))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
+
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    refresh_token = create_refresh_token(data={"sub": user.email})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}

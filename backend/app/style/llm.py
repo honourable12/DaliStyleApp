@@ -88,7 +88,7 @@ def generate_styling_note(
                 _record_success()
                 return note
 
-            logger.warning(f"LLM returned empty/short note")
+            logger.warning("LLM returned empty/short note")
             _record_failure()
         else:
             logger.warning(f"AI service LLM returned {response.status_code}")

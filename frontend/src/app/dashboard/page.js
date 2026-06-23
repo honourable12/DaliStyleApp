@@ -54,12 +54,51 @@ export default function Dashboard() {
   });
 
   const [greeting, setGreeting] = useState("Good morning");
+  const [weather, setWeather] = useState(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour >= 12 && hour < 17) setGreeting("Good afternoon");
     else if (hour >= 17) setGreeting("Good evening");
     else setGreeting("Good morning");
+  }, []);
+
+  // Fetch weather for the dashboard widget
+  useEffect(() => {
+    const getWeather = async () => {
+      try {
+        let coords = null;
+        const cached = sessionStorage.getItem("user_coords");
+        if (cached) { coords = JSON.parse(cached); }
+        else if (navigator.geolocation) {
+          coords = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const c = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                try { sessionStorage.setItem("user_coords", JSON.stringify(c)); } catch {}
+                resolve(c);
+              },
+              () => resolve(null),
+              { timeout: 3000, maximumAge: 600000 }
+            );
+          });
+        }
+        if (!coords) return;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current_weather=true`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const temp = Math.round(data.current_weather.temperature);
+          const code = data.current_weather.weathercode;
+          setWeather({
+            temp, code,
+            label: code >= 200 && code < 600 ? "Rainy" : temp < 15 ? "Cool" : temp > 25 ? "Warm" : "Clear",
+            icon: code >= 200 && code < 600 ? "🌧️" : temp < 5 ? "❄️" : temp > 25 ? "☀️" : "🌤️",
+          });
+        }
+      } catch (e) {}
+    };
+    getWeather();
   }, []);
 
   useEffect(() => {
@@ -180,7 +219,7 @@ export default function Dashboard() {
         </Link>
       </section>
 
-      <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link
           href="/wardrobe"
           className="bg-white p-6 rounded-[28px] border border-black/5 shadow-sm hover:shadow-md transition-shadow pressable"
@@ -225,7 +264,25 @@ export default function Dashboard() {
           <p className="count-up font-serif text-3xl italic text-white">
             {sustainabilityAvg}
           </p>
-          <p className="t-eyebrow text-white/50 mt-1">Sustainability score</p>
+          <p className="t-eyebrow text-white/50 mt-1">Sustainability</p>
+        </div>
+
+        {/* Weather widget */}
+        <div className="bg-white p-6 rounded-[28px] border border-black/5 shadow-sm">
+          <div className="flex justify-between items-start mb-3">
+            <div className="w-10 h-10 rounded-xl bg-fashion-bg border border-black/5 flex items-center justify-center text-xl">
+              {weather ? weather.icon : "🌤️"}
+            </div>
+            {weather && (
+              <span className="px-2 py-0.5 bg-fashion-gold/10 text-fashion-gold rounded-full text-[9px] font-bold uppercase tracking-wider">
+                {weather.label}
+              </span>
+            )}
+          </div>
+          <p className="font-serif text-3xl italic text-fashion-charcoal">
+            {weather ? weather.temp + "°" : "—"}
+          </p>
+          <p className="t-eyebrow text-fashion-muted mt-1">Today's weather</p>
         </div>
       </section>
 
