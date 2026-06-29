@@ -11,6 +11,7 @@ const SAMPLE_LOOKS = [
     hex: "#d7bd96",
     occasion: "Casual Friday",
     note: "Earthy terracotta with cream denim — relaxed confidence for the day.",
+    image: "/images/looks/casual_friday.jpg",
     items: [
       { name: "Linen Blazer", color: "#a8623c", category: "Outerwear" },
       { name: "Cream Jeans", color: "#e8dcc4", category: "Bottom" },
@@ -23,6 +24,7 @@ const SAMPLE_LOOKS = [
     hex: "#f7ead0",
     occasion: "Evening Out",
     note: "Deep emerald against your warm undertone — quiet drama for tonight.",
+    image: "/images/looks/evening_out.jpg",
     items: [
       { name: "Silk Blouse", color: "#0f5132", category: "Top" },
       { name: "Tailored Trousers", color: "#1a1a1a", category: "Bottom" },
@@ -35,6 +37,7 @@ const SAMPLE_LOOKS = [
     hex: "#604134",
     occasion: "Work Mode",
     note: "Crisp ivory + navy — clean authority that flatters deep skin tones.",
+    image: "/images/looks/work_mode.jpg",
     items: [
       { name: "Ivory Sweater", color: "#f4ede0", category: "Top" },
       { name: "Navy Trousers", color: "#1b263b", category: "Bottom" },
@@ -138,44 +141,67 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-5 space-y-3">
+              {/* Outfit Showcase Image */}
+              <div className="relative h-96 w-full bg-fashion-bg overflow-hidden border-b border-black/5">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeLook}
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -30 }}
+                    initial={{ opacity: 0, scale: 1.05 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4 }}
-                    className="space-y-3"
+                    className="w-full h-full relative"
+                  >
+                    <Image
+                      src={look.image}
+                      alt={look.occasion}
+                      fill
+                      sizes="(max-width: 448px) 100vw, 448px"
+                      className="object-cover"
+                      priority
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Compact Horizontal Clothes Items */}
+              <div className="p-4 bg-white border-b border-black/5">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeLook}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.4 }}
+                    className="flex justify-around gap-4"
                   >
                     {look.items.map((item, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-4 p-3 bg-fashion-bg rounded-2xl"
+                        className="flex items-center gap-2 bg-fashion-bg px-3 py-2 rounded-xl flex-1 justify-center min-w-0"
                       >
                         <div
-                          className="w-12 h-12 rounded-xl shadow-sm border border-black/5"
+                          className="w-4 h-4 rounded-full border border-black/10 shrink-0"
                           style={{ backgroundColor: item.color }}
                         />
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-fashion-charcoal">{item.name}</p>
-                          <p className="t-eyebrow text-fashion-muted">{item.category}</p>
-                        </div>
+                        <span className="text-[11px] font-semibold text-fashion-charcoal truncate">
+                          {item.name}
+                        </span>
                       </div>
                     ))}
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              <div className="bg-fashion-charcoal text-white p-5">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <Sparkles size={16} className="text-fashion-gold shrink-0 mt-1" />
-                  <p className="text-sm font-serif italic leading-snug flex-1">"{look.note}"</p>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                  <span className="t-meta text-white/50">Color harmony</span>
+              {/* Stylist Note and Harmony Footer */}
+              <div className="bg-fashion-charcoal text-white p-4">
+                <p className="text-xs font-serif italic text-white/95 text-center leading-relaxed mb-3 px-2">
+                  "{look.note}"
+                </p>
+                <div className="flex items-center justify-between pt-2.5 border-t border-white/10">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Color harmony</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
                       <motion.div
                         key={`bar-${activeLook}`}
                         initial={{ width: 0 }}
@@ -184,7 +210,7 @@ export default function Home() {
                         className="h-full bg-fashion-gold"
                       />
                     </div>
-                    <span className="text-sm font-bold text-fashion-gold">{look.harmony}%</span>
+                    <span className="text-xs font-bold text-fashion-gold">{look.harmony}%</span>
                   </div>
                 </div>
               </div>

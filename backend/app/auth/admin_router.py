@@ -31,7 +31,6 @@ def create_partner(req: PartnerCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Partner name already exists")
 
     # Generate a secure random API Key
-    # format: ds_live_... for a professional look
     api_key = f"ds_live_{secrets.token_urlsafe(32)}"
 
     new_partner = Partner(name=req.name, api_key=api_key, settings=req.settings or {})
