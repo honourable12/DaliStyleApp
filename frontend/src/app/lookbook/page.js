@@ -44,7 +44,7 @@ export default function Lookbook() {
       </AnimatePresence>
 
       <section className="text-center space-y-4">
-        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-6xl md:text-8xl font-serif text-fashion-charcoal">Style Archive</motion.h1>
+        <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-3xl sm:text-6xl md:text-8xl font-serif text-fashion-charcoal">Style Archive</motion.h1>
         <p className="text-fashion-muted uppercase tracking-[0.4em] text-[10px] font-bold">Your Curated Journey</p>
       </section>
 

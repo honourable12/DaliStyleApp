@@ -158,7 +158,7 @@ export default function Onboarding() {
               <div className="space-y-6 text-center md:text-left">
                 <div className="space-y-3">
                   <p className="t-eyebrow text-fashion-gold">Step 1 of 3</p>
-                  <h1 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+                  <h1 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
                     Meet your canvas.
                   </h1>
                   <p className="t-body text-fashion-muted text-base max-w-sm mx-auto md:mx-0">
@@ -259,7 +259,7 @@ export default function Onboarding() {
             >
               <div className="space-y-3">
                 <p className="t-eyebrow text-fashion-gold">Step 2 of 3</p>
-                <h1 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+                <h1 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
                   Pick your vibe.
                 </h1>
                 <p className="t-body text-fashion-muted text-base max-w-md mx-auto">
@@ -327,7 +327,7 @@ export default function Onboarding() {
             >
               <div className="space-y-3">
                 <p className="t-eyebrow text-fashion-gold">Step 3 of 3</p>
-                <h1 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+                <h1 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
                   Add your first pieces.
                 </h1>
                 <p className="t-body text-fashion-muted text-base max-w-md mx-auto">

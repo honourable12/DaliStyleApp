@@ -60,7 +60,7 @@ function ResetPasswordForm() {
   return (
     <div className="w-full max-w-md space-y-12 text-center">
       <div className="space-y-4">
-        <h1 className="text-5xl font-serif text-fashion-charcoal">New Identity</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif text-fashion-charcoal">New Identity</h1>
         <p className="text-fashion-muted font-light uppercase tracking-widest text-[10px] font-bold">
           Secure your closet with a new password
         </p>

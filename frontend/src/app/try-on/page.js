@@ -158,10 +158,10 @@ export default function TryOnStudio() {
       </AnimatePresence>
 
       <section className="text-center space-y-2 shrink-0">
-        <h1 className="text-5xl md:text-8xl font-serif text-fashion-charcoal uppercase italic tracking-tighter leading-none">
+        <h1 className="text-3xl sm:text-5xl md:text-8xl font-serif text-fashion-charcoal uppercase italic tracking-tighter leading-none">
           Studio
         </h1>
-        <p className="text-fashion-muted text-[8px] md:text-[10px] font-bold tracking-[0.5em] uppercase">
+        <p className="text-fashion-muted text-[8px] md:text-[10px] font-bold tracking-[0.25em] sm:tracking-[0.5em] uppercase">
           VIRTUAL FITTING ROOM
         </p>
       </section>

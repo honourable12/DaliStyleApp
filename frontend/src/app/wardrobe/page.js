@@ -277,23 +277,23 @@ export default function Wardrobe() {
         </AnimatePresence>
 
         {discoveryItem && (
-          <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-              <div className="p-8 border-b flex justify-between items-center">
+          <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-3 sm:p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[24px] sm:rounded-[40px] max-w-2xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+              <div className="p-5 sm:p-8 border-b flex justify-between items-center">
                 <div>
-                  <h2 className="text-3xl font-serif italic uppercase">Discover Matches</h2>
+                  <h2 className="text-2xl sm:text-3xl font-serif italic uppercase">Discover Matches</h2>
                   <p className="text-[10px] font-bold tracking-widest text-fashion-muted">AI FOUND {discoveryItem.count} ITEMS</p>
                 </div>
                 <button onClick={() => setDiscoveryItem(null)} className="p-2 hover:bg-black/5 rounded-full"><X /></button>
               </div>
-              <div className="overflow-y-auto p-8 space-y-10">
+              <div className="overflow-y-auto p-5 sm:p-8 space-y-10">
                 {discoveryItem.detections.map((det, i) => (
                   <div key={i} className="space-y-4 text-left">
                     <div className="flex gap-4 items-center">
                       <div className="px-4 py-1.5 bg-fashion-gold text-white rounded-full text-[10px] font-bold uppercase tracking-widest">{det.analysis.category}</div>
                       <div className="px-4 py-1.5 bg-fashion-charcoal text-white rounded-full text-[10px] font-bold uppercase tracking-widest">{det.analysis.pattern}</div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                       {det.found_images.map((img, idx) => (
                         <div key={idx} className="relative aspect-[3/4] rounded-2xl overflow-hidden border">
                           <Image src={img} alt="Matched item" fill className="object-cover" />
@@ -309,8 +309,8 @@ export default function Wardrobe() {
 
         <header className="flex justify-between items-center mb-10 px-2">
           <div>
-            <h1 className="text-5xl font-serif text-fashion-charcoal tracking-tighter uppercase italic">Closet</h1>
-            <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em]">{items?.length || 0} PIECES</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif text-fashion-charcoal tracking-tighter uppercase italic">Closet</h1>
+            <p className="text-fashion-muted text-[10px] font-bold tracking-[0.25em] sm:tracking-[0.5em]">{items?.length || 0} PIECES</p>
           </div>
           <div className="flex gap-4">
             <button
@@ -422,7 +422,7 @@ export default function Wardrobe() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2">
             {filteredItems.map((item, idx) => (
               <motion.div
                 layout
@@ -541,7 +541,7 @@ export default function Wardrobe() {
 
               <div className="flex flex-col items-center md:items-start flex-1 min-w-0 gap-4">
                 <div className="text-center md:text-left">
-                  <p className="text-[9px] font-bold tracking-[0.5em] uppercase text-fashion-gold mb-1">Color Harmony</p>
+                  <p className="text-[9px] font-bold tracking-[0.25em] sm:tracking-[0.5em] uppercase text-fashion-gold mb-1">Color Harmony</p>
                   <h3 className="text-2xl md:text-4xl font-serif italic text-white leading-tight">
                     {calculateHarmony(workbench)}% Match
                   </h3>
@@ -580,15 +580,15 @@ export default function Wardrobe() {
 
       <AnimatePresence>
         {editingItem && (
-          <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[40px] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+              className="bg-white rounded-[24px] sm:rounded-[40px] max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col md:flex-row shadow-2xl"
             >
               {/* Image Section */}
-              <div className="relative w-full md:w-1/2 aspect-square md:aspect-auto bg-fashion-bg group">
+              <div className="relative w-full md:w-1/2 aspect-[4/3] sm:aspect-square md:aspect-auto bg-fashion-bg group shrink-0">
                 <AnimatePresence mode="wait">
                   {discoveredReplacement ? (
                     <motion.div 
@@ -671,10 +671,10 @@ export default function Wardrobe() {
               </div>
 
               {/* Form Section */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-12">
-                <div className="flex justify-between items-start mb-10">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-8 md:p-12">
+                <div className="flex justify-between items-start mb-6 sm:mb-10">
                   <div>
-                    <h2 className="text-4xl font-serif italic text-fashion-charcoal mb-2">Vault Details</h2>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif italic text-fashion-charcoal mb-2">Vault Details</h2>
                     <p className="text-[10px] font-bold tracking-[0.3em] text-fashion-muted uppercase">Management Tool</p>
                   </div>
                   <button onClick={() => setEditingItem(null)} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={20}/></button>
@@ -690,7 +690,7 @@ export default function Wardrobe() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Brand</label>
                       <input 
@@ -759,7 +759,7 @@ export default function Wardrobe() {
 
                     {editingItem.is_shoppable && (
                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <label className="text-[10px] font-bold uppercase tracking-widest text-fashion-muted ml-1">Price (Cents)</label>
                             <input 

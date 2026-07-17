@@ -67,28 +67,28 @@ export default function StyleFeed() {
       </AnimatePresence>
 
       <section className="text-center space-y-4">
-        <h1 className="text-6xl md:text-8xl font-serif text-fashion-charcoal uppercase italic tracking-tighter leading-none">Feed</h1>
-        <p className="text-fashion-muted text-[10px] font-bold tracking-[0.5em] uppercase">COMMUNITY TRENDS & CURATED PIECES</p>
+        <h1 className="text-3xl sm:text-6xl md:text-8xl font-serif text-fashion-charcoal uppercase italic tracking-tighter leading-none">Feed</h1>
+        <p className="text-fashion-muted text-[10px] font-bold tracking-[0.25em] sm:tracking-[0.5em] uppercase">COMMUNITY TRENDS & CURATED PIECES</p>
       </section>
 
       <div className="space-y-24">
         {posts.map((post) => (
           <motion.article 
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="group space-y-6"
-          >
+             key={post.id}
+             initial={{ opacity: 0, y: 20 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             className="group space-y-6"
+           >
             {/* ... rest of post header and content remains same ... */}
             <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-fashion-gold/10 text-fashion-gold flex items-center justify-center border border-fashion-gold/20">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-fashion-gold/10 text-fashion-gold flex items-center justify-center border border-fashion-gold/20 shrink-0">
                   <User size={20} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-fashion-charcoal">{post.user.email.split('@')[0]}</p>
-                  <p className="text-[8px] font-medium text-fashion-muted uppercase tracking-tighter">Shared an {post.post_type}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-fashion-charcoal truncate">{post.user.email.split('@')[0]}</p>
+                  <p className="text-[8px] font-medium text-fashion-muted uppercase tracking-tighter truncate">Shared an {post.post_type}</p>
                 </div>
               </div>
               <button className="text-fashion-muted hover:text-fashion-charcoal transition-colors">

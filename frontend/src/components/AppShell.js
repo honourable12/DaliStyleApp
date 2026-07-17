@@ -23,9 +23,9 @@ export default function AppShell({ children, handleLogout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={20} />, short: "Home" },
     { name: "Daily Look", href: "/daily", icon: <Sparkles size={20} />, short: "Daily", primary: true },
     { name: "Fitting Room", href: "/try-on", icon: <Camera size={20} />, short: "Try-On" },
+    { name: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={20} />, short: "Home" },
     { name: "My Closet", href: "/wardrobe", icon: <Shirt size={20} />, short: "Closet" },
     { name: "Feed", href: "/feed", icon: <Share2 size={20} />, short: "Feed" },
     { name: "Lookbook", href: "/lookbook", icon: <BookOpen size={20} />, short: "Saved" },
@@ -101,23 +101,23 @@ export default function AppShell({ children, handleLogout }) {
       </aside>
 
       {/* Mobile Top Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-md border-b border-black/5 px-5 py-3 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Logo className="w-7 h-7" color="#C5A059" />
-          <span className="font-serif text-sm tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-md border-b border-black/5 px-3 py-2 flex items-center justify-between">
+        <Link href="/dashboard" className="flex items-center gap-1.5 min-w-0 shrink-0">
+          <Logo className="w-6 h-6 shrink-0" color="#C5A059" />
+          <span className="font-serif text-xs sm:text-sm tracking-[0.12em] xs:tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
             Daily Style
           </span>
         </Link>
         <Link
           href="/profile"
-          className="w-9 h-9 rounded-full bg-fashion-gold flex items-center justify-center text-white shadow-sm"
+          className="w-8 h-8 rounded-full bg-fashion-gold flex items-center justify-center text-white shadow-sm shrink-0"
         >
-          <User size={16} />
+          <User size={14} />
         </Link>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 w-full min-h-screen pt-20 lg:pt-0 pb-32 lg:pb-0">
+      <main className="flex-1 w-full min-h-screen pt-20 lg:pt-0 pb-28 lg:pb-0">
         <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12">
           <AnimatePresence mode="wait">
             <motion.div
@@ -134,7 +134,7 @@ export default function AppShell({ children, handleLogout }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden bg-white/95 backdrop-blur-md border-t border-black/5 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden bg-white/95 backdrop-blur-md border-t border-black/5 px-1 py-1.5 sm:px-2 sm:py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div className="flex items-center justify-around max-w-md mx-auto">
           {mobileNav.map((item) => {
             const isActive = pathname === item.href;
@@ -143,7 +143,7 @@ export default function AppShell({ children, handleLogout }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-xl transition-all flex-1 ${
+                className={`flex flex-col items-center justify-center gap-1 px-1 py-1 sm:px-3 sm:py-1.5 rounded-xl transition-all flex-1 min-w-0 ${
                   isActive
                     ? isPrimary
                       ? "bg-fashion-charcoal text-white"
@@ -155,7 +155,7 @@ export default function AppShell({ children, handleLogout }) {
                   {item.icon}
                 </span>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wide ${
+                  className={`text-[10px] font-bold uppercase tracking-wide truncate max-w-full ${
                     isActive ? "text-current" : ""
                   }`}
                 >

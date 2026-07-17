@@ -74,8 +74,8 @@ export default function Profile() {
       </AnimatePresence>
 
       <section className="text-center space-y-4">
-        <h1 className="text-5xl font-serif text-fashion-charcoal uppercase tracking-tighter">Style Dashboard</h1>
-        <p className="text-fashion-muted uppercase tracking-[0.3em] text-[10px] font-bold tracking-[0.5em]">Biological & Wardrobe Intelligence</p>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif text-fashion-charcoal uppercase tracking-tighter">Style Dashboard</h1>
+        <p className="text-fashion-muted uppercase tracking-[0.25em] sm:tracking-[0.5em] text-[10px] font-bold">Biological & Wardrobe Intelligence</p>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

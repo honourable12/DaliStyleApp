@@ -35,7 +35,7 @@ export default function Auth() {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         localStorage.setItem("token", res.data.access_token);
-        router.push("/wardrobe");
+        router.push("/dashboard");
       } else {
         await client.post("/auth/register", formData);
         setSuccess("Registration successful! Please sign in with your new credentials.");
@@ -73,7 +73,7 @@ export default function Auth() {
     <div className="min-h-[70vh] flex items-center justify-center py-10">
       <div className="w-full max-w-md space-y-12">
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-serif">{isLogin ? "Welcome Back" : "Join the Club"}</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif">{isLogin ? "Welcome Back" : "Join the Club"}</h1>
           <p className="text-fashion-muted font-light uppercase tracking-widest text-[10px] font-bold">
             {isLogin ? "Your personal stylist is waiting" : "Start your digital closet today"}
           </p>

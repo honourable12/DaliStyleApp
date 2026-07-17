@@ -140,7 +140,7 @@ export default function Dashboard() {
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
           <p className="t-eyebrow text-fashion-gold">{greeting}</p>
-          <h1 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
             Ready to look good
             <br />
             today?
@@ -219,7 +219,7 @@ export default function Dashboard() {
         </Link>
       </section>
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Link
           href="/wardrobe"
           className="bg-white p-6 rounded-[28px] border border-black/5 shadow-sm hover:shadow-md transition-shadow pressable"
@@ -252,7 +252,7 @@ export default function Dashboard() {
           <p className="t-eyebrow text-fashion-muted mt-1">Your skin tone</p>
         </Link>
 
-        <div className="bg-fashion-charcoal text-white p-6 rounded-[28px] shadow-md col-span-2 md:col-span-1">
+        <div className="bg-fashion-charcoal text-white p-6 rounded-[28px] shadow-md col-span-1 sm:col-span-2 md:col-span-1">
           <div className="flex justify-between items-start mb-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 text-fashion-gold flex items-center justify-center">
               <TrendingUp size={18} />

@@ -311,7 +311,7 @@ export default function DailyLook() {
 
       <section className="text-center space-y-3">
         <p className="t-eyebrow text-fashion-gold">Your daily edit</p>
-        <h1 className="font-serif text-5xl md:text-7xl italic text-fashion-charcoal leading-tight">
+        <h1 className="text-3xl sm:text-5xl md:text-7xl font-serif italic text-fashion-charcoal leading-tight">
           Today's look
         </h1>
       </section>
@@ -497,7 +497,7 @@ export default function DailyLook() {
                 )}
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={() => handleWishlistLook(focusedLook, focusedLookIdx)}
                   className={`flex items-center justify-center gap-1.5 py-4 rounded-full font-bold t-meta transition-all shadow-lg pressable ${

@@ -86,7 +86,7 @@ export default function Home() {
               <span className="t-eyebrow text-fashion-gold">Your stylist. In 10 seconds.</span>
             </div>
 
-            <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-fashion-charcoal tracking-tighter leading-[0.9]">
+            <h1 className="font-serif text-3xl sm:text-5xl md:text-7xl lg:text-8xl text-fashion-charcoal tracking-tighter leading-[0.9]">
               Look good.
               <br />
               <span className="italic">Feel confident.</span>
@@ -236,7 +236,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-4 mb-16">
             <p className="t-eyebrow text-fashion-gold">Three steps to your daily look</p>
-            <h2 className="font-serif text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl md:text-6xl italic text-fashion-charcoal leading-tight">
               No stylist needed.
               <br />
               Just your phone.
@@ -369,7 +369,7 @@ export default function Home() {
 
       <section className="py-20 md:py-32 px-6">
         <div className="max-w-3xl mx-auto text-center space-y-8">
-          <h2 className="font-serif text-5xl md:text-7xl italic text-fashion-charcoal leading-tight">
+          <h2 className="font-serif text-3xl sm:text-5xl md:text-7xl italic text-fashion-charcoal leading-tight">
             Your best look
             <br />
             is already in your closet.
