@@ -66,7 +66,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Sparkles size={20} className="text-fashion-gold" />
             <span className="font-serif text-lg tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
-              Daily Style
+              Stylora
             </span>
           </div>
           <Link href="/auth" className="t-meta text-fashion-muted hover:text-fashion-charcoal transition-colors">
@@ -83,20 +83,17 @@ export default function Home() {
           >
             <div className="inline-flex items-center gap-2 bg-fashion-gold/10 px-4 py-2 rounded-full">
               <Zap size={14} className="text-fashion-gold" />
-              <span className="t-eyebrow text-fashion-gold">Your stylist. In 10 seconds.</span>
+              <span className="t-eyebrow text-fashion-gold uppercase tracking-widest font-semibold">Your AI stylist</span>
             </div>
 
             <h1 className="font-serif text-3xl sm:text-5xl md:text-7xl lg:text-8xl text-fashion-charcoal tracking-tighter leading-[0.9]">
-              Look good.
+              Wear Smarter.
               <br />
-              <span className="italic">Feel confident.</span>
-              <br />
-              Every day.
+              <span className="italic text-fashion-gold">Style Everyday.</span>
             </h1>
 
-            <p className="t-body text-fashion-muted text-lg max-w-md">
-              AI curates a daily outfit from <em>your</em> closet, matched to your skin tone,
-              the weather, and your plans. No more standing in front of the mirror at 8am.
+            <p className="t-body text-fashion-muted text-lg max-w-md font-light">
+              <strong className="text-fashion-charcoal font-medium">Your Wardrobe, Reimagined.</strong> Stylora curates daily outfits from <em>your</em> closet, matched to your skin tone, weather, and occasion.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -355,10 +352,10 @@ export default function Home() {
               <Clock size={18} className="text-fashion-gold" />
               <span className="t-meta">30-second setup</span>
             </div>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Heart size={18} className="text-rose-500" />
               <span className="t-meta">No credit card</span>
-            </div>
+            </div>*/}
             <div className="flex items-center gap-2">
               <Palette size={18} className="text-fashion-navy" />
               <span className="t-meta">Monk Skin Tone Scale</span>
@@ -391,10 +388,10 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-fashion-gold" />
-            <span className="t-meta text-fashion-charcoal">Daily Style</span>
+            <span className="t-meta text-fashion-charcoal font-bold tracking-wider">Stylora</span>
           </div>
           <p className="t-eyebrow text-fashion-muted">
-            Style is a way to say who you are without having to speak.
+            Your AI stylist. Wear Smarter. Style Everyday. Your Wardrobe, Reimagined.
           </p>
         </div>
       </footer>

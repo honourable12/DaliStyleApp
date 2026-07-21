@@ -228,7 +228,7 @@ export default function DailyLook() {
         "/social/share",
         {
           outfit_id: res.data.id,
-          caption: `My curated ${occasion} look from Daily Style.`,
+          caption: `My curated ${occasion} look from Stylora.`,
         },
         { timeout: 15000 }
       );

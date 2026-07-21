@@ -18,7 +18,7 @@ import logging
 from app.database import get_db, SessionLocal
 from app.auth.router import get_current_user
 from app.wardrobe.models import User, ClothingItem, BodyScan
-from app.wardrobe.s3 import upload_file_to_s3, get_image_url
+from app.wardrobe.s3 import upload_file_to_s3, get_image_url, delete_file_from_s3
 from app.wardrobe.utils import validate_image, calculate_sustainability_score
 from app.auth.partners import get_optional_partner
 from app.wardrobe.models import Partner
@@ -554,9 +554,32 @@ def delete_item(
     )
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
+    if item.image_url:
+        delete_file_from_s3(item.image_url)
     db.delete(item)
     db.commit()
     return {"message": "Deleted"}
+
+
+@router.delete("/body-scans/{scan_id}")
+def delete_body_scan(
+    scan_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    scan = (
+        db.query(BodyScan)
+        .filter(BodyScan.id == scan_id, BodyScan.user_id == current_user.id)
+        .first()
+    )
+    if not scan:
+        raise HTTPException(status_code=404, detail="Not found")
+    if scan.image_url:
+        delete_file_from_s3(scan.image_url)
+    db.delete(scan)
+    db.commit()
+    return {"message": "Deleted"}
+
 
 
 @router.post("/items/{item_id}/apply-clean-replacement")

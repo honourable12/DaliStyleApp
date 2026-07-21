@@ -37,7 +37,7 @@ export async function generateLookImage(look, user) {
   ctx.fillStyle = "#1A1A1A";
   ctx.fillRect(0, 0, W, 180);
 
-  // Draw the Daily Style logo (inline SVG data URL - avoids CORS issues)
+  // Draw the Stylora logo (inline SVG data URL - avoids CORS issues)
   const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="510 150 400 480" width="80" height="80">
     <g fill="#C5A059"><path d="M 639.00 190.00 C 634.71 183.84 640.51 170.70 646.75 164.75 C 653.00 158.80 665.77 154.55 675.22 156.78 C 684.67 159.01 691.55 164.08 696.92 173.08 C 702.29 182.08 695.56 196.36 696.00 204.00 C 704.75 191.59 701.66 175.43 692.75 164.25 C 683.84 153.07 663.80 153.64 653.23 158.23 C 642.66 162.82 630.50 181.99 639.00 190.00 Z"/></g>
     <g fill="#A79061"><path d="M 812.00 216.00 C 808.37 222.70 800.19 230.05 792.25 234.25 C 784.32 238.46 775.31 247.04 766.31 249.30 C 757.30 251.57 747.74 261.44 738.92 262.92 C 730.11 264.41 719.94 250.25 710.78 250.22 C 701.62 250.20 691.67 234.86 682.00 238.00 C 679.67 241.10 678.05 245.04 675.00 248.00 C 679.86 251.14 687.17 253.28 691.92 256.08 C 696.68 258.87 705.09 260.97 708.92 264.08 C 712.76 267.18 724.89 268.34 725.00 273.00 C 725.11 277.62 715.02 281.43 713.08 286.08 C 711.14 290.73 704.72 295.45 702.70 300.70 C 700.67 305.94 693.80 311.31 695.00 318.00 C 714.48 297.74 737.33 274.40 763.00 265.00 C 772.63 259.46 783.95 254.44 792.75 247.75 C 801.55 241.06 810.38 233.94 816.69 224.69 C 823.01 215.45 828.31 199.19 824.00 190.00 C 822.58 199.31 818.30 208.77 812.00 216.00 Z"/></g>
@@ -53,7 +53,7 @@ export async function generateLookImage(look, user) {
   ctx.fillStyle = "#C5A059";
   ctx.font = "bold 28px sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText("DAILY STYLE", 170, 90);
+  ctx.fillText("STYLORA", 170, 90);
 
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.font = "18px sans-serif";
@@ -153,7 +153,7 @@ export async function generateLookImage(look, user) {
   return canvas.toDataURL("image/png");
 }
 
-export function downloadImage(dataUrl, filename = "daily-style-look.png") {
+export function downloadImage(dataUrl, filename = "stylora-look.png") {
   const link = document.createElement("a");
   link.download = filename;
   link.href = dataUrl;

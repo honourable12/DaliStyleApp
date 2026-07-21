@@ -200,17 +200,38 @@ def get_image_url(object_name: str) -> str:
 
 
 def delete_file_from_s3(object_name: str):
+    if not object_name:
+        return
+
+    # Handle presigned or full URLs if object_name is passed as a URL
+    if object_name.startswith("http://") or object_name.startswith("https://"):
+        try:
+            from urllib.parse import urlparse
+            path = urlparse(object_name).path.lstrip("/")
+            # If path contains bucket name prefix (e.g. daily-style-assets/users/...), strip bucket name
+            if S3_BUCKET and path.startswith(f"{S3_BUCKET}/"):
+                path = path[len(S3_BUCKET) + 1:]
+            object_name = path
+        except Exception as err:
+            logger.error(f"Error parsing URL for S3 deletion: {err}")
+
     if STORAGE_TYPE == "local":
         try:
             path = LOCAL_STORAGE_DIR / object_name
             if path.exists():
                 path.unlink()
+                logger.info(f"Local file {object_name} deleted successfully.")
         except Exception as e:
             logger.error(f"Error deleting local file {object_name}: {e}")
         return
+
     if not s3_client:
+        logger.warning(f"S3 client not initialized. Cannot delete {object_name} from S3.")
         return
+
     try:
         s3_client.delete_object(Bucket=S3_BUCKET, Key=object_name)
+        logger.info(f"Successfully deleted '{object_name}' from S3 bucket '{S3_BUCKET}'")
     except Exception as e:
-        logger.error(f"Error deleting from S3: {e}")
+        logger.error(f"Error deleting '{object_name}' from S3: {e}")
+

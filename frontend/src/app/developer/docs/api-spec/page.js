@@ -71,7 +71,7 @@ export default function ApiSpecification() {
           </div>
           <h1 className="text-5xl font-serif text-fashion-charcoal mb-6">Headless API Specification</h1>
           <p className="text-fashion-muted text-lg leading-relaxed max-w-2xl">
-            Integrate Daily Style's computer vision and styling logic directly into your existing backend or mobile app.
+            Integrate Stylora's computer vision and styling logic directly into your existing backend or mobile app.
           </p>
         </header>
 

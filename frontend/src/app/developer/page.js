@@ -203,7 +203,7 @@ export default function PartnerPortal() {
           </div>
           <h1 className="text-4xl font-serif text-fashion-charcoal mb-4">Partner Developer Portal</h1>
           <p className="text-fashion-muted max-w-2xl text-sm leading-relaxed">
-            Welcome to the Daily Style integration hub. Manage your access keys, monitor styling requests, and explore our headless AI documentation.
+            Welcome to the Stylora integration hub. Manage your access keys, monitor styling requests, and explore our headless AI documentation.
           </p>
         </header>
 
@@ -239,7 +239,7 @@ export default function PartnerPortal() {
               <Shield size={24} className="text-fashion-gold mb-3" />
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-fashion-charcoal mb-2">Security Note</h4>
               <p className="text-[10px] text-fashion-muted leading-relaxed">
-                Daily Style uses hashed storage. Once created, your keys are revealed ONLY ONCE. 
+                Stylora uses hashed storage. Once created, your keys are revealed ONLY ONCE. 
               </p>
             </div>
           </aside>
@@ -595,7 +595,7 @@ export default function PartnerPortal() {
                   <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-start gap-3">
                     <Info size={16} className="text-red-500 shrink-0 mt-0.5" />
                     <p className="text-[9px] text-red-700 leading-relaxed font-bold uppercase tracking-widest">
-                      Daily Style does not store raw keys. If you lose this, you must revoke and regenerate a new one.
+                      Stylora does not store raw keys. If you lose this, you must revoke and regenerate a new one.
                     </p>
                   </div>
 

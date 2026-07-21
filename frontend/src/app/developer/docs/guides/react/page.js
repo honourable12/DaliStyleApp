@@ -35,7 +35,7 @@ const getOutfit = async () => {
           </div>
           <h1 className="text-5xl font-serif mb-6">React & Next.js Integration</h1>
           <p className="text-fashion-muted text-lg leading-relaxed max-w-2xl">
-            Learn how to use the Daily Style SDK to build AI-powered fashion experiences in your modern JavaScript applications.
+            Learn how to use the Stylora SDK to build AI-powered fashion experiences in your modern JavaScript applications.
           </p>
         </header>
 
@@ -43,7 +43,7 @@ const getOutfit = async () => {
           <div className="space-y-6">
             <h2 className="text-3xl font-serif italic">1. Installation</h2>
             <p className="text-sm text-fashion-muted leading-relaxed">
-              You can install the Daily Style Headless SDK via NPM or include it directly in your HTML.
+              You can install the Stylora Headless SDK via NPM or include it directly in your HTML.
             </p>
             
             <div className="space-y-4">

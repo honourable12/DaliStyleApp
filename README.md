@@ -1,4 +1,7 @@
-# Daily Style Fashion
+# Stylora
+
+> **Your AI stylist.**
+> **Wear Smarter. Style Everyday. Your Wardrobe, Reimagined.**
 
 An AI-powered personal styling application that helps you manage your wardrobe and receive daily outfit recommendations based on colour theory and skin tone analysis.
 

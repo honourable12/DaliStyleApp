@@ -1,11 +1,11 @@
 /**
- * Daily Style Headless SDK
- * A lightweight wrapper for the Daily Style Styling Engine.
+ * Stylora Headless SDK
+ * A lightweight wrapper for the Stylora Styling Engine.
  */
-class DailyStyleSDK {
+class StyloraSDK {
   /**
-   * @param {string} apiKey - Partner API Key 
-   * @param {string} baseUrl - The URL of the Daily Style API
+   * @param {string} apiKey - Your Stylora API key
+   * @param {string} baseUrl - The URL of the Stylora API
    */
   constructor(apiKey, baseUrl = "https://api.dailystyle.app") {
     this.apiKey = apiKey;

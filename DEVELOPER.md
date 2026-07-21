@@ -1,6 +1,6 @@
-# Daily Style Developer Guide: Headless Integration
+# Stylora Developer Guide: Headless Integration
 
-Welcome to the Daily Style Styling Engine. This guide will help you integrate our AI-powered stylist into your own fashion store application.
+Welcome to the Stylora Styling Engine. This guide will help you integrate our AI-powered stylist into your own fashion store application.
 
 ## 1. Quick Start with the JS SDK
 

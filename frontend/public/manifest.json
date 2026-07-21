@@ -1,7 +1,7 @@
 {
-  "name": "Daily Style Fashion",
-  "short_name": "DailyStyle",
-  "description": "AI-Powered Personal Stylist & Digital Closet",
+  "name": "Stylora - Your AI Stylist",
+  "short_name": "Stylora",
+  "description": "Your AI stylist. Wear Smarter. Style Everyday. Your Wardrobe, Reimagined.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F9F9F9",

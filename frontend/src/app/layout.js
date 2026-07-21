@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
 
 export const metadata = {
-  title: "DAILY STYLE | AI Stylist",
-  description: "Your personalized AI fashion assistant",
+  title: "Stylora | Your AI Stylist",
+  description: "Your AI stylist. Wear Smarter. Style Everyday. Your Wardrobe, Reimagined.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.png",
@@ -17,7 +17,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Daily Style",
+    title: "Stylora",
   },
   formatDetection: {
     telephone: false,

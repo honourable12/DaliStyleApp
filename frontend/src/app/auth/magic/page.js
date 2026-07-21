@@ -41,7 +41,7 @@ function MagicLinkContent() {
               <CheckCircle2 size={40} />
             </div>
             <div className="space-y-2">
-              <h1 className="text-3xl font-serif italic text-fashion-charcoal">Welcome to Daily Style!</h1>
+              <h1 className="text-3xl font-serif italic text-fashion-charcoal">Welcome to Stylora!</h1>
               <p className="text-sm text-fashion-muted">Redirecting to your studio...</p>
             </div>
           </div>

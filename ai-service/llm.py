@@ -95,18 +95,22 @@ def generate_styling_note(
         brand_ctx = f" featuring {brand}" if brand else ""
         material_ctx = f" crafted from {material}" if material else ""
 
-        prompt = (
-            f"You are a professional high-fashion stylist. "
-            f"The user has a '{skin_tone_name}' skin tone. "
-            f"You have curated an outfit{brand_ctx}{material_ctx}:\n"
-            f"- Top: {top_color} {context}\n"
-            f"- Bottom: {bottom_color}\n\n"
-            f"Explain in exactly 2 chic sentences why this combination works. "
-            f"Mention the color synergy with their skin tone. "
-            f"Be encouraging and sophisticated. No bullet points."
+        user_prompt = (
+            f"Skin tone: {skin_tone_name}\n"
+            f"Outfit: Top is {top_color} ({context}), Bottom is {bottom_color}{brand_ctx}{material_ctx}.\n"
+            f"Explain in 2 chic sentences why this combination works and flatters their skin tone."
         )
 
-        messages = [{"role": "user", "content": prompt}]
+        messages = [
+            {
+                "role": "system",
+                "content": "You are Stylora, a professional high-fashion AI stylist. Provide concise, encouraging 2-sentence outfit advice.",
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
         formatted = _tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -116,30 +120,46 @@ def generate_styling_note(
             outputs = _model.generate(
                 **inputs,
                 max_new_tokens=MAX_NEW_TOKENS,
-                do_sample=False,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.9,
                 pad_token_id=_tokenizer.pad_token_id,
                 eos_token_id=_tokenizer.eos_token_id,
                 use_cache=True,
             )
 
         input_len = inputs["input_ids"].shape[1]
-        generated = _tokenizer.decode(
+        raw_generated = _tokenizer.decode(
             outputs[0][input_len:], skip_special_tokens=True
         ).strip()
 
-        if not generated or len(generated) < 30:
-            logger.warning("LLM output too short, using fallback")
+        # Clean prompt or system text if echoed in generated output
+        generated = raw_generated
+        for noise in [user_prompt, "You are Stylora", "Explain in 2 chic sentences", "Skin tone:", "Outfit:"]:
+            if noise in generated:
+                generated = generated.replace(noise, "").strip()
+
+        # Remove chat template system/user headers if present
+        for tag in ["<|im_start|>", "<|im_end|>", "system", "user", "assistant"]:
+            if generated.startswith(tag):
+                generated = generated[len(tag):].strip()
+
+        if not generated or len(generated) < 25:
+            logger.warning("LLM output invalid or too short, using fallback")
             return _fallback_note(skin_tone_name, top_color, bottom_color, context, brand, material)
 
-        sentences = generated.split(".")
-        if len(sentences) > 2:
-            generated = ".".join(sentences[:2]).strip() + "."
+        sentences = [s.strip() for s in generated.split(".") if s.strip()]
+        if len(sentences) >= 2:
+            generated = ". ".join(sentences[:2]) + "."
+        elif len(sentences) == 1:
+            generated = sentences[0] + "."
 
         return generated
 
     except Exception as e:
         logger.error(f"LLM generation failed: {e}")
         return _fallback_note(skin_tone_name, top_color, bottom_color, context, brand, material)
+
 
 
 def _fallback_note(

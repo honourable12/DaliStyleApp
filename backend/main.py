@@ -13,7 +13,7 @@ from app.auth.admin_router import router as admin_router
 from app.auth.partner_router import router as partner_auth_router
 from app.auth.middleware import ApiUsageMiddleware
 
-app = FastAPI(title="Daily Style Fashion API")
+app = FastAPI(title="Stylora API")
 
 # Configure CORS from Environment
 origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
@@ -65,4 +65,4 @@ handler = Mangum(app, lifespan="off")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Daily Style Fashion API"}
+    return {"message": "Welcome to Stylora API"}

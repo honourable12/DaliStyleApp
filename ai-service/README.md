@@ -1,5 +1,5 @@
 ---
-title: Daily Style AI Service
+title: Stylora AI Service
 emoji: 👗
 colorFrom: pink
 colorTo: indigo
@@ -8,9 +8,9 @@ app_port: 7860
 pinned: false
 ---
 
-# Daily Style AI Service
+# Stylora AI Service
 
-This is the AI service for the Daily Style Fashion application. It provides:
+This is the AI service for the Stylora application. It provides:
 - Clothing identification (Category & Pattern)
 - Skin tone analysis (Monk Scale)
 - Automated image search for high-quality replacements

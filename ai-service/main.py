@@ -1,6 +1,6 @@
 import uvicorn
 import os
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, Request
 from pydantic import BaseModel
 from typing import Optional
 
@@ -15,7 +15,7 @@ from skin_tone import analyze_skin_tone
 from llm import generate_styling_note, get_llm_status, prewarm_model
 from bootloader import sync_models, upload_model
 
-app = FastAPI(title="Daily Style AI Service")
+app = FastAPI(title="Stylora AI Service")
 
 
 @app.on_event("startup")
@@ -124,17 +124,46 @@ async def analyze_body_segments(file: UploadFile = File(...)):
     }
 
 
+class StylingNotePayload(BaseModel):
+    skin_tone_name: str = "Medium"
+    top_color: str = "white"
+    bottom_color: str = "black"
+    context: str = "casual"
+    brand: Optional[str] = None
+    material: Optional[str] = None
+
 @app.post("/generate-styling-note")
 async def generate_styling_note_endpoint(
-    skin_tone_name: str = Form(...),
-    top_color: str = Form(...),
-    bottom_color: str = Form(...),
-    context: str = Form(...),
-    brand: Optional[str] = Form(None),
-    material: Optional[str] = Form(None),
+    request: Request,
 ):
     import time
     start = time.time()
+    
+    skin_tone_name = "Medium"
+    top_color = "white"
+    bottom_color = "black"
+    context = "casual"
+    brand = None
+    material = None
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        skin_tone_name = body.get("skin_tone_name", skin_tone_name)
+        top_color = body.get("top_color", top_color)
+        bottom_color = body.get("bottom_color", bottom_color)
+        context = body.get("context", context)
+        brand = body.get("brand")
+        material = body.get("material")
+    else:
+        form = await request.form()
+        skin_tone_name = form.get("skin_tone_name", skin_tone_name)
+        top_color = form.get("top_color", top_color)
+        bottom_color = form.get("bottom_color", bottom_color)
+        context = form.get("context", context)
+        brand = form.get("brand")
+        material = form.get("material")
+
     note = generate_styling_note(
         skin_tone_name=skin_tone_name,
         top_color=top_color,
@@ -146,6 +175,7 @@ async def generate_styling_note_endpoint(
     elapsed = time.time() - start
     print(f"[LLM] /generate-styling-note: {elapsed:.2f}s", flush=True)
     return {"note": note, "elapsed_ms": int(elapsed * 1000)}
+
 
 
 @app.get("/health")

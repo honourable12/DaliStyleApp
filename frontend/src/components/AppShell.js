@@ -44,7 +44,7 @@ export default function AppShell({ children, handleLogout }) {
               color="#C5A059"
             />
             <span className="font-serif text-lg tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
-              Daily Style
+              Stylora
             </span>
           </Link>
         </div>
@@ -105,7 +105,7 @@ export default function AppShell({ children, handleLogout }) {
         <Link href="/dashboard" className="flex items-center gap-1.5 min-w-0 shrink-0">
           <Logo className="w-6 h-6 shrink-0" color="#C5A059" />
           <span className="font-serif text-xs sm:text-sm tracking-[0.12em] xs:tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
-            Daily Style
+            Stylora
           </span>
         </Link>
         <Link

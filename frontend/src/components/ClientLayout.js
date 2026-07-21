@@ -47,7 +47,7 @@ export default function ClientLayout({ children }) {
           <Link href="/" className="flex items-center gap-2 group">
             <Logo className="w-12 h-12 group-hover:scale-110 transition-transform duration-500" color="#C5A059" />
             <span className="font-serif text-xl tracking-[0.2em] font-bold text-fashion-charcoal uppercase">
-              Daily Style
+              Stylora
             </span>
           </Link>
 

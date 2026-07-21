@@ -1,6 +1,6 @@
 {
-  "name": "dalistyleapp-frontend",
-  "version": "0.1.0",
+  "name": "stylora-frontend",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
