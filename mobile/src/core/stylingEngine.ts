@@ -78,3 +78,73 @@ export function generateDailyOutfit(
 
   return bestOutfit;
 }
+
+/**
+ * Generates an array of curated precombined matched outfits from the wardrobe
+ */
+export function generatePrecombinedLooks(
+  wardrobe: WardrobeItem[],
+  userProfile: UserStyleProfile
+): OutfitRecommendation[] {
+  if (wardrobe.length < 2) return [];
+
+  const tops = wardrobe.filter((i) => i.category === 'top');
+  const bottoms = wardrobe.filter((i) => i.category === 'bottom');
+  const outerwears = wardrobe.filter((i) => i.category === 'outerwear');
+  const shoesList = wardrobe.filter((i) => i.category === 'shoes');
+
+  const availableTops = tops.length > 0 ? tops : wardrobe;
+  const availableBottoms = bottoms.length > 0 ? bottoms : wardrobe;
+
+  const results: OutfitRecommendation[] = [];
+  const seenCombos = new Set<string>();
+
+  for (const top of availableTops) {
+    for (const bottom of availableBottoms) {
+      if (top.id === bottom.id && wardrobe.length > 1) continue;
+
+      const comboKey = `${top.id}_${bottom.id}`;
+      if (seenCombos.has(comboKey)) continue;
+      seenCombos.add(comboKey);
+
+      const items: WardrobeItem[] = [top, bottom];
+
+      // Add a matching outerwear if available
+      if (outerwears.length > 0 && results.length % 2 === 0) {
+        items.push(outerwears[results.length % outerwears.length]);
+      }
+
+      // Add shoes if available
+      if (shoesList.length > 0) {
+        items.push(shoesList[results.length % shoesList.length]);
+      }
+
+      const colors = items.map((i) => i.primaryColor);
+      const harmony = calculateGarmentHarmony(colors);
+      const skinContrast = calculateSkinContrast(userProfile.skinHex, top.primaryColor);
+
+      // Only include high harmony or high contrast combinations
+      if (harmony.score >= 75) {
+        const stylingNote = `Precombined ${harmony.type} look. Blends ${top.primaryColorName} with ${bottom.primaryColorName} for a balanced silhouette.`;
+
+        results.push({
+          id: `matched-${top.id.slice(0, 4)}-${bottom.id.slice(0, 4)}`,
+          items,
+          harmonyScore: harmony.score,
+          skinContrastScore: skinContrast,
+          weatherAppropriate: true,
+          weatherType: 'Clear',
+          harmonyType: harmony.type,
+          stylingNote,
+          savedInLookbook: false,
+        });
+
+        if (results.length >= 8) break;
+      }
+    }
+    if (results.length >= 8) break;
+  }
+
+  // Sort by highest harmony score
+  return results.sort((a, b) => b.harmonyScore - a.harmonyScore);
+}

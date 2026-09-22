@@ -20,17 +20,26 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AddGarmentModal } from './src/screens/AddGarmentModal';
 import { MonkCalibrationModal } from './src/screens/MonkCalibrationModal';
 import { SelfieCalibrationModal } from './src/screens/SelfieCalibrationModal';
+import { ItemDetailsModal } from './src/components/ItemDetailsModal';
 import { wardrobeStore } from './src/db/storage';
-import { generateDailyOutfit, WeatherCondition } from './src/core/stylingEngine';
+import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from './src/core/stylingEngine';
+import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
 import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile } from './src/types';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'feed' | 'profile'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'lookbook' | 'feed' | 'profile'>('today');
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [profile, setProfile] = useState<UserStyleProfile>(wardrobeStore.getProfile());
-  const [lookbook, setLookbook] = useState<OutfitRecommendation[]>([]);
+  const [savedLooks, setSavedLooks] = useState<OutfitRecommendation[]>([]);
   const [todayOutfit, setTodayOutfit] = useState<OutfitRecommendation | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Workbench State
+  const [workbenchItems, setWorkbenchItems] = useState<WardrobeItem[]>([]);
+
+  // Item Details & Delete Modal State
+  const [selectedDetailItem, setSelectedDetailItem] = useState<WardrobeItem | null>(null);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
   // Modals
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -48,11 +57,14 @@ export default function App() {
     const saved = wardrobeStore.getLookbook();
     setWardrobe(items);
     setProfile(prof);
-    setLookbook(saved);
+    setSavedLooks(saved);
 
     const outfit = generateDailyOutfit(items, prof, currentWeather);
     setTodayOutfit(outfit);
   }, []);
+
+  // Precombined matched looks generated algorithmically from the current wardrobe
+  const precombinedLooks = generatePrecombinedLooks(wardrobe, profile);
 
   const handleReroll = () => {
     const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
@@ -62,14 +74,16 @@ export default function App() {
 
   const handleSaveToLookbook = (outfit: OutfitRecommendation) => {
     wardrobeStore.saveToLookbook(outfit);
-    setLookbook(wardrobeStore.getLookbook());
-    setTodayOutfit({ ...outfit, savedInLookbook: true });
+    setSavedLooks(wardrobeStore.getLookbook());
+    if (todayOutfit?.id === outfit.id) {
+      setTodayOutfit({ ...outfit, savedInLookbook: true });
+    }
     Alert.alert('Saved to Lookbook', 'Outfit archived for future inspiration.');
   };
 
   const handleRemoveFromLookbook = (id: string) => {
     wardrobeStore.removeFromLookbook(id);
-    setLookbook(wardrobeStore.getLookbook());
+    setSavedLooks(wardrobeStore.getLookbook());
   };
 
   const handleAddGarment = (newItem: WardrobeItem) => {
@@ -78,6 +92,78 @@ export default function App() {
     setWardrobe(updated);
     const refreshed = generateDailyOutfit(updated, profile, currentWeather);
     setTodayOutfit(refreshed);
+  };
+
+  // --- DELETE ITEM FUNCTION ---
+  const handleDeleteItem = async (id: string) => {
+    wardrobeStore.removeItem(id);
+    const updated = wardrobeStore.getItems();
+    setWardrobe(updated);
+
+    // Remove from workbench if present
+    setWorkbenchItems((prev) => prev.filter((i) => i.id !== id));
+
+    // Refresh today outfit
+    const refreshed = generateDailyOutfit(updated, profile, currentWeather);
+    setTodayOutfit(refreshed);
+
+    Alert.alert('Piece Deleted', 'Item permanently removed from your vault.');
+
+    // Background delete attempt on live backend
+    try {
+      fetch(`http://10.0.2.2:8000/api/wardrobe/items/${id}`, { method: 'DELETE' }).catch(() => {});
+    } catch {
+      // offline
+    }
+  };
+
+  // --- WORKBENCH FUNCTIONS ---
+  const handleAddToWorkbench = (item: WardrobeItem) => {
+    if (workbenchItems.some((w) => w.id === item.id)) {
+      Alert.alert('Workbench', 'This piece is already on your workbench.');
+      return;
+    }
+
+    setWorkbenchItems((prev) => {
+      // If same category exists and not accessory, replace it
+      const filtered = prev.filter((w) => w.category !== item.category || item.category === 'accessory');
+      if (filtered.length >= 3) {
+        return [...filtered.slice(0, 2), item];
+      }
+      return [...filtered, item];
+    });
+  };
+
+  const handleRemoveWorkbenchItem = (id: string) => {
+    setWorkbenchItems((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleClearWorkbench = () => {
+    setWorkbenchItems([]);
+  };
+
+  const handleSaveWorkbenchLook = () => {
+    if (workbenchItems.length < 2) return;
+
+    const colors = workbenchItems.map((i) => i.primaryColor);
+    const harmony = calculateGarmentHarmony(colors);
+    const skinContrast = calculateSkinContrast(profile.skinHex, workbenchItems[0].primaryColor);
+
+    const newLook: OutfitRecommendation = {
+      id: `wb-look-${Date.now()}`,
+      items: [...workbenchItems],
+      harmonyScore: harmony.score,
+      skinContrastScore: skinContrast,
+      weatherAppropriate: true,
+      weatherType: 'Clear',
+      harmonyType: harmony.type,
+      stylingNote: `Bespoke workbench composition. Hand-assembled ${harmony.type} look featuring ${workbenchItems.map((i) => i.name).join(' & ')}.`,
+      savedInLookbook: true,
+    };
+
+    wardrobeStore.saveToLookbook(newLook);
+    setSavedLooks(wardrobeStore.getLookbook());
+    Alert.alert('Look Saved', 'Your custom workbench outfit was saved to your Lookbook!');
   };
 
   const handleSelectTone = (tone: MonkTone) => {
@@ -122,8 +208,9 @@ export default function App() {
     }
   };
 
+  // 5 Canonical Tabs matching DRAPE Design Architecture
   const NAV_ITEMS: Array<{
-    key: 'today' | 'closet' | 'studio' | 'feed' | 'profile';
+    key: 'today' | 'closet' | 'studio' | 'lookbook' | 'feed';
     label: string;
     iconActive: keyof typeof Ionicons.glyphMap;
     iconInactive: keyof typeof Ionicons.glyphMap;
@@ -131,8 +218,8 @@ export default function App() {
     { key: 'today', label: 'TODAY', iconActive: 'sparkles', iconInactive: 'sparkles-outline' },
     { key: 'closet', label: 'CLOSET', iconActive: 'shirt', iconInactive: 'shirt-outline' },
     { key: 'studio', label: 'STUDIO', iconActive: 'color-palette', iconInactive: 'color-palette-outline' },
+    { key: 'lookbook', label: 'LOOKS', iconActive: 'bookmark', iconInactive: 'bookmark-outline' },
     { key: 'feed', label: 'FEED', iconActive: 'globe', iconInactive: 'globe-outline' },
-    { key: 'profile', label: 'PROFILE', iconActive: 'person', iconInactive: 'person-outline' },
   ];
 
   return (
@@ -145,7 +232,7 @@ export default function App() {
           profile={profile}
           tempC={currentWeather.tempC}
           weatherCondition={currentWeather.condition}
-          onPressProfile={() => setSelfieModalVisible(true)}
+          onPressProfile={() => setActiveTab('profile')}
           onPressSync={handleLiveBackendSync}
           isSyncing={isSyncing}
         />
@@ -157,27 +244,45 @@ export default function App() {
               outfit={todayOutfit}
               onReroll={handleReroll}
               onSaveToLookbook={handleSaveToLookbook}
-              onSelectItem={(item) =>
-                Alert.alert(
-                  item.name,
-                  `${item.category.toUpperCase()} · Color: ${item.primaryColorName} (${item.primaryColor})`
-                )
-              }
+              onSelectItem={(item) => {
+                setSelectedDetailItem(item);
+                setDetailsModalVisible(true);
+              }}
             />
           )}
 
           {activeTab === 'closet' && (
             <ClosetScreen
               items={wardrobe}
-              onSelectItem={(item) =>
-                Alert.alert(item.name, `${item.category.toUpperCase()} · ${item.primaryColorName}`)
-              }
+              workbenchItems={workbenchItems}
+              onSelectItem={(item) => {
+                setSelectedDetailItem(item);
+                setDetailsModalVisible(true);
+              }}
               onPressAdd={() => setAddModalVisible(true)}
+              onAddToWorkbench={handleAddToWorkbench}
+              onRemoveWorkbenchItem={handleRemoveWorkbenchItem}
+              onClearWorkbench={handleClearWorkbench}
+              onSaveWorkbenchLook={handleSaveWorkbenchLook}
+              onOpenStudio={() => setActiveTab('studio')}
             />
           )}
 
           {activeTab === 'studio' && (
             <StudioScreen wardrobe={wardrobe} userProfile={profile} />
+          )}
+
+          {activeTab === 'lookbook' && (
+            <LookbookScreen
+              savedLooks={savedLooks}
+              precombinedLooks={precombinedLooks}
+              onRemove={handleRemoveFromLookbook}
+              onSavePrecombined={handleSaveToLookbook}
+              onWearLook={(outfit) => {
+                setTodayOutfit(outfit);
+                setActiveTab('today');
+              }}
+            />
           )}
 
           {activeTab === 'feed' && <FeedScreen />}
@@ -218,6 +323,15 @@ export default function App() {
             );
           })}
         </View>
+
+        {/* Item Details & Delete Modal */}
+        <ItemDetailsModal
+          item={selectedDetailItem}
+          visible={detailsModalVisible}
+          onClose={() => setDetailsModalVisible(false)}
+          onAddToWorkbench={handleAddToWorkbench}
+          onDelete={handleDeleteItem}
+        />
 
         {/* Cloth Upload Modal */}
         <AddGarmentModal
