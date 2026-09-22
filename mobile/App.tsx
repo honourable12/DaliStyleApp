@@ -15,14 +15,17 @@ import { TodayScreen } from './src/screens/TodayScreen';
 import { ClosetScreen } from './src/screens/ClosetScreen';
 import { StudioScreen } from './src/screens/StudioScreen';
 import { LookbookScreen } from './src/screens/LookbookScreen';
+import { FeedScreen } from './src/screens/FeedScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AddGarmentModal } from './src/screens/AddGarmentModal';
 import { MonkCalibrationModal } from './src/screens/MonkCalibrationModal';
+import { SelfieCalibrationModal } from './src/screens/SelfieCalibrationModal';
 import { wardrobeStore } from './src/db/storage';
 import { generateDailyOutfit, WeatherCondition } from './src/core/stylingEngine';
 import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile } from './src/types';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'lookbook'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'feed' | 'profile'>('today');
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [profile, setProfile] = useState<UserStyleProfile>(wardrobeStore.getProfile());
   const [lookbook, setLookbook] = useState<OutfitRecommendation[]>([]);
@@ -32,6 +35,7 @@ export default function App() {
   // Modals
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [monkModalVisible, setMonkModalVisible] = useState(false);
+  const [selfieModalVisible, setSelfieModalVisible] = useState(false);
 
   const currentWeather: WeatherCondition = {
     tempC: 26,
@@ -39,7 +43,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Initial offline data load (0ms instantaneous)
     const items = wardrobeStore.getItems();
     const prof = wardrobeStore.getProfile();
     const saved = wardrobeStore.getLookbook();
@@ -47,7 +50,6 @@ export default function App() {
     setProfile(prof);
     setLookbook(saved);
 
-    // Generate initial outfit
     const outfit = generateDailyOutfit(items, prof, currentWeather);
     setTodayOutfit(outfit);
   }, []);
@@ -92,6 +94,15 @@ export default function App() {
     setTodayOutfit(recalibrated);
   };
 
+  const handleUpdatePersona = (persona: UserStyleProfile['persona']) => {
+    const updatedProf: UserStyleProfile = { ...profile, persona };
+    wardrobeStore.updateProfile(updatedProf);
+    setProfile(updatedProf);
+    const recalibrated = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
+    setTodayOutfit(recalibrated);
+    Alert.alert('Persona Updated', `Style persona set to: ${persona}`);
+  };
+
   const handleLiveBackendSync = async () => {
     setIsSyncing(true);
     const result = await wardrobeStore.syncWithBackend();
@@ -112,7 +123,7 @@ export default function App() {
   };
 
   const NAV_ITEMS: Array<{
-    key: 'today' | 'closet' | 'studio' | 'lookbook';
+    key: 'today' | 'closet' | 'studio' | 'feed' | 'profile';
     label: string;
     iconActive: keyof typeof Ionicons.glyphMap;
     iconInactive: keyof typeof Ionicons.glyphMap;
@@ -120,7 +131,8 @@ export default function App() {
     { key: 'today', label: 'TODAY', iconActive: 'sparkles', iconInactive: 'sparkles-outline' },
     { key: 'closet', label: 'CLOSET', iconActive: 'shirt', iconInactive: 'shirt-outline' },
     { key: 'studio', label: 'STUDIO', iconActive: 'color-palette', iconInactive: 'color-palette-outline' },
-    { key: 'lookbook', label: 'LOOKS', iconActive: 'bookmark', iconInactive: 'bookmark-outline' },
+    { key: 'feed', label: 'FEED', iconActive: 'globe', iconInactive: 'globe-outline' },
+    { key: 'profile', label: 'PROFILE', iconActive: 'person', iconInactive: 'person-outline' },
   ];
 
   return (
@@ -133,7 +145,7 @@ export default function App() {
           profile={profile}
           tempC={currentWeather.tempC}
           weatherCondition={currentWeather.condition}
-          onPressProfile={() => setMonkModalVisible(true)}
+          onPressProfile={() => setSelfieModalVisible(true)}
           onPressSync={handleLiveBackendSync}
           isSyncing={isSyncing}
         />
@@ -168,15 +180,20 @@ export default function App() {
             <StudioScreen wardrobe={wardrobe} userProfile={profile} />
           )}
 
-          {activeTab === 'lookbook' && (
-            <LookbookScreen
-              lookbook={lookbook}
-              onRemove={handleRemoveFromLookbook}
+          {activeTab === 'feed' && <FeedScreen />}
+
+          {activeTab === 'profile' && (
+            <ProfileScreen
+              profile={profile}
+              wardrobe={wardrobe}
+              onUpdatePersona={handleUpdatePersona}
+              onOpenSelfieCalibration={() => setSelfieModalVisible(true)}
+              onOpenMonkList={() => setMonkModalVisible(true)}
             />
           )}
         </View>
 
-        {/* Bottom Navigation Bar with Vector Icons */}
+        {/* Bottom Navigation Bar */}
         <View style={styles.bottomNav}>
           {NAV_ITEMS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -189,7 +206,7 @@ export default function App() {
               >
                 <Ionicons
                   name={isActive ? tab.iconActive : tab.iconInactive}
-                  size={21}
+                  size={20}
                   color={isActive ? COLORS.accent : COLORS.textSecondary}
                   style={styles.navIcon}
                 />
@@ -202,13 +219,21 @@ export default function App() {
           })}
         </View>
 
-        {/* Modals */}
+        {/* Cloth Upload Modal */}
         <AddGarmentModal
           visible={addModalVisible}
           onClose={() => setAddModalVisible(false)}
           onSave={handleAddGarment}
         />
 
+        {/* Selfie Skin Tone Calibration Modal */}
+        <SelfieCalibrationModal
+          visible={selfieModalVisible}
+          onClose={() => setSelfieModalVisible(false)}
+          onCalibrate={handleSelectTone}
+        />
+
+        {/* Monk Scale Reference List Modal */}
         <MonkCalibrationModal
           visible={monkModalVisible}
           selectedLabel={profile.monkLabel}
@@ -230,7 +255,7 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    height: 64,
+    height: 62,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceBorder,
@@ -242,24 +267,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
-    paddingHorizontal: 12,
-    minWidth: 64,
+    paddingHorizontal: 10,
+    minWidth: 54,
   },
   navIcon: {
     marginBottom: 2,
   },
   navText: {
     color: COLORS.textSecondary,
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   navTextActive: {
     color: COLORS.accent,
   },
   navActiveDot: {
-    width: 4,
-    height: 4,
+    width: 3.5,
+    height: 3.5,
     borderRadius: 2,
     backgroundColor: COLORS.accent,
     marginTop: 3,
