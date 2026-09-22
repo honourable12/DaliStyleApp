@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ClothingCategory, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { STANDARD_COLORS, rgbToHex } from '../core/colorTheory';
+import { EdgeAIPipeline } from '../ai/edgePipeline';
 
 interface AddGarmentModalProps {
   visible: boolean;
@@ -123,17 +124,23 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
     }
   };
 
-  const handlePhotoSelected = (uri: string) => {
+  const handlePhotoSelected = async (uri: string) => {
     setImageUrl(uri);
 
-    // Auto-detect dominant color on device
-    const randomColor = STANDARD_COLORS[Math.floor(Math.random() * STANDARD_COLORS.length)];
-    const hex = rgbToHex(randomColor[1][0], randomColor[1][1], randomColor[1][2]);
-    setSelectedHex(hex);
-    setColorName(randomColor[0]);
+    try {
+      // Run full On-Edge AI Pipeline
+      const edgeResult = await EdgeAIPipeline.processGarment(uri);
+      setSelectedHex(edgeResult.primaryHex);
+      setColorName(edgeResult.primaryName);
+      setCategory(edgeResult.suggestedCategory);
 
-    if (!name.trim()) {
-      setName(`Tailored ${randomColor[0]} Piece`);
+      if (!name.trim()) {
+        setName(`Tailored ${edgeResult.primaryName} ${edgeResult.suggestedCategory.toUpperCase()}`);
+      }
+    } catch {
+      // Fallback
+      setSelectedHex('#E8A830');
+      setColorName('Rust / Turmeric');
     }
   };
 

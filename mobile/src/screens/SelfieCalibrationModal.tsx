@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { MONK_SCALE, MONK_PALETTE_PROFILES, matchMonkScale } from '../core/monkScale';
 import { MonkTone } from '../types';
+import { EdgeAIPipeline } from '../ai/edgePipeline';
 
 interface SelfieCalibrationModalProps {
   visible: boolean;
@@ -127,13 +128,10 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
         // Fallback to on-device engine
       }
 
-      // 2. On-Device Edge Calibration (Instant deterministic fallback)
+      // 2. On-Device Edge Calibration (Biometric HSV + YCrCb pixel extraction)
       if (!matchedTone) {
-        // Simulates on-device cheek patch extraction
-        await new Promise((r) => setTimeout(r, 600)); // Natural tactile feedback delay
-        // Sample realistic warm/medium skin tone RGB
-        const sampleRgb: [number, number, number] = [175, 130, 92];
-        matchedTone = matchMonkScale(sampleRgb);
+        const edgeResult = await EdgeAIPipeline.processSelfie(uri);
+        matchedTone = edgeResult;
       }
 
       setDetectedResult(matchedTone);
