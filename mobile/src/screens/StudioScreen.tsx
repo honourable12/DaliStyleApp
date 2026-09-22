@@ -10,6 +10,7 @@ import {
 import { WardrobeItem, UserStyleProfile } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { calculateGarmentHarmony, calculateSkinContrast } from '../core/colorTheory';
+import { GarmentVisual } from '../components/GarmentVisual';
 
 interface StudioScreenProps {
   wardrobe: WardrobeItem[];
@@ -62,13 +63,29 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
       <View style={styles.previewContainer}>
         {selectedTop && (
           <View style={styles.previewBox}>
-            <Image source={{ uri: selectedTop.imageUrl }} style={styles.previewImg} />
+            <GarmentVisual
+              imageUrl={selectedTop.imageUrl}
+              category={selectedTop.category}
+              primaryColor={selectedTop.primaryColor}
+              primaryColorName={selectedTop.primaryColorName}
+              name={selectedTop.name}
+              style={styles.previewImg}
+              iconSize={40}
+            />
             <Text style={styles.previewName}>{selectedTop.name}</Text>
           </View>
         )}
         {selectedBottom && (
           <View style={styles.previewBox}>
-            <Image source={{ uri: selectedBottom.imageUrl }} style={styles.previewImg} />
+            <GarmentVisual
+              imageUrl={selectedBottom.imageUrl}
+              category={selectedBottom.category}
+              primaryColor={selectedBottom.primaryColor}
+              primaryColorName={selectedBottom.primaryColorName}
+              name={selectedBottom.name}
+              style={styles.previewImg}
+              iconSize={40}
+            />
             <Text style={styles.previewName}>{selectedBottom.name}</Text>
           </View>
         )}
@@ -86,7 +103,15 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
               onPress={() => setSelectedTop(top)}
               style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
             >
-              <Image source={{ uri: top.imageUrl }} style={styles.pickerImg} />
+              <GarmentVisual
+                imageUrl={top.imageUrl}
+                category={top.category}
+                primaryColor={top.primaryColor}
+                primaryColorName={top.primaryColorName}
+                name={top.name}
+                style={styles.pickerImg}
+                iconSize={20}
+              />
               <View style={[styles.pickerDot, { backgroundColor: top.primaryColor }]} />
             </TouchableOpacity>
           );
@@ -105,7 +130,15 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
               onPress={() => setSelectedBottom(bottom)}
               style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
             >
-              <Image source={{ uri: bottom.imageUrl }} style={styles.pickerImg} />
+              <GarmentVisual
+                imageUrl={bottom.imageUrl}
+                category={bottom.category}
+                primaryColor={bottom.primaryColor}
+                primaryColorName={bottom.primaryColorName}
+                name={bottom.name}
+                style={styles.pickerImg}
+                iconSize={20}
+              />
               <View style={[styles.pickerDot, { backgroundColor: bottom.primaryColor }]} />
             </TouchableOpacity>
           );

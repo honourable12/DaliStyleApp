@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { OutfitRecommendation } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
+import { GarmentVisual } from '../components/GarmentVisual';
 
 interface LookbookScreenProps {
   lookbook: OutfitRecommendation[];
@@ -48,7 +49,15 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
             <View style={styles.thumbRow}>
               {item.items.map((garment) => (
                 <View key={garment.id} style={styles.thumbWrap}>
-                  <Image source={{ uri: garment.imageUrl }} style={styles.thumbImg} />
+                  <GarmentVisual
+                    imageUrl={garment.imageUrl}
+                    category={garment.category}
+                    primaryColor={garment.primaryColor}
+                    primaryColorName={garment.primaryColorName}
+                    name={garment.name}
+                    style={styles.thumbImg}
+                    iconSize={16}
+                  />
                   <View style={[styles.colorDot, { backgroundColor: garment.primaryColor }]} />
                 </View>
               ))}

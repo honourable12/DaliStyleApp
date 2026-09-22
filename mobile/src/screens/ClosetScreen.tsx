@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ClothingCategory, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
+import { GarmentVisual } from '../components/GarmentVisual';
 
 interface ClosetScreenProps {
   items: WardrobeItem[];
@@ -78,7 +79,15 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
             onPress={() => onSelectItem(item)}
             style={styles.card}
           >
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" />
+            <GarmentVisual
+              imageUrl={item.imageUrl}
+              category={item.category}
+              primaryColor={item.primaryColor}
+              primaryColorName={item.primaryColorName}
+              name={item.name}
+              style={styles.cardImage}
+              iconSize={36}
+            />
             <View style={styles.cardInfo}>
               <View style={styles.cardTitleRow}>
                 <Text style={styles.cardTitle} numberOfLines={1}>

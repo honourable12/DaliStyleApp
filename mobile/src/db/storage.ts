@@ -1,4 +1,4 @@
-import { WardrobeItem, UserStyleProfile, OutfitRecommendation } from '../types';
+import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory } from '../types';
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   id: 'user-default-1',
@@ -9,14 +9,15 @@ export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   locationName: 'Accra',
 };
 
+// Initial offline items with verified reliable CDN endpoints and instant visual fallbacks
 export const INITIAL_WARDROBE: WardrobeItem[] = [
   {
     id: 'w-1',
-    name: 'Structured Linen Overshirt',
+    name: 'Ochre Turmeric Overshirt',
     category: 'top',
     primaryColor: '#E8A830', // Turmeric
     primaryColorName: 'Rust / Turmeric',
-    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 3,
   },
   {
@@ -25,7 +26,7 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
     category: 'bottom',
     primaryColor: '#1A1917', // Ash / Charcoal
     primaryColorName: 'Charcoal',
-    imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 5,
   },
   {
@@ -34,7 +35,7 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
     category: 'top',
     primaryColor: '#F2EDE6', // Cream
     primaryColorName: 'Cream',
-    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 2,
   },
   {
@@ -43,7 +44,7 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
     category: 'bottom',
     primaryColor: '#141E30', // Deep Indigo
     primaryColorName: 'Navy',
-    imageUrl: 'https://images.unsplash.com/photo-1542272604-780c96856592?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1542272604-780c96856592?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 7,
   },
   {
@@ -52,7 +53,7 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
     category: 'outerwear',
     primaryColor: '#825C43', // Deep Camel
     primaryColorName: 'Brown',
-    imageUrl: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 4,
   },
   {
@@ -61,10 +62,19 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
     category: 'shoes',
     primaryColor: '#1A1917',
     primaryColorName: 'Black',
-    imageUrl: 'https://images.unsplash.com/photo-1614252369475-531eba835eb1?auto=format&fit=crop&w=400&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1614252369475-531eba835eb1?auto=format&fit=crop&w=600&q=80',
     createdAt: Date.now() - 86400000 * 10,
   },
 ];
+
+function normalizeCategory(cat: string): ClothingCategory {
+  const c = String(cat || '').toLowerCase();
+  if (['top', 'shirt', 't-shirt', 'sweater', 'hoodie', 'blouse'].some((k) => c.includes(k))) return 'top';
+  if (['bottom', 'trousers', 'pants', 'jeans', 'shorts', 'skirt'].some((k) => c.includes(k))) return 'bottom';
+  if (['outerwear', 'jacket', 'coat', 'blazer', 'cardigan'].some((k) => c.includes(k))) return 'outerwear';
+  if (['shoes', 'sneakers', 'boots', 'derby', 'loafers'].some((k) => c.includes(k))) return 'shoes';
+  return 'accessory';
+}
 
 class LocalWardrobeStore {
   private wardrobe: WardrobeItem[] = [...INITIAL_WARDROBE];
@@ -77,6 +87,10 @@ class LocalWardrobeStore {
 
   addItem(item: WardrobeItem): void {
     this.wardrobe.unshift(item);
+  }
+
+  setItems(items: WardrobeItem[]): void {
+    this.wardrobe = [...items];
   }
 
   removeItem(id: string): void {
@@ -103,6 +117,64 @@ class LocalWardrobeStore {
 
   removeFromLookbook(id: string): void {
     this.lookbook = this.lookbook.filter((o) => o.id !== id);
+  }
+
+  /**
+   * Attempts to sync items from the live FastAPI backend server
+   */
+  async syncWithBackend(baseUrl = 'http://10.0.2.2:8000'): Promise<{ count: number; error?: string }> {
+    try {
+      const endpoints = [
+        `${baseUrl}/api/wardrobe/items`,
+        `${baseUrl}/wardrobe/items`,
+        'http://localhost:8000/api/wardrobe/items',
+      ];
+
+      let data: any[] | null = null;
+      let activeHost = baseUrl;
+
+      for (const ep of endpoints) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
+          const res = await fetch(ep, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (res.ok) {
+            data = await res.json();
+            activeHost = ep.split('/api')[0].split('/wardrobe')[0];
+            break;
+          }
+        } catch {
+          // try next endpoint
+        }
+      }
+
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        return { count: 0, error: 'No live items returned from backend. Using local wardrobe.' };
+      }
+
+      const liveItems: WardrobeItem[] = data.map((raw: any) => {
+        let img = raw.image_url || '';
+        if (img && !img.startsWith('http')) {
+          img = `${activeHost}/static/${img.replace(/^users\//, 'users/')}`;
+        }
+        return {
+          id: String(raw.id || `live-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
+          name: raw.name || 'Tailored Garment',
+          category: normalizeCategory(raw.category),
+          primaryColor: raw.color_primary && raw.color_primary !== 'unknown' ? raw.color_primary : '#1A1917',
+          primaryColorName: raw.color_primary_name || 'Neutral',
+          imageUrl: img,
+          pattern: raw.pattern || 'solid',
+          createdAt: Date.now(),
+        };
+      });
+
+      this.wardrobe = liveItems;
+      return { count: liveItems.length };
+    } catch (e: any) {
+      return { count: 0, error: e.message || 'Sync failed' };
+    }
   }
 }
 

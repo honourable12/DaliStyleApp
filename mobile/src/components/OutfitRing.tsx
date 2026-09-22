@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { WardrobeItem } from '../types';
 import { COLORS, RADIUS } from '../theme';
+import { GarmentVisual } from './GarmentVisual';
 
 interface OutfitRingProps {
   items: WardrobeItem[];
@@ -76,7 +77,14 @@ export const OutfitRing: React.FC<OutfitRingProps> = ({
                 },
               ]}
             >
-              <Image source={{ uri: item.imageUrl }} style={styles.itemImage} resizeMode="cover" />
+              <GarmentVisual
+                imageUrl={item.imageUrl}
+                category={item.category}
+                primaryColor={item.primaryColor}
+                primaryColorName={item.primaryColorName}
+                name={item.name}
+                iconSize={20}
+              />
               <View style={[styles.colorIndicator, { backgroundColor: item.primaryColor }]} />
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryText}>{item.category.toUpperCase()}</Text>

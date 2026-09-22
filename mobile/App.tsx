@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   View,
@@ -8,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from './src/theme';
 import { HeaderBar } from './src/components/HeaderBar';
 import { TodayScreen } from './src/screens/TodayScreen';
@@ -26,6 +27,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserStyleProfile>(wardrobeStore.getProfile());
   const [lookbook, setLookbook] = useState<OutfitRecommendation[]>([]);
   const [todayOutfit, setTodayOutfit] = useState<OutfitRecommendation | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Modals
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -51,7 +53,6 @@ export default function App() {
   }, []);
 
   const handleReroll = () => {
-    // Shuffles or regenerates outfit
     const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
     const outfit = generateDailyOutfit(shuffled, profile, currentWeather);
     setTodayOutfit(outfit);
@@ -73,7 +74,6 @@ export default function App() {
     wardrobeStore.addItem(newItem);
     const updated = wardrobeStore.getItems();
     setWardrobe(updated);
-    // Refresh today outfit if appropriate
     const refreshed = generateDailyOutfit(updated, profile, currentWeather);
     setTodayOutfit(refreshed);
   };
@@ -88,97 +88,135 @@ export default function App() {
     wardrobeStore.updateProfile(updatedProf);
     setProfile(updatedProf);
 
-    // Recalculate outfit with new skin tone calibration
     const recalibrated = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
     setTodayOutfit(recalibrated);
   };
 
+  const handleLiveBackendSync = async () => {
+    setIsSyncing(true);
+    const result = await wardrobeStore.syncWithBackend();
+    setIsSyncing(false);
+
+    if (result.count > 0) {
+      const liveItems = wardrobeStore.getItems();
+      setWardrobe(liveItems);
+      const newOutfit = generateDailyOutfit(liveItems, profile, currentWeather);
+      setTodayOutfit(newOutfit);
+      Alert.alert('Live Sync Complete', `Synced ${result.count} live clothing items from your backend!`);
+    } else {
+      Alert.alert(
+        'Live Backend Sync',
+        'Could not reach local FastAPI server (default: http://10.0.2.2:8000). Your offline wardrobe is active and ready.'
+      );
+    }
+  };
+
+  const NAV_ITEMS: Array<{
+    key: 'today' | 'closet' | 'studio' | 'lookbook';
+    label: string;
+    iconActive: keyof typeof Ionicons.glyphMap;
+    iconInactive: keyof typeof Ionicons.glyphMap;
+  }> = [
+    { key: 'today', label: 'TODAY', iconActive: 'sparkles', iconInactive: 'sparkles-outline' },
+    { key: 'closet', label: 'CLOSET', iconActive: 'shirt', iconInactive: 'shirt-outline' },
+    { key: 'studio', label: 'STUDIO', iconActive: 'color-palette', iconInactive: 'color-palette-outline' },
+    { key: 'lookbook', label: 'LOOKS', iconActive: 'bookmark', iconInactive: 'bookmark-outline' },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      {/* Global DRAPE Header */}
-      <HeaderBar
-        profile={profile}
-        tempC={currentWeather.tempC}
-        weatherCondition={currentWeather.condition}
-        onPressProfile={() => setMonkModalVisible(true)}
-      />
+        {/* Global DRAPE Header */}
+        <HeaderBar
+          profile={profile}
+          tempC={currentWeather.tempC}
+          weatherCondition={currentWeather.condition}
+          onPressProfile={() => setMonkModalVisible(true)}
+          onPressSync={handleLiveBackendSync}
+          isSyncing={isSyncing}
+        />
 
-      {/* Screen Body */}
-      <View style={styles.mainContent}>
-        {activeTab === 'today' && (
-          <TodayScreen
-            outfit={todayOutfit}
-            onReroll={handleReroll}
-            onSaveToLookbook={handleSaveToLookbook}
-            onSelectItem={(item) =>
-              Alert.alert(item.name, `${item.category.toUpperCase()} · Color: ${item.primaryColorName} (${item.primaryColor})`)
-            }
-          />
-        )}
+        {/* Screen Body */}
+        <View style={styles.mainContent}>
+          {activeTab === 'today' && (
+            <TodayScreen
+              outfit={todayOutfit}
+              onReroll={handleReroll}
+              onSaveToLookbook={handleSaveToLookbook}
+              onSelectItem={(item) =>
+                Alert.alert(
+                  item.name,
+                  `${item.category.toUpperCase()} · Color: ${item.primaryColorName} (${item.primaryColor})`
+                )
+              }
+            />
+          )}
 
-        {activeTab === 'closet' && (
-          <ClosetScreen
-            items={wardrobe}
-            onSelectItem={(item) =>
-              Alert.alert(item.name, `${item.category.toUpperCase()} · ${item.primaryColorName}`)
-            }
-            onPressAdd={() => setAddModalVisible(true)}
-          />
-        )}
+          {activeTab === 'closet' && (
+            <ClosetScreen
+              items={wardrobe}
+              onSelectItem={(item) =>
+                Alert.alert(item.name, `${item.category.toUpperCase()} · ${item.primaryColorName}`)
+              }
+              onPressAdd={() => setAddModalVisible(true)}
+            />
+          )}
 
-        {activeTab === 'studio' && (
-          <StudioScreen wardrobe={wardrobe} userProfile={profile} />
-        )}
+          {activeTab === 'studio' && (
+            <StudioScreen wardrobe={wardrobe} userProfile={profile} />
+          )}
 
-        {activeTab === 'lookbook' && (
-          <LookbookScreen
-            lookbook={lookbook}
-            onRemove={handleRemoveFromLookbook}
-          />
-        )}
-      </View>
+          {activeTab === 'lookbook' && (
+            <LookbookScreen
+              lookbook={lookbook}
+              onRemove={handleRemoveFromLookbook}
+            />
+          )}
+        </View>
 
-      {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        {[
-          { key: 'today', label: 'TODAY' },
-          { key: 'closet', label: 'CLOSET' },
-          { key: 'studio', label: 'STUDIO' },
-          { key: 'lookbook', label: 'LOOKS' },
-        ].map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              activeOpacity={0.8}
-              onPress={() => setActiveTab(tab.key as any)}
-              style={styles.navItem}
-            >
-              <Text style={[styles.navText, isActive && styles.navTextActive]}>
-                {tab.label}
-              </Text>
-              {isActive && <View style={styles.navActiveDot} />}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        {/* Bottom Navigation Bar with Vector Icons */}
+        <View style={styles.bottomNav}>
+          {NAV_ITEMS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                activeOpacity={0.75}
+                onPress={() => setActiveTab(tab.key)}
+                style={styles.navItem}
+              >
+                <Ionicons
+                  name={isActive ? tab.iconActive : tab.iconInactive}
+                  size={21}
+                  color={isActive ? COLORS.accent : COLORS.textSecondary}
+                  style={styles.navIcon}
+                />
+                <Text style={[styles.navText, isActive && styles.navTextActive]}>
+                  {tab.label}
+                </Text>
+                {isActive && <View style={styles.navActiveDot} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      {/* Modals */}
-      <AddGarmentModal
-        visible={addModalVisible}
-        onClose={() => setAddModalVisible(false)}
-        onSave={handleAddGarment}
-      />
+        {/* Modals */}
+        <AddGarmentModal
+          visible={addModalVisible}
+          onClose={() => setAddModalVisible(false)}
+          onSave={handleAddGarment}
+        />
 
-      <MonkCalibrationModal
-        visible={monkModalVisible}
-        selectedLabel={profile.monkLabel}
-        onClose={() => setMonkModalVisible(false)}
-        onSelectTone={handleSelectTone}
-      />
-    </SafeAreaView>
+        <MonkCalibrationModal
+          visible={monkModalVisible}
+          selectedLabel={profile.monkLabel}
+          onClose={() => setMonkModalVisible(false)}
+          onSelectTone={handleSelectTone}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -192,24 +230,29 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    height: 58,
+    height: 64,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceBorder,
     alignItems: 'center',
     justifyContent: 'space-around',
+    paddingBottom: 4,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    minWidth: 64,
+  },
+  navIcon: {
+    marginBottom: 2,
   },
   navText: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
   },
   navTextActive: {
     color: COLORS.accent,
@@ -219,6 +262,6 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: COLORS.accent,
-    marginTop: 4,
+    marginTop: 3,
   },
 });

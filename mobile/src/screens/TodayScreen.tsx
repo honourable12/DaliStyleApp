@@ -11,6 +11,7 @@ import { OutfitRing } from '../components/OutfitRing';
 import { OutfitRecommendation, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { wardrobeStore } from '../db/storage';
+import { GarmentVisual } from '../components/GarmentVisual';
 
 interface TodayScreenProps {
   outfit: OutfitRecommendation | null;
@@ -78,7 +79,15 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
             onPress={() => onSelectItem(item)}
             style={styles.pieceRow}
           >
-            <View style={[styles.colorSquare, { backgroundColor: item.primaryColor }]} />
+            <GarmentVisual
+              imageUrl={item.imageUrl}
+              category={item.category}
+              primaryColor={item.primaryColor}
+              primaryColorName={item.primaryColorName}
+              name={item.name}
+              style={styles.colorSquare}
+              iconSize={18}
+            />
             <View style={styles.pieceInfo}>
               <Text style={styles.pieceName}>{item.name}</Text>
               <Text style={styles.pieceSub}>

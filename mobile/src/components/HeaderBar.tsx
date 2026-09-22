@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { UserStyleProfile } from '../types';
 
@@ -8,6 +9,8 @@ interface HeaderBarProps {
   tempC?: number;
   weatherCondition?: string;
   onPressProfile?: () => void;
+  onPressSync?: () => void;
+  isSyncing?: boolean;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -15,6 +18,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   tempC = 24,
   weatherCondition = 'Clear',
   onPressProfile,
+  onPressSync,
+  isSyncing = false,
 }) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -32,15 +37,33 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </Text>
       </View>
 
-      {/* Monk Skin Calibration Pill */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onPressProfile}
-        style={styles.profilePill}
-      >
-        <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex }]} />
-        <Text style={styles.monkCode}>{profile.monkLabel}</Text>
-      </TouchableOpacity>
+      {/* Action Controls */}
+      <View style={styles.actionsRight}>
+        {/* Live Backend Sync Button */}
+        {onPressSync && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onPressSync}
+            style={styles.iconBtn}
+          >
+            <Ionicons
+              name={isSyncing ? 'sync' : 'cloud-download-outline'}
+              size={18}
+              color={isSyncing ? COLORS.accent : COLORS.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
+
+        {/* Monk Skin Calibration Pill */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onPressProfile}
+          style={styles.profilePill}
+        >
+          <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex }]} />
+          <Text style={styles.monkCode}>{profile.monkLabel}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -51,7 +74,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
+    paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm,
     backgroundColor: COLORS.background,
     borderBottomWidth: 1,
@@ -59,9 +82,9 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     color: COLORS.textPrimary,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
-    letterSpacing: 2.5,
+    letterSpacing: 2.2,
   },
   dateSubtitle: {
     color: COLORS.textSecondary,
@@ -70,12 +93,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.2,
   },
+  actionsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceRaised,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   profilePill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceRaised,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: RADIUS.full,
     borderWidth: 1,
     borderColor: COLORS.surfaceBorder,
