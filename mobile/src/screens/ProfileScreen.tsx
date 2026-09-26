@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { UserStyleProfile, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { MONK_PALETTE_PROFILES } from '../core/monkScale';
+import { StyloraLogo } from '../components/StyloraLogo';
 
 interface ProfileScreenProps {
   profile: UserStyleProfile;
@@ -160,6 +161,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <Text style={styles.saveIpBtnText}>Save</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Brand Footer */}
+      <View style={styles.brandFooter}>
+        <StyloraLogo size={40} style={styles.footerLogo} />
+        <Text style={styles.footerBrandName}>STYLORA</Text>
+        <Text style={styles.footerVersion}>DRAPE AI PERSONAL STYLING ENGINE · v1.0.0</Text>
       </View>
     </ScrollView>
   );
@@ -358,5 +366,30 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
     fontSize: 11,
     fontWeight: '700',
+  },
+  brandFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xl,
+    paddingVertical: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.surfaceBorder,
+  },
+  footerLogo: {
+    marginBottom: 8,
+  },
+  footerBrandName: {
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 2.5,
+  },
+  footerVersion: {
+    color: COLORS.textSecondary,
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    marginTop: 4,
   },
 });

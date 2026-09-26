@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { UserStyleProfile } from '../types';
+import { StyloraLogo } from './StyloraLogo';
 
 interface HeaderBarProps {
   profile: UserStyleProfile;
@@ -30,11 +31,14 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   return (
     <View style={styles.header}>
       {/* Brand & Date */}
-      <View>
-        <Text style={styles.brandTitle}>STYLORA</Text>
-        <Text style={styles.dateSubtitle}>
-          {currentDate} · {tempC}°C {weatherCondition}
-        </Text>
+      <View style={styles.brandContainer}>
+        <StyloraLogo size={32} style={styles.brandLogo} />
+        <View>
+          <Text style={styles.brandTitle}>STYLORA</Text>
+          <Text style={styles.dateSubtitle}>
+            {currentDate} · {tempC}°C {weatherCondition}
+          </Text>
+        </View>
       </View>
 
       {/* Action Controls */}
@@ -80,11 +84,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceBorder,
   },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  brandLogo: {
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+  },
   brandTitle: {
     color: COLORS.textPrimary,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
-    letterSpacing: 2.2,
+    letterSpacing: 2,
   },
   dateSubtitle: {
     color: COLORS.textSecondary,
