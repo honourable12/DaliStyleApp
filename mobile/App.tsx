@@ -264,6 +264,7 @@ export default function App() {
               onRemoveWorkbenchItem={handleRemoveWorkbenchItem}
               onClearWorkbench={handleClearWorkbench}
               onSaveWorkbenchLook={handleSaveWorkbenchLook}
+              onDeleteItem={handleDeleteItem}
               onOpenStudio={() => setActiveTab('studio')}
             />
           )}

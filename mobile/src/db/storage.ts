@@ -67,6 +67,31 @@ export const INITIAL_WARDROBE: WardrobeItem[] = [
   },
 ];
 
+export const INITIAL_LOOKBOOK: OutfitRecommendation[] = [
+  {
+    id: 'seed-look-1',
+    items: [INITIAL_WARDROBE[0], INITIAL_WARDROBE[1], INITIAL_WARDROBE[5]],
+    harmonyScore: 94,
+    skinContrastScore: 88,
+    weatherAppropriate: true,
+    weatherType: 'Clear',
+    harmonyType: 'Analogous',
+    stylingNote: 'Warm ochre turmeric overshirt grounded by tailored raw wool trousers and classic leather derbies.',
+    savedInLookbook: true,
+  },
+  {
+    id: 'seed-look-2',
+    items: [INITIAL_WARDROBE[2], INITIAL_WARDROBE[3], INITIAL_WARDROBE[4]],
+    harmonyScore: 91,
+    skinContrastScore: 82,
+    weatherAppropriate: true,
+    weatherType: 'Cold',
+    harmonyType: 'Complementary',
+    stylingNote: 'Crisp poplin shirt contrasted against deep indigo denim, layered beneath a structured wool trench.',
+    savedInLookbook: true,
+  },
+];
+
 function normalizeCategory(cat: string): ClothingCategory {
   const c = String(cat || '').toLowerCase();
   if (['top', 'shirt', 't-shirt', 'sweater', 'hoodie', 'blouse'].some((k) => c.includes(k))) return 'top';
@@ -79,7 +104,7 @@ function normalizeCategory(cat: string): ClothingCategory {
 class LocalWardrobeStore {
   private wardrobe: WardrobeItem[] = [...INITIAL_WARDROBE];
   private profile: UserStyleProfile = { ...DEFAULT_USER_PROFILE };
-  private lookbook: OutfitRecommendation[] = [];
+  private lookbook: OutfitRecommendation[] = [...INITIAL_LOOKBOOK];
 
   getItems(): WardrobeItem[] {
     return [...this.wardrobe];

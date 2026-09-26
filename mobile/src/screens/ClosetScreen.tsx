@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeItem } from '../types';
@@ -22,6 +23,7 @@ interface ClosetScreenProps {
   onRemoveWorkbenchItem: (id: string) => void;
   onClearWorkbench: () => void;
   onSaveWorkbenchLook: () => void;
+  onDeleteItem: (id: string) => void;
   onOpenStudio?: () => void;
 }
 
@@ -36,6 +38,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   onRemoveWorkbenchItem,
   onClearWorkbench,
   onSaveWorkbenchLook,
+  onDeleteItem,
   onOpenStudio,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -86,7 +89,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
         numColumns={2}
         contentContainerStyle={[
           styles.gridContent,
-          workbenchItems.length > 0 && { paddingBottom: 190 },
+          { paddingBottom: 170 },
         ]}
         columnWrapperStyle={styles.columnWrapper}
         renderItem={({ item }) => {
@@ -107,6 +110,24 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
                 style={styles.cardImage}
                 iconSize={36}
               />
+
+              {/* Quick Delete button on card */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  Alert.alert(
+                    'Delete Garment',
+                    `Remove "${item.name}" from your vault?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => onDeleteItem(item.id) },
+                    ]
+                  );
+                }}
+                style={styles.deleteCardBtn}
+              >
+                <Ionicons name="trash-outline" size={13} color={COLORS.destructive} />
+              </TouchableOpacity>
 
               {/* Quick Add to Workbench button on card */}
               <TouchableOpacity
@@ -153,7 +174,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
         onPress={onPressAdd}
         style={[
           styles.fab,
-          workbenchItems.length > 0 && { bottom: 180 },
+          { bottom: 160 },
         ]}
       >
         <Text style={styles.fabPlus}>+</Text>
@@ -225,6 +246,19 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: COLUMN_WIDTH * 1.25,
+  },
+  deleteCardBtn: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(14, 13, 12, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(192, 82, 74, 0.4)',
   },
   quickAddBtn: {
     position: 'absolute',
