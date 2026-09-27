@@ -1,37 +1,26 @@
 import React from 'react';
-import { View, Image, ImageStyle, StyleProp, ViewStyle } from 'react-native';
+import { View, Image, ImageStyle, StyleProp, ViewStyle, StyleSheet } from 'react-native';
+import { SHADOWS } from '../theme';
 
 interface StyloraLogoProps {
-  size?: number; // total size of the component
+  size?: number;
+  /** Kept for API compatibility — the mark is always the cream tile now. */
   withWhiteBg?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
 }
 
+/**
+ * The Stylora brand mark — the charcoal+gold emblem on a cream tile.
+ * Uses assets/icon.png (the same cream tile used as the app launcher icon),
+ * so the in-app logo is always visually identical to the home-screen icon.
+ */
 export const StyloraLogo: React.FC<StyloraLogoProps> = ({
-  size = 48,
-  withWhiteBg = true,
+  size = 44,
   containerStyle,
   imageStyle,
 }) => {
-  const imageSize = withWhiteBg ? Math.round(size * 0.74) : size;
-  const borderRadius = Math.round(size * 0.22);
-
-  if (!withWhiteBg) {
-    return (
-      <Image
-        source={require('../../assets/logo.png')}
-        style={[
-          {
-            width: size,
-            height: size,
-          },
-          imageStyle,
-        ]}
-        resizeMode="contain"
-      />
-    );
-  }
+  const radius = Math.round(size * 0.24);
 
   return (
     <View
@@ -39,30 +28,26 @@ export const StyloraLogo: React.FC<StyloraLogoProps> = ({
         {
           width: size,
           height: size,
-          backgroundColor: '#FFFFFF',
-          borderRadius: borderRadius,
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-          elevation: 3,
+          borderRadius: radius,
+          overflow: 'hidden',
+          ...SHADOWS.card,
         },
         containerStyle,
       ]}
     >
       <Image
-        source={require('../../assets/logo.png')}
-        style={[
-          {
-            width: imageSize,
-            height: imageSize,
-          },
-          imageStyle,
-        ]}
-        resizeMode="contain"
+        source={require('../../assets/icon.png')}
+        style={[{ width: size, height: size }, imageStyle]}
+        resizeMode="cover"
       />
     </View>
   );
 };
+
+export const styloraLogoStyles = StyleSheet.create({
+  // exported for consumers that need a matching border treatment
+  bordered: {
+    borderWidth: 1,
+    borderColor: 'rgba(242, 237, 230, 0.12)',
+  },
+});

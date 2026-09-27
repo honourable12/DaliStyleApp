@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from './src/theme';
+import { COLORS, RADIUS, SPACING, SHADOWS } from './src/theme';
 import { HeaderBar } from './src/components/HeaderBar';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { ClosetScreen } from './src/screens/ClosetScreen';
@@ -222,11 +222,11 @@ export default function App() {
     iconActive: keyof typeof Ionicons.glyphMap;
     iconInactive: keyof typeof Ionicons.glyphMap;
   }> = [
-    { key: 'today', label: 'TODAY', iconActive: 'sparkles', iconInactive: 'sparkles-outline' },
-    { key: 'closet', label: 'CLOSET', iconActive: 'shirt', iconInactive: 'shirt-outline' },
-    { key: 'studio', label: 'STUDIO', iconActive: 'color-palette', iconInactive: 'color-palette-outline' },
-    { key: 'lookbook', label: 'LOOKS', iconActive: 'bookmark', iconInactive: 'bookmark-outline' },
-    { key: 'feed', label: 'FEED', iconActive: 'globe', iconInactive: 'globe-outline' },
+    { key: 'today', label: 'Today', iconActive: 'sparkles', iconInactive: 'sparkles-outline' },
+    { key: 'closet', label: 'Closet', iconActive: 'shirt', iconInactive: 'shirt-outline' },
+    { key: 'studio', label: 'Studio', iconActive: 'color-palette', iconInactive: 'color-palette-outline' },
+    { key: 'lookbook', label: 'Looks', iconActive: 'bookmark', iconInactive: 'bookmark-outline' },
+    { key: 'feed', label: 'Feed', iconActive: 'globe', iconInactive: 'globe-outline' },
   ];
 
   if (isAuthActive) {
@@ -370,20 +370,20 @@ export default function App() {
             return (
               <TouchableOpacity
                 key={tab.key}
-                activeOpacity={0.75}
+                activeOpacity={0.6}
                 onPress={() => setActiveTab(tab.key)}
                 style={styles.navItem}
               >
-                <Ionicons
-                  name={isActive ? tab.iconActive : tab.iconInactive}
-                  size={20}
-                  color={isActive ? COLORS.accent : COLORS.textSecondary}
-                  style={styles.navIcon}
-                />
+                <View style={[styles.navIconWrap, isActive && styles.navIconWrapActive]}>
+                  <Ionicons
+                    name={isActive ? tab.iconActive : tab.iconInactive}
+                    size={22}
+                    color={isActive ? COLORS.accent : COLORS.textSecondary}
+                  />
+                </View>
                 <Text style={[styles.navText, isActive && styles.navTextActive]}>
                   {tab.label}
                 </Text>
-                {isActive && <View style={styles.navActiveDot} />}
               </TouchableOpacity>
             );
           })}
@@ -434,38 +434,39 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    height: 62,
+    height: 68,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.surfaceBorder,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingBottom: 4,
+    paddingBottom: 8,
+    paddingTop: 8,
+    ...SHADOWS.float,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
-    paddingHorizontal: 10,
-    minWidth: 54,
+    paddingHorizontal: 8,
+    minWidth: 56,
   },
-  navIcon: {
-    marginBottom: 2,
+  navIconWrap: {
+    width: 40,
+    height: 32,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconWrapActive: {
+    backgroundColor: COLORS.accentMuted,
   },
   navText: {
     color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   navTextActive: {
     color: COLORS.accent,
-  },
-  navActiveDot: {
-    width: 3.5,
-    height: 3.5,
-    borderRadius: 2,
-    backgroundColor: COLORS.accent,
-    marginTop: 3,
+    fontWeight: '700',
   },
 });

@@ -30,38 +30,36 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
   return (
     <View style={styles.header}>
-      {/* Brand & Date */}
       <View style={styles.brandContainer}>
-        <StyloraLogo size={42} containerStyle={styles.brandLogo} />
-        <View>
-          <Text style={styles.brandTitle}>STYLORA</Text>
+        <StyloraLogo size={40} />
+        <View style={styles.brandText}>
+          <Text style={styles.brandTitle}>Stylora</Text>
           <Text style={styles.dateSubtitle}>
-            {currentDate} · {tempC}°C {weatherCondition}
+            {currentDate} · {tempC}° {weatherCondition}
           </Text>
         </View>
       </View>
 
-      {/* Action Controls */}
       <View style={styles.actionsRight}>
-        {/* Live Backend Sync Button */}
         {onPressSync && (
           <TouchableOpacity
-            activeOpacity={0.7}
+            activeOpacity={0.6}
             onPress={onPressSync}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
             style={styles.iconBtn}
           >
             <Ionicons
               name={isSyncing ? 'sync' : 'cloud-download-outline'}
-              size={18}
+              size={20}
               color={isSyncing ? COLORS.accent : COLORS.textSecondary}
             />
           </TouchableOpacity>
         )}
 
-        {/* Monk Skin Calibration Pill */}
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.6}
           onPress={onPressProfile}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           style={styles.profilePill}
         >
           <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex }]} />
@@ -77,47 +75,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceBorder,
   },
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
-  brandLogo: {
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+  brandText: {
+    // nothing
   },
   brandTitle: {
     color: COLORS.textPrimary,
     fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   dateSubtitle: {
     color: COLORS.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
-    marginTop: 2,
-    letterSpacing: 0.2,
+    marginTop: 1,
   },
   actionsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   iconBtn: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -125,24 +116,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceRaised,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   skinToneDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   monkCode: {
     color: COLORS.textPrimary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
 });

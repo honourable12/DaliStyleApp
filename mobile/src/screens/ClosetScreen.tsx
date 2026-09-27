@@ -6,11 +6,10 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeItem } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, SHADOWS } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { WorkbenchTray } from '../components/WorkbenchTray';
 
@@ -27,7 +26,7 @@ interface ClosetScreenProps {
   onOpenStudio?: () => void;
 }
 
-const COLUMN_WIDTH = (Dimensions.get('window').width - SPACING.md * 3) / 2;
+const COLUMN_WIDTH = (Dimensions.get('window').width - SPACING.lg * 3) / 2;
 
 export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   items,
@@ -44,11 +43,11 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const categories: Array<{ id: string; label: string }> = [
-    { id: 'all', label: 'ALL' },
-    { id: 'top', label: 'TOPS' },
-    { id: 'bottom', label: 'BOTTOMS' },
-    { id: 'outerwear', label: 'OUTER' },
-    { id: 'shoes', label: 'SHOES' },
+    { id: 'all', label: 'All' },
+    { id: 'top', label: 'Tops' },
+    { id: 'bottom', label: 'Bottoms' },
+    { id: 'outerwear', label: 'Outer' },
+    { id: 'shoes', label: 'Shoes' },
   ];
 
   const filteredItems =
@@ -58,23 +57,17 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Category Horizontal Filter */}
       <View style={styles.filterRow}>
         {categories.map((cat) => {
           const isActive = selectedCategory === cat.id;
           return (
             <TouchableOpacity
               key={cat.id}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={() => setSelectedCategory(cat.id)}
               style={[styles.filterPill, isActive && styles.filterPillActive]}
             >
-              <Text
-                style={[
-                  styles.filterText,
-                  isActive && styles.filterTextActive,
-                ]}
-              >
+              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
                 {cat.label}
               </Text>
             </TouchableOpacity>
@@ -82,22 +75,20 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
         })}
       </View>
 
-      {/* Wardrobe 2-Column Grid */}
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={[
           styles.gridContent,
-          { paddingBottom: 170 },
+          { paddingBottom: 200 },
         ]}
         columnWrapperStyle={styles.columnWrapper}
         renderItem={({ item }) => {
           const inWorkbench = workbenchItems.some((w) => w.id === item.id);
-
           return (
             <TouchableOpacity
-              activeOpacity={0.85}
+              activeOpacity={0.8}
               onPress={() => onSelectItem(item)}
               style={styles.card}
             >
@@ -108,80 +99,54 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
                 primaryColorName={item.primaryColorName}
                 name={item.name}
                 style={styles.cardImage}
-                iconSize={36}
+                iconSize={34}
               />
 
-              {/* Quick Delete button on card */}
+              {/* single, subtle workbench toggle */}
               <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => {
-                  Alert.alert(
-                    'Delete Garment',
-                    `Remove "${item.name}" from your vault?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => onDeleteItem(item.id) },
-                    ]
-                  );
-                }}
-                style={styles.deleteCardBtn}
-              >
-                <Ionicons name="trash-outline" size={13} color={COLORS.destructive} />
-              </TouchableOpacity>
-
-              {/* Quick Add to Workbench button on card */}
-              <TouchableOpacity
-                activeOpacity={0.8}
+                activeOpacity={0.7}
                 onPress={() => onAddToWorkbench(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={[styles.quickAddBtn, inWorkbench && styles.quickAddBtnActive]}
               >
                 <Ionicons
                   name={inWorkbench ? 'checkmark' : 'add'}
-                  size={14}
+                  size={16}
                   color={inWorkbench ? COLORS.background : COLORS.textPrimary}
                 />
               </TouchableOpacity>
 
               <View style={styles.cardInfo}>
-                <View style={styles.cardTitleRow}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <View
-                    style={[
-                      styles.colorDot,
-                      { backgroundColor: item.primaryColor },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.cardMeta}>
-                  {item.category.toUpperCase()} · {item.primaryColorName}
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {item.name}
                 </Text>
+                <View style={styles.cardMetaRow}>
+                  <View style={[styles.colorDot, { backgroundColor: item.primaryColor }]} />
+                  <Text style={styles.cardMeta}>
+                    {item.category} · {item.primaryColorName}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No items found in this category.</Text>
+            <Ionicons name="shirt-outline" size={44} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No pieces here yet.</Text>
           </View>
         }
       />
 
-      {/* Floating Add Item Button */}
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.8}
         onPress={onPressAdd}
-        style={[
-          styles.fab,
-          { bottom: 160 },
-        ]}
+        style={[styles.fab, { bottom: 170 }]}
       >
-        <Text style={styles.fabPlus}>+</Text>
-        <Text style={styles.fabText}>Add Item</Text>
+        <Ionicons name="add" size={22} color={COLORS.background} />
+        <Text style={styles.fabText}>Add</Text>
       </TouchableOpacity>
 
-      {/* Floating Outfit Workbench Tray */}
       <WorkbenchTray
         items={workbenchItems}
         onRemoveItem={onRemoveWorkbenchItem}
@@ -200,36 +165,30 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceBorder,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    gap: 8,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceRaised,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   filterPillActive: {
     backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
   },
   filterText: {
     color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: '600',
   },
   filterTextActive: {
     color: COLORS.background,
+    fontWeight: '700',
   },
   gridContent: {
-    padding: SPACING.md,
-    paddingBottom: 80,
+    padding: SPACING.lg,
   },
   columnWrapper: {
     justifyContent: 'space-between',
@@ -238,105 +197,78 @@ const styles = StyleSheet.create({
   card: {
     width: COLUMN_WIDTH,
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
   },
   cardImage: {
     width: '100%',
-    height: COLUMN_WIDTH * 1.25,
-  },
-  deleteCardBtn: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(14, 13, 12, 0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(192, 82, 74, 0.4)',
+    height: COLUMN_WIDTH * 1.2,
   },
   quickAddBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(14, 13, 12, 0.85)',
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(14, 13, 12, 0.72)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   quickAddBtnActive: {
     backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
   },
   cardInfo: {
-    padding: SPACING.sm,
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: SPACING.sm + 2,
   },
   cardTitle: {
-    flex: 1,
     color: COLORS.textPrimary,
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
   },
   colorDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginLeft: 6,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   cardMeta: {
     color: COLORS.textSecondary,
-    fontSize: 9.5,
-    marginTop: 2,
+    fontSize: 11,
+    textTransform: 'capitalize',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
+    marginTop: 80,
+    gap: 12,
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
   },
   fab: {
     position: 'absolute',
-    bottom: SPACING.lg,
     right: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: RADIUS.full,
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabPlus: {
-    color: COLORS.background,
-    fontSize: 18,
-    fontWeight: '800',
-    marginRight: 6,
-    lineHeight: 18,
+    gap: 6,
+    ...SHADOWS.glow,
   },
   fabText: {
     color: COLORS.background,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
 });

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WardrobeItem } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, SHADOWS } from '../theme';
 import { GarmentVisual } from './GarmentVisual';
 import { calculateGarmentHarmony } from '../core/colorTheory';
 
@@ -35,40 +35,34 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header bar */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={() => setCollapsed(!collapsed)}
           style={styles.headerLeft}
         >
-          <Ionicons
-            name="construct-outline"
-            size={16}
-            color={COLORS.accent}
-            style={styles.headerIcon}
-          />
-          <Text style={styles.title}>OUTFIT WORKBENCH</Text>
+          <Ionicons name="construct-outline" size={16} color={COLORS.accent} />
+          <Text style={styles.title}>Workbench</Text>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{items.length}/3</Text>
           </View>
-
           {items.length >= 2 && (
             <View style={styles.scorePill}>
               <Text style={styles.scoreText}>{harmony.score}%</Text>
-              <Text style={styles.typeText}>{harmony.type.toUpperCase()}</Text>
             </View>
           )}
         </TouchableOpacity>
 
         <View style={styles.headerRight}>
           {items.length > 0 && (
-            <TouchableOpacity onPress={onClear} style={styles.clearBtn}>
+            <TouchableOpacity onPress={onClear} hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
               <Text style={styles.clearText}>Clear</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={() => setCollapsed(!collapsed)}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
             style={styles.chevronBtn}
           >
             <Ionicons
@@ -80,14 +74,11 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
         </View>
       </View>
 
-      {/* Expandable Body */}
       {!collapsed && (
         <>
-          {/* 3 Garment Slots */}
           <View style={styles.slotsRow}>
             {slots.map((slotIndex) => {
               const item = items[slotIndex];
-
               return (
                 <View key={slotIndex} style={styles.slot}>
                   {item ? (
@@ -101,21 +92,13 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
                         style={styles.slotImage}
                         iconSize={22}
                       />
-
-                      {/* Remove badge */}
                       <TouchableOpacity
-                        activeOpacity={0.8}
+                        activeOpacity={0.7}
                         onPress={() => onRemoveItem(item.id)}
                         style={styles.removeBtn}
                       >
                         <Ionicons name="close" size={12} color={COLORS.textPrimary} />
                       </TouchableOpacity>
-
-                      <View style={styles.itemMeta}>
-                        <Text style={styles.itemName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                      </View>
                     </View>
                   ) : (
                     <View style={styles.emptySlot}>
@@ -128,10 +111,10 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
                             : 'shield-outline'
                         }
                         size={18}
-                        color={COLORS.textSecondary}
+                        color={COLORS.textMuted}
                       />
                       <Text style={styles.emptySlotLabel}>
-                        {slotIndex === 0 ? '+ TOP' : slotIndex === 1 ? '+ BOTTOM' : '+ LAYER'}
+                        {slotIndex === 0 ? 'Top' : slotIndex === 1 ? 'Bottom' : 'Layer'}
                       </Text>
                     </View>
                   )}
@@ -140,10 +123,9 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
             })}
           </View>
 
-          {/* Action Row & Instructions */}
           {items.length === 0 ? (
             <Text style={styles.instructionText}>
-              Tap the <Text style={styles.boldText}>'+'</Text> button on any piece in your closet to test combinations.
+              Tap <Text style={styles.boldText}>+</Text> on a piece to build a look.
             </Text>
           ) : (
             <View style={styles.actionsRow}>
@@ -154,7 +136,7 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
                 style={[styles.btn, styles.btnPrimary, items.length < 2 && styles.btnDisabled]}
               >
                 <Ionicons name="bookmark-outline" size={15} color={COLORS.background} style={styles.btnIcon} />
-                <Text style={styles.btnPrimaryText}>Save as Look</Text>
+                <Text style={styles.btnPrimaryText}>Save Look</Text>
               </TouchableOpacity>
 
               {onOpenStudio && (
@@ -164,7 +146,7 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
                   style={[styles.btn, styles.btnSecondary]}
                 >
                   <Ionicons name="color-palette-outline" size={15} color={COLORS.textPrimary} style={styles.btnIcon} />
-                  <Text style={styles.btnSecondaryText}>Studio Lab</Text>
+                  <Text style={styles.btnSecondaryText}>Studio</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -182,84 +164,60 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1.5,
-    borderTopColor: COLORS.accent,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 25,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    ...SHADOWS.float,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: SPACING.sm,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flex: 1,
   },
-  headerIcon: {
-    marginRight: 2,
-  },
   title: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
   },
   countBadge: {
     backgroundColor: COLORS.surfaceRaised,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   countText: {
-    color: COLORS.accentSoft,
-    fontSize: 8.5,
+    color: COLORS.textSecondary,
+    fontSize: 11,
     fontWeight: '700',
   },
   scorePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceRaised,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    backgroundColor: COLORS.accentMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: RADIUS.full,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   scoreText: {
     color: COLORS.accent,
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-  },
-  typeText: {
-    color: COLORS.accentSoft,
-    fontSize: 7.5,
-    fontWeight: '700',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  clearBtn: {
-    paddingVertical: 2,
-    paddingHorizontal: 6,
+    gap: 12,
   },
   clearText: {
     color: COLORS.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   chevronBtn: {
@@ -267,33 +225,30 @@ const styles = StyleSheet.create({
   },
   slotsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 6,
+    gap: 10,
+    marginBottom: SPACING.sm,
   },
   slot: {
     flex: 1,
-    height: 82,
+    height: 92,
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
     overflow: 'hidden',
   },
   emptySlot: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderStyle: 'dashed',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.md,
   },
   emptySlotLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 8.5,
-    fontWeight: '700',
-    marginTop: 3,
-    letterSpacing: 0.5,
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
   },
   filledSlot: {
     flex: 1,
@@ -304,37 +259,20 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     position: 'absolute',
-    top: 3,
-    right: 3,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(14, 13, 12, 0.88)',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(14, 13, 12, 0.82)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-  },
-  itemMeta: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(14, 13, 12, 0.75)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  itemName: {
-    color: COLORS.textPrimary,
-    fontSize: 8,
-    fontWeight: '700',
-    textAlign: 'center',
   },
   instructionText: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     textAlign: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   boldText: {
     color: COLORS.accent,
@@ -342,7 +280,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     marginTop: 2,
   },
   btn: {
@@ -350,31 +288,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: RADIUS.sm,
   },
   btnPrimary: {
     backgroundColor: COLORS.accent,
   },
   btnDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   btnPrimaryText: {
     color: COLORS.background,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
   },
   btnSecondary: {
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   btnSecondaryText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   btnIcon: {
-    marginRight: 4,
+    marginRight: 6,
   },
 });

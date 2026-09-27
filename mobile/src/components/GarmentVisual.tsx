@@ -59,27 +59,19 @@ export const GarmentVisual: React.FC<GarmentVisualProps> = ({
         />
       )}
 
-      {/* High-visibility Editorial Fallback Card */}
       {showFallback && (
-        <View style={[styles.fallbackContainer, { borderColor: primaryColor }]}>
-          {/* Glowing color aura */}
-          <View
-            style={[
-              styles.colorAura,
-              { backgroundColor: primaryColor, opacity: 0.22 },
-            ]}
-          />
-
+        <View style={styles.fallback}>
+          {/* soft color wash */}
+          <View style={[styles.colorWash, { backgroundColor: primaryColor, opacity: 0.18 }]} />
           <Ionicons
             name={getCategoryIcon(category)}
             size={iconSize}
             color={COLORS.textPrimary}
           />
-
-          <View style={styles.colorPill}>
+          <View style={styles.swatchDotRow}>
             <View style={[styles.swatchDot, { backgroundColor: primaryColor }]} />
             <Text style={styles.swatchText} numberOfLines={1}>
-              {primaryColorName || primaryColor}
+              {primaryColorName}
             </Text>
           </View>
         </View>
@@ -92,7 +84,7 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: '100%',
-    backgroundColor: COLORS.surfaceRaised,
+    backgroundColor: COLORS.surface,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -101,41 +93,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  fallbackContainer: {
+  fallback: {
     width: '100%',
     height: '100%',
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 6,
-    borderWidth: 1.5,
   },
-  colorAura: {
+  colorWash: {
     position: 'absolute',
-    width: '120%',
-    height: '120%',
+    width: '140%',
+    height: '140%',
     borderRadius: 999,
   },
-  colorPill: {
+  swatchDotRow: {
+    position: 'absolute',
+    bottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(14, 13, 12, 0.85)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: 'rgba(14, 13, 12, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 999,
-    marginTop: 6,
-    maxWidth: '90%',
+    maxWidth: '88%',
   },
   swatchDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   swatchText: {
-    color: COLORS.accentSoft,
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: COLORS.textPrimary,
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

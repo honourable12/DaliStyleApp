@@ -6,8 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  Dimensions,
-  TextInput,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,12 +32,12 @@ const INITIAL_POSTS: FeedPost[] = [
     creatorHandle: '@amarastyle',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80',
-    caption: 'High contrast monochrome styling with turmeric undertones. Perfect for autumn afternoons.',
+    caption: 'High-contrast monochrome with turmeric undertones.',
     harmonyScore: 94,
     harmonyType: 'Complementary',
     likesCount: 142,
     liked: false,
-    timeAgo: '2h ago',
+    timeAgo: '2h',
   },
   {
     id: 'p-2',
@@ -47,12 +45,12 @@ const INITIAL_POSTS: FeedPost[] = [
     creatorHandle: '@kofidrape',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80',
-    caption: 'Tailored deep indigo linen paired with chalk loafers. Calibrated for MST-7 warm tones.',
+    caption: 'Indigo linen with chalk loafers, MST-7 warm tones.',
     harmonyScore: 91,
     harmonyType: 'Triadic',
     likesCount: 89,
     liked: true,
-    timeAgo: '5h ago',
+    timeAgo: '5h',
   },
   {
     id: 'p-3',
@@ -60,12 +58,12 @@ const INITIAL_POSTS: FeedPost[] = [
     creatorHandle: '@siennastyle',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
     imageUrl: 'https://images.unsplash.com/photo-1485968579580-b6d095142e6e?auto=format&fit=crop&w=600&q=80',
-    caption: 'Minimalist neutral base. Letting the natural silhouette carry the outfit.',
+    caption: 'Minimalist neutral base. Letting the silhouette carry it.',
     harmonyScore: 88,
     harmonyType: 'Monochrome',
     likesCount: 204,
     liked: false,
-    timeAgo: '1d ago',
+    timeAgo: '1d',
   },
 ];
 
@@ -90,17 +88,14 @@ export const FeedScreen: React.FC = () => {
 
   const handleComment = (id: string) => {
     Alert.prompt
-      ? Alert.prompt('Add Comment', 'Share your style thoughts:', (text) => {
-          if (text) Alert.alert('Comment Posted', `Your thought was shared with the community.`);
+      ? Alert.prompt('Comment', 'Share your thoughts:', (text) => {
+          if (text) Alert.alert('Posted', 'Your comment was shared.');
         })
-      : Alert.alert('Community Comment', 'Commenting enabled on community server.');
+      : Alert.alert('Comment', 'Commenting is enabled on the community server.');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>COMMUNITY FEED</Text>
-      <Text style={styles.subHeading}>Curated looks from stylists worldwide</Text>
-
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -108,7 +103,6 @@ export const FeedScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            {/* Creator Header */}
             <View style={styles.creatorRow}>
               <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
               <View style={styles.creatorInfo}>
@@ -119,53 +113,49 @@ export const FeedScreen: React.FC = () => {
               </View>
               <View style={styles.harmonyPill}>
                 <Text style={styles.harmonyScore}>{item.harmonyScore}%</Text>
-                <Text style={styles.harmonyType}>{item.harmonyType.toUpperCase()}</Text>
               </View>
             </View>
 
-            {/* Post Image */}
             <View style={styles.imageWrap}>
               <Image source={{ uri: item.imageUrl }} style={styles.postImage} resizeMode="cover" />
             </View>
 
-            {/* Actions Bar */}
             <View style={styles.actionsRow}>
-              <View style={styles.actionsLeft}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => handleToggleLike(item.id)}
-                  style={styles.actionBtn}
-                >
-                  <Ionicons
-                    name={item.liked ? 'heart' : 'heart-outline'}
-                    size={22}
-                    color={item.liked ? COLORS.destructive : COLORS.textPrimary}
-                  />
-                  <Text style={[styles.actionCount, item.liked && styles.actionCountLiked]}>
-                    {item.likesCount}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => handleComment(item.id)}
-                  style={styles.actionBtn}
-                >
-                  <Ionicons name="chatbubble-outline" size={20} color={COLORS.textPrimary} />
-                  <Text style={styles.actionCount}>Discuss</Text>
-                </TouchableOpacity>
-              </View>
-
               <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => Alert.alert('Share', `Sharing look by ${item.creatorName}`)}
+                activeOpacity={0.6}
+                onPress={() => handleToggleLike(item.id)}
+                hitSlop={{ top: 10, bottom: 10, left: 4, right: 8 }}
                 style={styles.actionBtn}
               >
-                <Ionicons name="paper-plane-outline" size={20} color={COLORS.textSecondary} />
+                <Ionicons
+                  name={item.liked ? 'heart' : 'heart-outline'}
+                  size={22}
+                  color={item.liked ? COLORS.destructive : COLORS.textPrimary}
+                />
+                <Text style={[styles.actionCount, item.liked && styles.actionCountLiked]}>
+                  {item.likesCount}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.6}
+                onPress={() => handleComment(item.id)}
+                hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                style={styles.actionBtn}
+              >
+                <Ionicons name="chatbubble-outline" size={21} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.6}
+                onPress={() => Alert.alert('Share', `Sharing ${item.creatorName}'s look`)}
+                hitSlop={{ top: 10, bottom: 10, left: 8, right: 4 }}
+                style={styles.actionBtn}
+              >
+                <Ionicons name="paper-plane-outline" size={21} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            {/* Caption */}
             <Text style={styles.captionText}>{item.caption}</Text>
           </View>
         )}
@@ -179,82 +169,54 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  heading: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
-  subHeading: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: SPACING.sm,
-  },
   listContent: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
     paddingBottom: 40,
   },
   card: {
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.lg,
     marginBottom: SPACING.lg,
     overflow: 'hidden',
   },
   creatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.sm,
+    padding: SPACING.md,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginRight: 12,
   },
   creatorInfo: {
     flex: 1,
   },
   creatorName: {
     color: COLORS.textPrimary,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   creatorHandle: {
     color: COLORS.textSecondary,
-    fontSize: 10.5,
+    fontSize: 12,
     marginTop: 1,
   },
   harmonyPill: {
-    alignItems: 'flex-end',
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
   },
   harmonyScore: {
     color: COLORS.accent,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
-  },
-  harmonyType: {
-    color: COLORS.textSecondary,
-    fontSize: 7.5,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   imageWrap: {
     width: '100%',
-    height: 320,
+    height: 340,
     backgroundColor: COLORS.surface,
   },
   postImage: {
@@ -264,31 +226,26 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-  },
-  actionsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
+    gap: 20,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
   },
   actionCount: {
     color: COLORS.textPrimary,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   actionCountLiked: {
     color: COLORS.destructive,
   },
   captionText: {
     color: COLORS.textPrimary,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 18,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,

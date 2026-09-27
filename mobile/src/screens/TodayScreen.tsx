@@ -10,7 +10,6 @@ import {
 import { OutfitRing } from '../components/OutfitRing';
 import { OutfitRecommendation, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
-import { wardrobeStore } from '../db/storage';
 import { GarmentVisual } from '../components/GarmentVisual';
 
 interface TodayScreenProps {
@@ -31,9 +30,9 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
   if (!outfit) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>Wardrobe is Empty</Text>
+        <Text style={styles.emptyTitle}>Your closet is empty</Text>
         <Text style={styles.emptySubtitle}>
-          Add items to your closet to generate your calibrated daily outfit.
+          Add pieces to generate your daily look.
         </Text>
       </View>
     );
@@ -41,18 +40,18 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
 
   const handleLogWorn = () => {
     setWornLogged(true);
-    Alert.alert('Outfit Logged', 'DRAPE noted today’s wear in your local style history.');
+    Alert.alert('Logged', "Today's outfit saved to your history.");
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Banner */}
       <View style={styles.bannerContainer}>
-        <Text style={styles.sectionHeading}>THE DAILY RITUAL</Text>
-        <Text style={styles.subHeading}>Curated for your skin tone & weather</Text>
+        <Text style={styles.sectionHeading}>Today's Look</Text>
+        <Text style={styles.subHeading}>
+          Tuned to your skin tone & the weather
+        </Text>
       </View>
 
-      {/* The Signature Radial Outfit Ring */}
       <OutfitRing
         items={outfit.items}
         harmonyScore={outfit.harmonyScore}
@@ -60,22 +59,20 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
         onSelectItem={onSelectItem}
       />
 
-      {/* Editorial Styling Blurb */}
       <View style={styles.blurbCard}>
         <View style={styles.blurbHeader}>
-          <Text style={styles.blurbTag}>COLOR THEORY NOTE</Text>
-          <Text style={styles.contrastPill}>Skin Contrast {outfit.skinContrastScore}%</Text>
+          <Text style={styles.blurbTag}>{outfit.harmonyType}</Text>
+          <Text style={styles.contrastPill}>{outfit.skinContrastScore}% contrast</Text>
         </View>
         <Text style={styles.blurbText}>{outfit.stylingNote}</Text>
       </View>
 
-      {/* Curated Pieces List */}
       <View style={styles.piecesContainer}>
-        <Text style={styles.piecesTitle}>CURATED PIECES ({outfit.items.length})</Text>
+        <Text style={styles.piecesTitle}>Pieces</Text>
         {outfit.items.map((item) => (
           <TouchableOpacity
             key={item.id}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => onSelectItem(item)}
             style={styles.pieceRow}
           >
@@ -91,17 +88,16 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
             <View style={styles.pieceInfo}>
               <Text style={styles.pieceName}>{item.name}</Text>
               <Text style={styles.pieceSub}>
-                {item.category.toUpperCase()} · {item.primaryColorName}
+                {item.category} · {item.primaryColorName}
               </Text>
             </View>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.actionsRow}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={onReroll}
           style={[styles.btn, styles.btnSecondary]}
         >
@@ -109,21 +105,21 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={() => onSaveToLookbook(outfit)}
           style={[styles.btn, styles.btnSecondary]}
         >
           <Text style={styles.btnSecondaryText}>
-            {outfit.savedInLookbook ? 'Saved ★' : 'Save Look'}
+            {outfit.savedInLookbook ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={handleLogWorn}
           style={[styles.btn, styles.btnPrimary, wornLogged && styles.btnActive]}
         >
-          <Text style={styles.btnPrimaryText}>{wornLogged ? 'Worn ✓' : 'Wear Today'}</Text>
+          <Text style={styles.btnPrimaryText}>{wornLogged ? 'Worn' : 'Wear Today'}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -161,105 +157,92 @@ const styles = StyleSheet.create({
   bannerContainer: {
     alignItems: 'center',
     marginTop: SPACING.md,
-    marginBottom: 4,
   },
   sectionHeading: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
+    color: COLORS.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
   },
   subHeading: {
     color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 13,
+    marginTop: 4,
   },
   blurbCard: {
     width: '90%',
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    marginTop: 4,
+    marginTop: SPACING.sm,
   },
   blurbHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   blurbTag: {
     color: COLORS.accent,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontWeight: '700',
   },
   contrastPill: {
-    color: COLORS.accentSoft,
-    fontSize: 10,
+    color: COLORS.textSecondary,
+    fontSize: 11,
     fontWeight: '600',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
   },
   blurbText: {
     color: COLORS.textPrimary,
-    fontSize: 12.5,
-    lineHeight: 18,
-    fontStyle: 'italic',
+    fontSize: 13,
+    lineHeight: 19,
   },
   piecesContainer: {
     width: '90%',
-    marginTop: SPACING.md,
+    marginTop: SPACING.lg,
   },
   piecesTitle: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1.2,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   pieceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     padding: SPACING.sm,
-    borderRadius: RADIUS.sm,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.md,
+    marginBottom: 8,
   },
   colorSquare: {
-    width: 28,
-    height: 28,
-    borderRadius: 4,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.sm,
+    marginRight: 12,
   },
   pieceInfo: {
     flex: 1,
   },
   pieceName: {
     color: COLORS.textPrimary,
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '600',
   },
   pieceSub: {
     color: COLORS.textSecondary,
-    fontSize: 10,
-    marginTop: 1,
+    fontSize: 12,
+    marginTop: 2,
+    textTransform: 'capitalize',
   },
   actionsRow: {
     flexDirection: 'row',
     width: '90%',
     justifyContent: 'space-between',
-    marginTop: SPACING.md,
+    marginTop: SPACING.lg,
+    gap: 8,
   },
   btn: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: RADIUS.md,
     alignItems: 'center',
@@ -268,18 +251,14 @@ const styles = StyleSheet.create({
   btnSecondary: {
     flex: 1,
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    marginRight: 8,
   },
   btnSecondaryText: {
     color: COLORS.textPrimary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
   btnPrimary: {
-    flex: 1.5,
+    flex: 1.4,
     backgroundColor: COLORS.accent,
   },
   btnActive: {
@@ -287,8 +266,7 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: {
     color: COLORS.background,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
 });

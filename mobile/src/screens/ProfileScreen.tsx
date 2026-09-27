@@ -47,7 +47,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     recommendedAccents: ['#E8A830', '#1A1917', '#F2EDE6'],
   };
 
-  // Metrics
   const tops = wardrobe.filter((i) => i.category === 'top').length;
   const bottoms = wardrobe.filter((i) => i.category === 'bottom').length;
   const outer = wardrobe.filter((i) => i.category === 'outerwear').length;
@@ -55,15 +54,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>STYLE PROFILE & VAULT</Text>
-      <Text style={styles.subHeading}>Personal calibration and wardrobe diagnostics</Text>
-
-      {/* Monk Tone Calibration Card */}
+      {/* Skin tone */}
       <View style={styles.sectionCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.sectionTitle}>SKIN TONE CALIBRATION</Text>
-          <TouchableOpacity onPress={onOpenMonkList}>
-            <Text style={styles.linkText}>Browse Scale →</Text>
+          <Text style={styles.sectionTitle}>Skin tone</Text>
+          <TouchableOpacity onPress={onOpenMonkList} hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}>
+            <Text style={styles.linkText}>Scale</Text>
           </TouchableOpacity>
         </View>
 
@@ -74,42 +70,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {profile.monkLabel} · {profile.skinName}
             </Text>
             <Text style={styles.toneSubtitle}>
-              {monkProfile.undertone} Undertone · {monkProfile.season} Palette
+              {monkProfile.undertone} · {monkProfile.season}
             </Text>
           </View>
         </View>
 
-        {/* Recommended Accents */}
-        <Text style={styles.subLabel}>COMPATIBLE COLOR ACCENTS:</Text>
         <View style={styles.swatchRow}>
           {monkProfile.recommendedAccents.map((hex, idx) => (
             <View key={idx} style={[styles.swatchBox, { backgroundColor: hex }]} />
           ))}
         </View>
 
-        {/* Retake Selfie Button */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onOpenSelfieCalibration}
           style={styles.selfieActionBtn}
         >
-          <Ionicons name="camera-reverse-outline" size={16} color={COLORS.background} style={styles.btnIcon} />
-          <Text style={styles.selfieBtnText}>Retake Style Selfie</Text>
+          <Ionicons name="camera-reverse-outline" size={17} color={COLORS.background} style={styles.btnIcon} />
+          <Text style={styles.selfieBtnText}>Retake selfie</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Style Persona Selector */}
+      {/* Persona */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>STYLE PERSONA</Text>
-        <Text style={styles.sectionDesc}>Shapes how aggressive or subtle DRAPE curates outfits.</Text>
-
+        <Text style={styles.sectionTitle}>Persona</Text>
         <View style={styles.personaRow}>
           {personas.map((p) => {
             const isActive = profile.persona === p;
             return (
               <TouchableOpacity
                 key={p}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
                 onPress={() => onUpdatePersona(p)}
                 style={[styles.personaPill, isActive && styles.personaPillActive]}
               >
@@ -122,44 +113,43 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </View>
 
-      {/* Wardrobe Diagnostics */}
+      {/* Wardrobe stats */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>WARDROBE DIAGNOSTICS</Text>
-
+        <Text style={styles.sectionTitle}>Wardrobe</Text>
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
             <Text style={styles.metricValue}>{wardrobe.length}</Text>
-            <Text style={styles.metricLabel}>TOTAL PIECES</Text>
+            <Text style={styles.metricLabel}>Total</Text>
           </View>
           <View style={styles.metricItem}>
             <Text style={styles.metricValue}>{tops}</Text>
-            <Text style={styles.metricLabel}>TOPS</Text>
+            <Text style={styles.metricLabel}>Tops</Text>
           </View>
           <View style={styles.metricItem}>
             <Text style={styles.metricValue}>{bottoms}</Text>
-            <Text style={styles.metricLabel}>BOTTOMS</Text>
+            <Text style={styles.metricLabel}>Bottoms</Text>
           </View>
           <View style={styles.metricItem}>
             <Text style={styles.metricValue}>{outer + shoes}</Text>
-            <Text style={styles.metricLabel}>LAYERS & SHOES</Text>
+            <Text style={styles.metricLabel}>Layers</Text>
           </View>
         </View>
       </View>
 
-      {/* Account & Atelier Access */}
+      {/* Account */}
       <View style={styles.sectionCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.sectionTitle}>ATELIER ACCOUNT & SESSION</Text>
+          <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.statusPill}>
             <View style={[styles.statusDot, { backgroundColor: currentUser?.isAuthenticated ? COLORS.success : COLORS.accent }]} />
             <Text style={styles.statusText}>
-              {currentUser?.isAuthenticated ? 'ONLINE SYNC' : 'OFFLINE VAULT'}
+              {currentUser?.isAuthenticated ? 'Online' : 'Offline'}
             </Text>
           </View>
         </View>
 
         <Text style={styles.accountEmailText}>
-          {currentUser?.email ? currentUser.email : 'Local Guest Atelier (Zero-Cloud)'}
+          {currentUser?.email || 'Local guest'}
         </Text>
 
         <View style={styles.accountActionRow}>
@@ -169,9 +159,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onPress={onOpenAuth}
               style={styles.accountBtn}
             >
-              <Ionicons name="key-outline" size={15} color={COLORS.accent} style={{ marginRight: 6 }} />
+              <Ionicons name="key-outline" size={16} color={COLORS.accent} style={{ marginRight: 8 }} />
               <Text style={styles.accountBtnText}>
-                {currentUser?.isAuthenticated ? 'Switch Account' : 'Sign In / Register'}
+                {currentUser?.isAuthenticated ? 'Switch' : 'Sign in'}
               </Text>
             </TouchableOpacity>
           )}
@@ -182,43 +172,38 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onPress={onLogout}
               style={[styles.accountBtn, { borderColor: COLORS.destructive }]}
             >
-              <Ionicons name="log-out-outline" size={15} color={COLORS.destructive} style={{ marginRight: 6 }} />
-              <Text style={[styles.accountBtnText, { color: COLORS.destructive }]}>Sign Out</Text>
+              <Ionicons name="log-out-outline" size={16} color={COLORS.destructive} style={{ marginRight: 8 }} />
+              <Text style={[styles.accountBtnText, { color: COLORS.destructive }]}>Sign out</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Relaunch Onboarding Tour */}
         {onRelaunchOnboarding && (
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onRelaunchOnboarding}
             style={styles.onboardingRelaunchBtn}
           >
-            <Ionicons name="compass-outline" size={16} color={COLORS.textPrimary} style={{ marginRight: 6 }} />
-            <Text style={styles.onboardingRelaunchText}>Relaunch Onboarding Tour</Text>
+            <Ionicons name="compass-outline" size={16} color={COLORS.textPrimary} style={{ marginRight: 8 }} />
+            <Text style={styles.onboardingRelaunchText}>Redo onboarding</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Server & Connectivity Settings */}
+      {/* Backend */}
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>BACKEND SERVER CONNECTIVITY</Text>
-        <Text style={styles.sectionDesc}>
-          Set your computer's IP address if testing on a physical phone on the same Wi-Fi.
-        </Text>
-
+        <Text style={styles.sectionTitle}>Backend</Text>
         <View style={styles.ipInputRow}>
           <TextInput
             style={styles.ipInput}
             value={backendIp}
             onChangeText={setBackendIp}
-            placeholder="e.g. 192.168.1.100:8000"
-            placeholderTextColor={COLORS.textSecondary}
+            placeholder="192.168.1.100:8000"
+            placeholderTextColor={COLORS.textMuted}
           />
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Saved Host', `FastAPI backend target set to: http://${backendIp}`)}
+            onPress={() => Alert.alert('Saved', `Backend set to http://${backendIp}`)}
             style={styles.saveIpBtn}
           >
             <Text style={styles.saveIpBtnText}>Save</Text>
@@ -226,11 +211,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </View>
 
-      {/* Brand Footer */}
+      {/* Brand footer */}
       <View style={styles.brandFooter}>
-        <StyloraLogo size={64} containerStyle={styles.footerLogo} />
-        <Text style={styles.footerBrandName}>STYLORA</Text>
-        <Text style={styles.footerVersion}>DRAPE AI PERSONAL STYLING ENGINE · v1.0.0</Text>
+        <StyloraLogo size={56} />
+        <Text style={styles.footerBrandName}>Stylora</Text>
+        <Text style={styles.footerVersion}>v1.0.0</Text>
       </View>
     </ScrollView>
   );
@@ -242,30 +227,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   content: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
     paddingBottom: 40,
-  },
-  heading: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-  },
-  subHeading: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: SPACING.md,
   },
   sectionCard: {
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
     marginBottom: SPACING.md,
   },
   cardHeader: {
@@ -275,20 +243,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-  sectionDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-    marginBottom: SPACING.sm,
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
   },
   linkText: {
-    color: COLORS.accentSoft,
-    fontSize: 11,
+    color: COLORS.accent,
+    fontSize: 13,
     fontWeight: '600',
   },
   toneHero: {
@@ -297,12 +258,12 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.sm,
   },
   skinColorOrb: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     marginRight: 14,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   toneHeroText: {
     flex: 1,
@@ -310,74 +271,64 @@ const styles = StyleSheet.create({
   toneTitle: {
     color: COLORS.textPrimary,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   toneSubtitle: {
     color: COLORS.textSecondary,
-    fontSize: 11.5,
+    fontSize: 12,
     marginTop: 2,
-  },
-  subLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginTop: 8,
-    marginBottom: 6,
   },
   swatchRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     marginBottom: SPACING.md,
   },
   swatchBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   selfieActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.accent,
-    paddingVertical: 10,
-    borderRadius: RADIUS.sm,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
   },
   selfieBtnText: {
     color: COLORS.background,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
   },
   btnIcon: {
-    marginRight: 6,
+    marginRight: 8,
   },
   personaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
+    marginTop: SPACING.sm,
   },
   personaPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: RADIUS.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   personaPillActive: {
     backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
   },
   personaText: {
     color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   personaTextActive: {
     color: COLORS.background,
+    fontWeight: '700',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -390,72 +341,37 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: COLORS.textPrimary,
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
   },
   metricLabel: {
-    color: COLORS.accent,
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 2,
-  },
-  ipInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  ipInput: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 8,
-    color: COLORS.textPrimary,
-    fontSize: 12,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-  },
-  saveIpBtn: {
-    backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.accent,
-    paddingHorizontal: 16,
-    borderRadius: RADIUS.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveIpBtnText: {
-    color: COLORS.accent,
+    color: COLORS.textSecondary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginTop: 3,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceRaised,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    gap: 5,
+    gap: 6,
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   statusText: {
     color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '700',
   },
   accountEmailText: {
-    color: COLORS.textPrimary,
+    color: COLORS.textSecondary,
     fontSize: 13,
-    fontWeight: '600',
     marginBottom: SPACING.md,
   },
   accountActionRow: {
@@ -468,15 +384,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    paddingVertical: 10,
-    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
   },
   accountBtnText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   onboardingRelaunchBtn: {
@@ -484,40 +398,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 168, 48, 0.4)',
-    paddingVertical: 10,
-    borderRadius: RADIUS.sm,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
     marginTop: 4,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorderStrong,
   },
   onboardingRelaunchText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ipInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: SPACING.sm,
+  },
+  ipInput: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    color: COLORS.textPrimary,
+    fontSize: 13,
+  },
+  saveIpBtn: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 18,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveIpBtnText: {
     color: COLORS.accent,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   brandFooter: {
     alignItems: 'center',
-    justifyContent: 'center',
     marginTop: SPACING.md,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     paddingVertical: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.surfaceBorder,
-  },
-  footerLogo: {
-    marginBottom: 8,
   },
   footerBrandName: {
     color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 2.5,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 10,
   },
   footerVersion: {
-    color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.8,
+    color: COLORS.textMuted,
+    fontSize: 11,
     marginTop: 4,
   },
 });

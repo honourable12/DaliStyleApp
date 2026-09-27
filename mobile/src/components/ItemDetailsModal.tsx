@@ -31,8 +31,8 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   const handleDeleteConfirm = () => {
     Alert.alert(
-      'Delete Garment',
-      `Are you sure you want to permanently remove "${item.name}" from your vault?`,
+      'Delete piece?',
+      `Remove "${item.name}" from your closet?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -51,18 +51,16 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
-          {/* Header */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.categoryBadge}>{item.category.toUpperCase()}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.categoryBadge}>{item.category}</Text>
               <Text style={styles.title}>{item.name}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={22} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Large Visual Preview */}
           <View style={styles.imageWrap}>
             <GarmentVisual
               imageUrl={item.imageUrl}
@@ -75,10 +73,9 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             />
           </View>
 
-          {/* Metadata Grid */}
           <View style={styles.metaGrid}>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>PRIMARY COLOR</Text>
+              <Text style={styles.metaLabel}>Color</Text>
               <View style={styles.colorValRow}>
                 <View style={[styles.swatchDot, { backgroundColor: item.primaryColor }]} />
                 <Text style={styles.metaValue}>{item.primaryColorName}</Text>
@@ -86,24 +83,18 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </View>
 
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>HEX CODE</Text>
+              <Text style={styles.metaLabel}>Hex</Text>
               <Text style={styles.metaValue}>{item.primaryColor.toUpperCase()}</Text>
             </View>
 
             {item.pattern && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>PATTERN</Text>
-                <Text style={styles.metaValue}>{item.pattern.toUpperCase()}</Text>
+                <Text style={styles.metaLabel}>Pattern</Text>
+                <Text style={styles.metaValue}>{item.pattern}</Text>
               </View>
             )}
-
-            <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>STORAGE</Text>
-              <Text style={styles.metaValue}>Local Vault ✓</Text>
-            </View>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.actions}>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -113,7 +104,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               }}
               style={[styles.btn, styles.btnPrimary]}
             >
-              <Ionicons name="construct-outline" size={17} color={COLORS.background} style={styles.btnIcon} />
+              <Ionicons name="add-circle-outline" size={18} color={COLORS.background} style={styles.btnIcon} />
               <Text style={styles.btnPrimaryText}>Add to Workbench</Text>
             </TouchableOpacity>
 
@@ -122,8 +113,8 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               onPress={handleDeleteConfirm}
               style={[styles.btn, styles.btnDestructive]}
             >
-              <Ionicons name="trash-outline" size={17} color={COLORS.destructive} style={styles.btnIcon} />
-              <Text style={styles.btnDestructiveText}>Delete Piece</Text>
+              <Ionicons name="trash-outline" size={18} color={COLORS.destructive} style={styles.btnIcon} />
+              <Text style={styles.btnDestructiveText}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -135,47 +126,41 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.82)',
+    backgroundColor: 'rgba(0,0,0,0.72)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.lg,
-    borderTopRightRadius: RADIUS.lg,
-    padding: SPACING.md,
-    maxHeight: '90%',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    maxHeight: '92%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   categoryBadge: {
     color: COLORS.accent,
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   title: {
     color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     marginTop: 2,
-  },
-  closeBtn: {
-    padding: 6,
   },
   imageWrap: {
     width: '100%',
     height: 220,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    marginVertical: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   garmentImage: {
     width: '100%',
@@ -185,51 +170,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    gap: 12,
-    marginVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    gap: 16,
+    marginBottom: SPACING.md,
   },
   metaItem: {
     width: '46%',
   },
   metaLabel: {
     color: COLORS.textSecondary,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '600',
   },
   metaValue: {
     color: COLORS.textPrimary,
-    fontSize: 11.5,
+    fontSize: 13,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 4,
   },
   colorValRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
+    gap: 8,
+    marginTop: 4,
   },
   swatchDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   actions: {
-    gap: 8,
-    marginTop: SPACING.sm,
+    gap: 10,
     marginBottom: SPACING.md,
   },
   btn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: RADIUS.md,
   },
   btnPrimary: {
@@ -237,20 +218,18 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: {
     color: COLORS.background,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   btnDestructive: {
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: 'rgba(192, 82, 74, 0.4)',
   },
   btnDestructiveText: {
     color: COLORS.destructive,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
   },
   btnIcon: {
-    marginRight: 6,
+    marginRight: 8,
   },
 });

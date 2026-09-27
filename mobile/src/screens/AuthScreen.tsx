@@ -41,19 +41,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     const trimmedPass = password.trim();
 
     if (!trimmedEmail || !trimmedPass) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage('Enter your email and password.');
       return;
     }
 
     if (!isLogin && !fullName.trim()) {
-      setErrorMessage('Please enter your name.');
+      setErrorMessage('Enter your name.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Attempt connection to FastAPI / Supabase backend endpoint
       const endpoint = isLogin
         ? `${backendBaseUrl}/auth/login`
         : `${backendBaseUrl}/auth/register`;
@@ -98,7 +97,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           }
         }
       } catch {
-        // Backend not reached or offline - proceed gracefully with local session
+        // Backend not reached — proceed with a local session.
       }
 
       onAuthSuccess(authUser);
@@ -107,10 +106,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGuestEntry = () => {
-    onSkipToGuest();
   };
 
   return (
@@ -123,55 +118,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand Emblem Hero */}
         <View style={styles.heroSection}>
-          <StyloraLogo
-            size={76}
-            containerStyle={styles.largeLogoBadge}
-          />
-          <Text style={styles.brandTitle}>STYLORA</Text>
-          <Text style={styles.tagline}>DRAPE · ON-EDGE AI PERSONAL STYLING</Text>
+          <StyloraLogo size={80} />
+          <Text style={styles.brandTitle}>Stylora</Text>
         </View>
 
-        {/* Auth Card */}
         <View style={styles.card}>
-          {/* Mode Switcher */}
           <View style={styles.tabSwitch}>
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={() => {
                 setIsLogin(true);
                 setErrorMessage('');
               }}
               style={[styles.tabBtn, isLogin && styles.tabBtnActive]}
             >
-              <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>
-                SIGN IN
-              </Text>
+              <Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Sign in</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={() => {
                 setIsLogin(false);
                 setErrorMessage('');
               }}
               style={[styles.tabBtn, !isLogin && styles.tabBtnActive]}
             >
-              <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>
-                CREATE VAULT
-              </Text>
+              <Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Create account</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Subheading */}
-          <Text style={styles.cardPrompt}>
-            {isLogin
-              ? 'Enter your credentials to unlock your calibrated wardrobe.'
-              : 'Create your bespoke digital atelier and personal color profile.'}
-          </Text>
-
-          {/* Error Message Box */}
           {Boolean(errorMessage) && (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={16} color={COLORS.destructive} />
@@ -179,15 +155,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             </View>
           )}
 
-          {/* Inputs */}
           {!isLogin && (
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>YOUR NAME</Text>
               <View style={styles.inputWrap}>
-                <Ionicons name="person-outline" size={17} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <Ionicons name="person-outline" size={18} color={COLORS.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. Maya Chen"
+                  placeholder="Name"
                   placeholderTextColor={COLORS.textMuted}
                   value={fullName}
                   onChangeText={setFullName}
@@ -198,12 +172,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
             <View style={styles.inputWrap}>
-              <Ionicons name="mail-outline" size={17} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <Ionicons name="mail-outline" size={18} color={COLORS.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="name@atelier.com"
+                placeholder="Email"
                 placeholderTextColor={COLORS.textMuted}
                 value={email}
                 onChangeText={setEmail}
@@ -215,12 +188,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>PASSWORD</Text>
             <View style={styles.inputWrap}>
-              <Ionicons name="lock-closed-outline" size={17} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="••••••••••••"
+                placeholder="Password"
                 placeholderTextColor={COLORS.textMuted}
                 value={password}
                 onChangeText={setPassword}
@@ -229,18 +201,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={18}
+                  size={20}
                   color={COLORS.textSecondary}
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Submit Button */}
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSubmit}
@@ -252,35 +223,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             ) : (
               <>
                 <Text style={styles.submitBtnText}>
-                  {isLogin ? 'ENTER ATELIER' : 'ACTIVATE VAULT'}
+                  {isLogin ? 'Sign in' : 'Create account'}
                 </Text>
-                <Ionicons name="arrow-forward" size={16} color={COLORS.background} />
+                <Ionicons name="arrow-forward" size={17} color={COLORS.background} />
               </>
             )}
           </TouchableOpacity>
 
-          {/* Divider */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Offline Guest Bypass Button */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={handleGuestEntry}
+            onPress={onSkipToGuest}
             style={styles.guestBtn}
           >
-            <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.accent} style={{ marginRight: 6 }} />
-            <Text style={styles.guestBtnText}>CONTINUE IN OFFLINE VAULT</Text>
+            <Text style={styles.guestBtnText}>Continue offline</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Footer Note */}
-        <Text style={styles.footerCaption}>
-          Private & Secure · Zero-Cloud Edge Vision Architecture
-        </Text>
+        <Text style={styles.footerCaption}>Private · on-device by default</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -301,48 +266,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.xl,
   },
-  largeLogoBadge: {
-    marginBottom: SPACING.md,
-    borderWidth: 2,
-    borderColor: 'rgba(232, 168, 48, 0.4)',
-  },
   brandTitle: {
     color: COLORS.textPrimary,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: 4,
-    marginBottom: 4,
-  },
-  tagline: {
-    color: COLORS.accent,
-    fontSize: 9.5,
+    fontSize: 28,
     fontWeight: '700',
-    letterSpacing: 1.5,
-    textAlign: 'center',
+    marginTop: SPACING.md,
+    letterSpacing: 0.5,
   },
   card: {
     width: '100%',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
   },
   tabSwitch: {
     flexDirection: 'row',
     backgroundColor: COLORS.surfaceRaised,
     borderRadius: RADIUS.md,
-    padding: 3,
+    padding: 4,
     marginBottom: SPACING.md,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 11,
     alignItems: 'center',
     borderRadius: RADIUS.sm,
   },
@@ -351,88 +297,65 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '600',
   },
   tabTextActive: {
     color: COLORS.background,
-    fontWeight: '800',
-  },
-  cardPrompt: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
+    fontWeight: '700',
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(192, 82, 74, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(192, 82, 74, 0.4)',
-    padding: SPACING.sm,
-    borderRadius: RADIUS.sm,
+    padding: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
     gap: 8,
   },
   errorText: {
     color: COLORS.destructive,
-    fontSize: 11.5,
+    fontSize: 13,
     flex: 1,
     fontWeight: '600',
   },
   inputGroup: {
     marginBottom: SPACING.md,
   },
-  inputLabel: {
-    color: COLORS.accentSoft,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    paddingHorizontal: SPACING.sm,
-    height: 48,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    height: 52,
   },
   inputIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   input: {
     flex: 1,
     color: COLORS.textPrimary,
-    fontSize: 14,
+    fontSize: 15,
     height: '100%',
-  },
-  eyeBtn: {
-    padding: 6,
   },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.accent,
-    borderRadius: RADIUS.sm,
-    height: 48,
-    marginTop: SPACING.sm,
-    gap: 6,
+    borderRadius: RADIUS.md,
+    height: 52,
+    marginTop: SPACING.xs,
+    gap: 8,
   },
   submitBtnDisabled: {
     opacity: 0.6,
   },
   submitBtnText: {
     color: COLORS.background,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 1.2,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -446,29 +369,26 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     marginHorizontal: SPACING.md,
   },
   guestBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    borderRadius: RADIUS.sm,
-    height: 46,
+    borderColor: COLORS.surfaceBorderStrong,
+    borderRadius: RADIUS.md,
+    height: 50,
   },
   guestBtnText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 14,
+    fontWeight: '600',
   },
   footerCaption: {
     color: COLORS.textMuted,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: SPACING.xl,
     textAlign: 'center',
   },

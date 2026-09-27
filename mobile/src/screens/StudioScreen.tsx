@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { WardrobeItem, UserStyleProfile } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
@@ -39,27 +38,22 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>STUDIO LAB</Text>
-      <Text style={styles.subHeading}>Interactive color & contrast testing</Text>
-
-      {/* Live Harmony Score Gauge */}
       <View style={styles.gaugeCard}>
         <View style={styles.gaugeRow}>
           <View style={styles.gaugeCol}>
             <Text style={styles.gaugeScore}>{harmony.score}%</Text>
-            <Text style={styles.gaugeLabel}>GARMENT HARMONY</Text>
-            <Text style={styles.gaugeSub}>{harmony.type.toUpperCase()}</Text>
+            <Text style={styles.gaugeLabel}>Harmony</Text>
+            <Text style={styles.gaugeSub}>{harmony.type}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.gaugeCol}>
             <Text style={styles.gaugeScore}>{skinContrast}%</Text>
-            <Text style={styles.gaugeLabel}>SKIN CONTRAST</Text>
-            <Text style={styles.gaugeSub}>{userProfile.monkLabel} PROFILE</Text>
+            <Text style={styles.gaugeLabel}>Skin contrast</Text>
+            <Text style={styles.gaugeSub}>{userProfile.monkLabel}</Text>
           </View>
         </View>
       </View>
 
-      {/* Preview Selected Combination */}
       <View style={styles.previewContainer}>
         {selectedTop && (
           <View style={styles.previewBox}>
@@ -72,7 +66,7 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
               style={styles.previewImg}
               iconSize={40}
             />
-            <Text style={styles.previewName}>{selectedTop.name}</Text>
+            <Text style={styles.previewName} numberOfLines={1}>{selectedTop.name}</Text>
           </View>
         )}
         {selectedBottom && (
@@ -86,13 +80,12 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
               style={styles.previewImg}
               iconSize={40}
             />
-            <Text style={styles.previewName}>{selectedBottom.name}</Text>
+            <Text style={styles.previewName} numberOfLines={1}>{selectedBottom.name}</Text>
           </View>
         )}
       </View>
 
-      {/* Top Selector Carousel */}
-      <Text style={styles.pickerTitle}>SELECT TOP</Text>
+      <Text style={styles.pickerTitle}>Top</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
         {tops.map((top) => {
           const isSelected = selectedTop?.id === top.id;
@@ -118,8 +111,7 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
         })}
       </ScrollView>
 
-      {/* Bottom Selector Carousel */}
-      <Text style={styles.pickerTitle}>SELECT BOTTOM</Text>
+      <Text style={styles.pickerTitle}>Bottom</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
         {bottoms.map((bottom) => {
           const isSelected = selectedBottom?.id === bottom.id;
@@ -154,30 +146,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   content: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
     paddingBottom: 40,
-  },
-  heading: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textAlign: 'center',
-  },
-  subHeading: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: SPACING.md,
   },
   gaugeCard: {
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
-    marginBottom: SPACING.md,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
   },
   gaugeRow: {
     flexDirection: 'row',
@@ -189,67 +165,63 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    height: 40,
+    height: 48,
     backgroundColor: COLORS.surfaceBorder,
   },
   gaugeScore: {
     color: COLORS.textPrimary,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
   },
   gaugeLabel: {
-    color: COLORS.accent,
-    fontSize: 8.5,
-    fontWeight: '700',
-    letterSpacing: 1,
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
     marginTop: 2,
   },
   gaugeSub: {
-    color: COLORS.textSecondary,
-    fontSize: 9,
-    marginTop: 1,
+    color: COLORS.accent,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
   },
   previewContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: 14,
     marginBottom: SPACING.lg,
   },
   previewBox: {
-    width: 130,
+    width: 140,
     alignItems: 'center',
   },
   previewImg: {
-    width: 130,
-    height: 160,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    width: 140,
+    height: 170,
+    borderRadius: RADIUS.lg,
   },
   previewName: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 8,
     textAlign: 'center',
   },
   pickerTitle: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1.2,
-    marginTop: SPACING.sm,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   pickerScroll: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   pickerItem: {
-    width: 64,
-    height: 76,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.surfaceBorder,
+    width: 68,
+    height: 80,
+    borderRadius: RADIUS.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
     marginRight: 10,
     overflow: 'hidden',
     backgroundColor: COLORS.surfaceRaised,
@@ -263,10 +235,12 @@ const styles = StyleSheet.create({
   },
   pickerDot: {
     position: 'absolute',
-    bottom: 3,
-    right: 3,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    bottom: 4,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: COLORS.surfaceRaised,
   },
 });

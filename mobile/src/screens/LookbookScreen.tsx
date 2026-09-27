@@ -33,45 +33,28 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>CURATED LOOKBOOK</Text>
-      <Text style={styles.subHeading}>Precombined matched styles and personal archives</Text>
-
-      {/* Tab Switcher */}
       <View style={styles.tabRow}>
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={() => setActiveTab('matched')}
           style={[styles.tabBtn, activeTab === 'matched' && styles.tabBtnActive]}
         >
-          <Ionicons
-            name="sparkles-outline"
-            size={14}
-            color={activeTab === 'matched' ? COLORS.background : COLORS.textSecondary}
-            style={styles.tabIcon}
-          />
           <Text style={[styles.tabText, activeTab === 'matched' && styles.tabTextActive]}>
-            MATCHED LOOKS ({precombinedLooks.length})
+            Matched
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           onPress={() => setActiveTab('saved')}
           style={[styles.tabBtn, activeTab === 'saved' && styles.tabBtnActive]}
         >
-          <Ionicons
-            name="bookmark-outline"
-            size={14}
-            color={activeTab === 'saved' ? COLORS.background : COLORS.textSecondary}
-            style={styles.tabIcon}
-          />
           <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>
-            SAVED VAULT ({savedLooks.length})
+            Saved
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Outfits List */}
       <FlatList
         data={displayedList}
         keyExtractor={(item) => item.id}
@@ -85,40 +68,41 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
               <View style={styles.cardHeader}>
                 <View>
                   <View style={styles.scoreRow}>
-                    <Text style={styles.scoreText}>HARMONY {item.harmonyScore}%</Text>
+                    <Text style={styles.scoreText}>{item.harmonyScore}%</Text>
                     <View style={styles.typeBadge}>
-                      <Text style={styles.typeText}>{item.harmonyType.toUpperCase()}</Text>
+                      <Text style={styles.typeText}>{item.harmonyType}</Text>
                     </View>
                   </View>
                   <Text style={styles.piecesCountText}>
-                    {item.items.length} pieces · Skin Contrast {item.skinContrastScore}%
+                    {item.items.length} pieces · {item.skinContrastScore}% contrast
                   </Text>
                 </View>
 
                 {activeTab === 'saved' ? (
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                     onPress={() => onRemove(item.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={styles.actionBtn}
                   >
-                    <Ionicons name="trash-outline" size={16} color={COLORS.textSecondary} />
+                    <Ionicons name="trash-outline" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                     onPress={() => onSavePrecombined(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={[styles.actionBtn, isSaved && styles.actionBtnSaved]}
                   >
                     <Ionicons
                       name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                      size={16}
+                      size={18}
                       color={isSaved ? COLORS.accent : COLORS.textPrimary}
                     />
                   </TouchableOpacity>
                 )}
               </View>
 
-              {/* Garments Thumbnail Row */}
               <View style={styles.thumbRow}>
                 {item.items.map((garment) => (
                   <View key={garment.id} style={styles.thumbWrap}>
@@ -136,42 +120,37 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                 ))}
               </View>
 
-              {/* Editorial styling note */}
               <Text style={styles.noteText}>{item.stylingNote}</Text>
 
-              {/* Action Buttons */}
-              <View style={styles.cardFooter}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    if (onWearLook) {
-                      onWearLook(item);
-                      Alert.alert('Outfit Selected', 'Applied this look as your active outfit for today!');
-                    }
-                  }}
-                  style={styles.wearBtn}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={15} color={COLORS.background} style={styles.btnIcon} />
-                  <Text style={styles.wearBtnText}>Wear This Look</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (onWearLook) {
+                    onWearLook(item);
+                    Alert.alert('Applied', 'This look is now your outfit for today.');
+                  }
+                }}
+                style={styles.wearBtn}
+              >
+                <Text style={styles.wearBtnText}>Wear this look</Text>
+              </TouchableOpacity>
             </View>
           );
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons
-              name={activeTab === 'matched' ? 'shirt-outline' : 'bookmark-outline'}
-              size={48}
-              color={COLORS.surfaceBorder}
+              name={activeTab === 'matched' ? 'sparkles-outline' : 'bookmark-outline'}
+              size={44}
+              color={COLORS.textMuted}
             />
             <Text style={styles.emptyTitle}>
-              {activeTab === 'matched' ? 'Need More Clothes' : 'No Saved Looks Yet'}
+              {activeTab === 'matched' ? 'Need more pieces' : 'Nothing saved yet'}
             </Text>
             <Text style={styles.emptySub}>
               {activeTab === 'matched'
-                ? 'Add at least one Top and one Bottom to your closet to generate precombined matched looks.'
-                : 'Tap the bookmark icon on any outfit to archive it into your personal vault.'}
+                ? 'Add a top and a bottom to generate matched looks.'
+                : 'Bookmark any outfit to keep it here.'}
             </Text>
           </View>
         }
@@ -184,65 +163,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.md,
-  },
-  heading: {
-    color: COLORS.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-  },
-  subHeading: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 2,
-    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
   tabRow: {
     flexDirection: 'row',
     backgroundColor: COLORS.surfaceRaised,
     borderRadius: RADIUS.full,
-    padding: 3,
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    padding: 4,
+    marginVertical: SPACING.md,
   },
   tabBtn: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: RADIUS.full,
   },
   tabBtnActive: {
     backgroundColor: COLORS.accent,
   },
-  tabIcon: {
-    marginRight: 6,
-  },
   tabText: {
     color: COLORS.textSecondary,
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontSize: 13,
+    fontWeight: '600',
   },
   tabTextActive: {
     color: COLORS.background,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   listContent: {
     paddingBottom: 40,
   },
   card: {
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
     marginBottom: SPACING.md,
   },
   cardHeader: {
@@ -258,36 +212,35 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     color: COLORS.accent,
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '800',
   },
   typeBadge: {
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   typeText: {
     color: COLORS.accentSoft,
-    fontSize: 7.5,
+    fontSize: 10,
     fontWeight: '700',
   },
   piecesCountText: {
     color: COLORS.textSecondary,
-    fontSize: 10,
-    marginTop: 3,
+    fontSize: 12,
+    marginTop: 4,
   },
   actionBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionBtnSaved: {
-    borderColor: COLORS.accent,
+    backgroundColor: COLORS.accentMuted,
   },
   thumbRow: {
     flexDirection: 'row',
@@ -295,12 +248,10 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.sm,
   },
   thumbWrap: {
-    width: 62,
-    height: 76,
-    borderRadius: RADIUS.sm,
+    width: 68,
+    height: 84,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   thumbImg: {
     width: '100%',
@@ -308,60 +259,49 @@ const styles = StyleSheet.create({
   },
   colorDot: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    bottom: 4,
+    right: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   noteText: {
     color: COLORS.textPrimary,
-    fontSize: 11.5,
-    lineHeight: 16,
-    fontStyle: 'italic',
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 4,
   },
-  cardFooter: {
-    marginTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.surfaceBorder,
-    paddingTop: SPACING.sm,
-  },
   wearBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.accent,
-    paddingVertical: 9,
-    borderRadius: RADIUS.sm,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm,
   },
   wearBtnText: {
     color: COLORS.background,
-    fontSize: 11.5,
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  btnIcon: {
-    marginRight: 6,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    gap: 8,
   },
   emptyTitle: {
     color: COLORS.textPrimary,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     marginTop: 12,
-    marginBottom: 6,
   },
   emptySub: {
     color: COLORS.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
   },

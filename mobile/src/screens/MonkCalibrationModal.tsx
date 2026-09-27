@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { MONK_SCALE, MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { MonkTone } from '../types';
@@ -29,12 +30,9 @@ export const MonkCalibrationModal: React.FC<MonkCalibrationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>MONK SKIN TONE SCALE</Text>
-              <Text style={styles.subtitle}>Select or calibrate your skin undertone profile</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeText}>✕</Text>
+            <Text style={styles.title}>Skin tone scale</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={22} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -46,7 +44,7 @@ export const MonkCalibrationModal: React.FC<MonkCalibrationModalProps> = ({
               return (
                 <TouchableOpacity
                   key={tone.label}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                   onPress={() => {
                     onSelectTone(tone);
                     onClose();
@@ -56,13 +54,15 @@ export const MonkCalibrationModal: React.FC<MonkCalibrationModalProps> = ({
                   <View style={[styles.toneCircle, { backgroundColor: tone.hex }]} />
                   <View style={styles.toneInfo}>
                     <Text style={styles.toneLabel}>
-                      {tone.label} — {tone.name}
+                      {tone.label} · {tone.name}
                     </Text>
                     <Text style={styles.toneMeta}>
-                      {profile?.undertone} undertone · {profile?.season}
+                      {profile?.undertone} · {profile?.season}
                     </Text>
                   </View>
-                  {isSelected && <Text style={styles.activeCheck}>✓ Active</Text>}
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.accent} />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -76,46 +76,28 @@ export const MonkCalibrationModal: React.FC<MonkCalibrationModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.md,
+    padding: SPACING.lg,
   },
   modalContent: {
     width: '100%',
-    maxHeight: '80%',
+    maxHeight: '82%',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: SPACING.md,
-    paddingBottom: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceBorder,
   },
   title: {
-    color: COLORS.accent,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  subtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  closeText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
+    color: COLORS.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
   },
   list: {
     paddingBottom: SPACING.md,
@@ -124,40 +106,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceRaised,
-    padding: SPACING.sm,
-    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   toneRowSelected: {
-    borderColor: COLORS.accent,
-    backgroundColor: 'rgba(232, 168, 48, 0.08)',
+    backgroundColor: COLORS.accentMuted,
   },
   toneCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginRight: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   toneInfo: {
     flex: 1,
   },
   toneLabel: {
     color: COLORS.textPrimary,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   toneMeta: {
     color: COLORS.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 2,
-  },
-  activeCheck: {
-    color: COLORS.accent,
-    fontSize: 11,
-    fontWeight: '800',
   },
 });

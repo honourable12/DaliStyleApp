@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0E0D0C"
     },
@@ -18,7 +18,7 @@
     "android": {
       "package": "com.stylora.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0E0D0C",
+        "backgroundColor": "#F2EDE6",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

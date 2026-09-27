@@ -15,7 +15,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { ClothingCategory, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
-import { STANDARD_COLORS, rgbToHex } from '../core/colorTheory';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
 
 interface AddGarmentModalProps {
@@ -82,32 +81,29 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const handleCaptureCamera = async () => {
     const granted = await requestPermission(true);
     if (!granted) {
-      Alert.alert('Permission Denied', 'Camera permission is required to capture clothes.');
+      Alert.alert('Permission needed', 'Camera permission is required.');
       return;
     }
-
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (!result.canceled && result.assets[0]) {
         handlePhotoSelected(result.assets[0].uri);
       }
     } catch (e: any) {
-      Alert.alert('Camera Error', e.message || 'Could not open camera.');
+      Alert.alert('Camera error', e.message || 'Could not open camera.');
     }
   };
 
   const handlePickGallery = async () => {
     const granted = await requestPermission(false);
     if (!granted) {
-      Alert.alert('Permission Denied', 'Gallery permission is required to select photos.');
+      Alert.alert('Permission needed', 'Gallery permission is required.');
       return;
     }
-
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -115,30 +111,25 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (!result.canceled && result.assets[0]) {
         handlePhotoSelected(result.assets[0].uri);
       }
     } catch (e: any) {
-      Alert.alert('Gallery Error', e.message || 'Could not select photo.');
+      Alert.alert('Gallery error', e.message || 'Could not select photo.');
     }
   };
 
   const handlePhotoSelected = async (uri: string) => {
     setImageUrl(uri);
-
     try {
-      // Run full On-Edge AI Pipeline
       const edgeResult = await EdgeAIPipeline.processGarment(uri);
       setSelectedHex(edgeResult.primaryHex);
       setColorName(edgeResult.primaryName);
       setCategory(edgeResult.suggestedCategory);
-
       if (!name.trim()) {
-        setName(`Tailored ${edgeResult.primaryName} ${edgeResult.suggestedCategory.toUpperCase()}`);
+        setName(`Tailored ${edgeResult.primaryName} ${edgeResult.suggestedCategory}`);
       }
     } catch {
-      // Fallback
       setSelectedHex('#E8A830');
       setColorName('Rust / Turmeric');
     }
@@ -154,35 +145,26 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Missing Name', 'Please give this garment a name.');
+      Alert.alert('Name required', 'Give this piece a name.');
       return;
     }
 
     setUploading(true);
-
     let finalImageUrl = imageUrl;
 
-    // Optional upload to FastAPI backend if URL is a local file URI
     if (imageUrl.startsWith('file://')) {
       try {
         const formData = new FormData();
         const filename = imageUrl.split('/').pop() || 'cloth.jpg';
-        formData.append('file', {
-          uri: imageUrl,
-          name: filename,
-          type: 'image/jpeg',
-        } as any);
-
+        formData.append('file', { uri: imageUrl, name: filename, type: 'image/jpeg' } as any);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 4000);
-
         const res = await fetch('http://10.0.2.2:8000/api/wardrobe/upload', {
           method: 'POST',
           body: formData,
           signal: controller.signal,
         });
         clearTimeout(timeout);
-
         if (res.ok) {
           const data = await res.json();
           if (data.image_url) {
@@ -190,7 +172,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
           }
         }
       } catch {
-        // Fallback gracefully to local URI storage
+        // fallback to local URI
       }
     }
 
@@ -216,50 +198,34 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>ADD TO WARDROBE</Text>
-              <Text style={styles.subtitle}>Camera capture with instant edge color tagging</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color={COLORS.textSecondary} />
+            <Text style={styles.title}>Add a piece</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={22} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Image Preview & Capture Controls */}
             <View style={styles.imagePreviewWrap}>
               <Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="cover" />
 
-              {/* Camera / Gallery Quick Overlay Buttons */}
               <View style={styles.captureOverlay}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleCaptureCamera}
-                  style={styles.captureBtn}
-                >
-                  <Ionicons name="camera" size={16} color={COLORS.textPrimary} style={styles.btnIcon} />
+                <TouchableOpacity activeOpacity={0.7} onPress={handleCaptureCamera} style={styles.captureBtn}>
+                  <Ionicons name="camera" size={16} color={COLORS.textPrimary} />
                   <Text style={styles.captureBtnText}>Camera</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handlePickGallery}
-                  style={styles.captureBtn}
-                >
-                  <Ionicons name="images" size={16} color={COLORS.textPrimary} style={styles.btnIcon} />
+                <TouchableOpacity activeOpacity={0.7} onPress={handlePickGallery} style={styles.captureBtn}>
+                  <Ionicons name="images" size={16} color={COLORS.textPrimary} />
                   <Text style={styles.captureBtnText}>Gallery</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Color Badge */}
               <View style={styles.scanBadge}>
                 <View style={[styles.scanDot, { backgroundColor: selectedHex }]} />
-                <Text style={styles.scanText}>Color: {colorName}</Text>
+                <Text style={styles.scanText}>{colorName}</Text>
               </View>
             </View>
 
-            {/* Presets Row */}
-            <Text style={styles.label}>QUICK EXAMPLES</Text>
+            <Text style={styles.label}>Quick examples</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
               {SAMPLE_PRESETS.map((p, idx) => (
                 <TouchableOpacity
@@ -274,37 +240,34 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
               ))}
             </ScrollView>
 
-            {/* Garment Name Input */}
-            <Text style={styles.label}>PIECE NAME</Text>
+            <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Linen Camp Collar Shirt"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholder="e.g. Linen camp shirt"
+              placeholderTextColor={COLORS.textMuted}
               value={name}
               onChangeText={setName}
             />
 
-            {/* Category Selector */}
-            <Text style={styles.label}>CATEGORY</Text>
+            <Text style={styles.label}>Category</Text>
             <View style={styles.catRow}>
               {categories.map((c) => {
                 const isActive = category === c;
                 return (
                   <TouchableOpacity
                     key={c}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                     onPress={() => setCategory(c)}
                     style={[styles.catBtn, isActive && styles.catBtnActive]}
                   >
                     <Text style={[styles.catText, isActive && styles.catTextActive]}>
-                      {c.toUpperCase()}
+                      {c}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            {/* Save Button */}
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={handleSave}
@@ -314,7 +277,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
               {uploading ? (
                 <ActivityIndicator size="small" color={COLORS.background} />
               ) : (
-                <Text style={styles.saveBtnText}>Save to Wardrobe</Text>
+                <Text style={styles.saveBtnText}>Save to closet</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -327,17 +290,15 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.lg,
-    borderTopRightRadius: RADIUS.lg,
-    padding: SPACING.md,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
     maxHeight: '92%',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   header: {
     flexDirection: 'row',
@@ -346,29 +307,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    color: COLORS.accent,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  subtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  closeBtn: {
-    padding: 6,
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
   },
   imagePreviewWrap: {
     width: '100%',
-    height: 190,
-    borderRadius: RADIUS.md,
+    height: 200,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
     marginBottom: SPACING.md,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: COLORS.surfaceRaised,
   },
   previewImage: {
@@ -377,90 +325,79 @@ const styles = StyleSheet.create({
   },
   captureOverlay: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     flexDirection: 'row',
     gap: 8,
   },
   captureBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(14, 13, 12, 0.88)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(14, 13, 12, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    gap: 5,
   },
   captureBtnText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  btnIcon: {
-    marginRight: 4,
+    fontSize: 12,
+    fontWeight: '600',
   },
   scanBadge: {
     position: 'absolute',
-    bottom: 10,
-    backgroundColor: 'rgba(14, 13, 12, 0.92)',
+    bottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(14, 13, 12, 0.85)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    gap: 8,
   },
   scanDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   scanText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   label: {
     color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
     marginTop: 6,
   },
   presetScroll: {
     marginBottom: SPACING.sm,
   },
   presetCard: {
-    width: 80,
-    marginRight: 10,
+    width: 84,
+    marginRight: 12,
     alignItems: 'center',
   },
   presetThumb: {
-    width: 60,
-    height: 60,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.md,
   },
   presetText: {
     color: COLORS.textPrimary,
-    fontSize: 9,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 5,
     textAlign: 'center',
   },
   input: {
     backgroundColor: COLORS.surfaceRaised,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
     color: COLORS.textPrimary,
-    fontSize: 13,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
+    fontSize: 14,
     marginBottom: SPACING.sm,
   },
   catRow: {
@@ -470,28 +407,27 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   catBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: RADIUS.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceRaised,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorder,
   },
   catBtnActive: {
     backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
   },
   catText: {
     color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   catTextActive: {
     color: COLORS.background,
+    fontWeight: '700',
   },
   saveBtn: {
     backgroundColor: COLORS.accent,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: RADIUS.md,
     alignItems: 'center',
     marginTop: SPACING.sm,
@@ -502,8 +438,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: COLORS.background,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
 });
