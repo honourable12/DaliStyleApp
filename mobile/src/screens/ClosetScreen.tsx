@@ -6,12 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { WorkbenchTray } from '../components/WorkbenchTray';
+import { batchUploadQueue } from '../uploads/BatchUploadQueue';
 
 interface ClosetScreenProps {
   items: WardrobeItem[];
@@ -41,6 +44,27 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   onOpenStudio,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const handleBatchPick = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Gallery access is required to pick photos.');
+      return;
+    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+        selectionLimit: 0, // 0 = unlimited multi-select
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        batchUploadQueue.enqueue(result.assets.map((a) => a.uri));
+      }
+    } catch (e: any) {
+      Alert.alert('Gallery error', e.message || 'Could not pick photos.');
+    }
+  };
 
   const categories: Array<{ id: string; label: string }> = [
     { id: 'all', label: 'All' },
@@ -137,6 +161,15 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
           </View>
         }
       />
+
+      {/* Batch upload — multi-select from gallery, processed in the background */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={handleBatchPick}
+        style={[styles.fabBatch, { bottom: 242 }]}
+      >
+        <Ionicons name="albums-outline" size={20} color={COLORS.textPrimary} />
+      </TouchableOpacity>
 
       <TouchableOpacity
         activeOpacity={0.8}
@@ -270,5 +303,18 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 14,
     fontWeight: '800',
+  },
+  fabBatch: {
+    position: 'absolute',
+    right: SPACING.lg,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorderStrong,
+    ...SHADOWS.card,
   },
 });

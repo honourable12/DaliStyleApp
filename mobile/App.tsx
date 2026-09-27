@@ -23,6 +23,8 @@ import { SelfieCalibrationModal } from './src/screens/SelfieCalibrationModal';
 import { ItemDetailsModal } from './src/components/ItemDetailsModal';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { BatchUploadSheet } from './src/components/BatchUploadSheet';
+import { batchUploadQueue } from './src/uploads/BatchUploadQueue';
 import { wardrobeStore } from './src/db/storage';
 import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from './src/core/stylingEngine';
 import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
@@ -69,6 +71,19 @@ export default function App() {
     const outfit = generateDailyOutfit(items, prof, currentWeather);
     setTodayOutfit(outfit);
   }, []);
+
+  // Wire the batch upload queue so completed items refresh the wardrobe + today outfit
+  useEffect(() => {
+    batchUploadQueue.onItemAdded = () => {
+      const updated = wardrobeStore.getItems();
+      setWardrobe(updated);
+      const refreshed = generateDailyOutfit(updated, profile, currentWeather);
+      setTodayOutfit(refreshed);
+    };
+    return () => {
+      batchUploadQueue.onItemAdded = undefined;
+    };
+  }, [profile]);
 
   // Precombined matched looks generated algorithmically from the current wardrobe
   const precombinedLooks = generatePrecombinedLooks(wardrobe, profile);
@@ -419,6 +434,9 @@ export default function App() {
           onClose={() => setMonkModalVisible(false)}
           onSelectTone={handleSelectTone}
         />
+
+        {/* Batch Upload Progress Overlay — auto-shows when jobs exist */}
+        <BatchUploadSheet />
       </SafeAreaView>
     </SafeAreaProvider>
   );
