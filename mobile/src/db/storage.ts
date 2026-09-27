@@ -1,4 +1,4 @@
-import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory } from '../types';
+import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory, AuthUser } from '../types';
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   id: 'user-default-1',
@@ -105,6 +105,8 @@ class LocalWardrobeStore {
   private wardrobe: WardrobeItem[] = [...INITIAL_WARDROBE];
   private profile: UserStyleProfile = { ...DEFAULT_USER_PROFILE };
   private lookbook: OutfitRecommendation[] = [...INITIAL_LOOKBOOK];
+  private hasCompletedOnboarding: boolean = false;
+  private currentUser: AuthUser | null = null;
 
   getItems(): WardrobeItem[] {
     return [...this.wardrobe];
@@ -142,6 +144,26 @@ class LocalWardrobeStore {
 
   removeFromLookbook(id: string): void {
     this.lookbook = this.lookbook.filter((o) => o.id !== id);
+  }
+
+  getHasCompletedOnboarding(): boolean {
+    return this.hasCompletedOnboarding;
+  }
+
+  setHasCompletedOnboarding(completed: boolean): void {
+    this.hasCompletedOnboarding = completed;
+  }
+
+  getCurrentUser(): AuthUser | null {
+    return this.currentUser ? { ...this.currentUser } : null;
+  }
+
+  setCurrentUser(user: AuthUser | null): void {
+    this.currentUser = user ? { ...user } : null;
+  }
+
+  logout(): void {
+    this.currentUser = null;
   }
 
   /**

@@ -48,3 +48,11 @@ export interface OutfitRecommendation {
   wornDate?: string;
   savedInLookbook?: boolean;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  token?: string;
+  isAuthenticated: boolean;
+}

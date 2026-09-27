@@ -32,7 +32,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     <View style={styles.header}>
       {/* Brand & Date */}
       <View style={styles.brandContainer}>
-        <StyloraLogo size={32} style={styles.brandLogo} />
+        <StyloraLogo size={42} containerStyle={styles.brandLogo} />
         <View>
           <Text style={styles.brandTitle}>STYLORA</Text>
           <Text style={styles.dateSubtitle}>

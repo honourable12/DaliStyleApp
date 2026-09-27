@@ -21,10 +21,12 @@ import { AddGarmentModal } from './src/screens/AddGarmentModal';
 import { MonkCalibrationModal } from './src/screens/MonkCalibrationModal';
 import { SelfieCalibrationModal } from './src/screens/SelfieCalibrationModal';
 import { ItemDetailsModal } from './src/components/ItemDetailsModal';
+import { AuthScreen } from './src/screens/AuthScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { wardrobeStore } from './src/db/storage';
 import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from './src/core/stylingEngine';
 import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
-import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile } from './src/types';
+import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser } from './src/types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'lookbook' | 'feed' | 'profile'>('today');
@@ -33,6 +35,11 @@ export default function App() {
   const [savedLooks, setSavedLooks] = useState<OutfitRecommendation[]>([]);
   const [todayOutfit, setTodayOutfit] = useState<OutfitRecommendation | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Auth & Onboarding Flow
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(wardrobeStore.getCurrentUser());
+  const [isOnboardingActive, setIsOnboardingActive] = useState<boolean>(!wardrobeStore.getHasCompletedOnboarding());
+  const [isAuthActive, setIsAuthActive] = useState<boolean>(false);
 
   // Workbench State
   const [workbenchItems, setWorkbenchItems] = useState<WardrobeItem[]>([]);
@@ -222,6 +229,55 @@ export default function App() {
     { key: 'feed', label: 'FEED', iconActive: 'globe', iconInactive: 'globe-outline' },
   ];
 
+  if (isAuthActive) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+          <AuthScreen
+            onAuthSuccess={(user) => {
+              wardrobeStore.setCurrentUser(user);
+              setCurrentUser(user);
+              setIsAuthActive(false);
+              Alert.alert('Atelier Authenticated', `Welcome back, ${user.name || user.email}!`);
+            }}
+            onSkipToGuest={() => {
+              setIsAuthActive(false);
+            }}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (isOnboardingActive) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+          <OnboardingScreen
+            initialProfile={profile}
+            seedWardrobe={wardrobe}
+            onOpenSelfie={() => setSelfieModalVisible(true)}
+            onComplete={(newProfile) => {
+              wardrobeStore.updateProfile(newProfile);
+              wardrobeStore.setHasCompletedOnboarding(true);
+              setProfile(newProfile);
+              setIsOnboardingActive(false);
+              const refreshed = generateDailyOutfit(wardrobe, newProfile, currentWeather);
+              setTodayOutfit(refreshed);
+            }}
+          />
+          <SelfieCalibrationModal
+            visible={selfieModalVisible}
+            onClose={() => setSelfieModalVisible(false)}
+            onCalibrate={handleSelectTone}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -292,9 +348,17 @@ export default function App() {
             <ProfileScreen
               profile={profile}
               wardrobe={wardrobe}
+              currentUser={currentUser}
               onUpdatePersona={handleUpdatePersona}
               onOpenSelfieCalibration={() => setSelfieModalVisible(true)}
               onOpenMonkList={() => setMonkModalVisible(true)}
+              onOpenAuth={() => setIsAuthActive(true)}
+              onLogout={() => {
+                wardrobeStore.logout();
+                setCurrentUser(null);
+                Alert.alert('Signed Out', 'Returned to local offline atelier vault.');
+              }}
+              onRelaunchOnboarding={() => setIsOnboardingActive(true)}
             />
           )}
         </View>

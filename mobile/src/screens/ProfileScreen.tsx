@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { UserStyleProfile, WardrobeItem } from '../types';
+import { UserStyleProfile, WardrobeItem, AuthUser } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { StyloraLogo } from '../components/StyloraLogo';
@@ -17,17 +17,25 @@ import { StyloraLogo } from '../components/StyloraLogo';
 interface ProfileScreenProps {
   profile: UserStyleProfile;
   wardrobe: WardrobeItem[];
+  currentUser?: AuthUser | null;
   onUpdatePersona: (persona: UserStyleProfile['persona']) => void;
   onOpenSelfieCalibration: () => void;
   onOpenMonkList: () => void;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
+  onRelaunchOnboarding?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   profile,
   wardrobe,
+  currentUser,
   onUpdatePersona,
   onOpenSelfieCalibration,
   onOpenMonkList,
+  onOpenAuth,
+  onLogout,
+  onRelaunchOnboarding,
 }) => {
   const [backendIp, setBackendIp] = useState('10.0.2.2:8000');
 
@@ -138,6 +146,61 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </View>
 
+      {/* Account & Atelier Access */}
+      <View style={styles.sectionCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.sectionTitle}>ATELIER ACCOUNT & SESSION</Text>
+          <View style={styles.statusPill}>
+            <View style={[styles.statusDot, { backgroundColor: currentUser?.isAuthenticated ? COLORS.success : COLORS.accent }]} />
+            <Text style={styles.statusText}>
+              {currentUser?.isAuthenticated ? 'ONLINE SYNC' : 'OFFLINE VAULT'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.accountEmailText}>
+          {currentUser?.email ? currentUser.email : 'Local Guest Atelier (Zero-Cloud)'}
+        </Text>
+
+        <View style={styles.accountActionRow}>
+          {onOpenAuth && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onOpenAuth}
+              style={styles.accountBtn}
+            >
+              <Ionicons name="key-outline" size={15} color={COLORS.accent} style={{ marginRight: 6 }} />
+              <Text style={styles.accountBtnText}>
+                {currentUser?.isAuthenticated ? 'Switch Account' : 'Sign In / Register'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {currentUser?.isAuthenticated && onLogout && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onLogout}
+              style={[styles.accountBtn, { borderColor: COLORS.destructive }]}
+            >
+              <Ionicons name="log-out-outline" size={15} color={COLORS.destructive} style={{ marginRight: 6 }} />
+              <Text style={[styles.accountBtnText, { color: COLORS.destructive }]}>Sign Out</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Relaunch Onboarding Tour */}
+        {onRelaunchOnboarding && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onRelaunchOnboarding}
+            style={styles.onboardingRelaunchBtn}
+          >
+            <Ionicons name="compass-outline" size={16} color={COLORS.textPrimary} style={{ marginRight: 6 }} />
+            <Text style={styles.onboardingRelaunchText}>Relaunch Onboarding Tour</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Server & Connectivity Settings */}
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>BACKEND SERVER CONNECTIVITY</Text>
@@ -165,7 +228,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* Brand Footer */}
       <View style={styles.brandFooter}>
-        <StyloraLogo size={40} style={styles.footerLogo} />
+        <StyloraLogo size={64} containerStyle={styles.footerLogo} />
         <Text style={styles.footerBrandName}>STYLORA</Text>
         <Text style={styles.footerVersion}>DRAPE AI PERSONAL STYLING ENGINE · v1.0.0</Text>
       </View>
@@ -363,6 +426,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveIpBtnText: {
+    color: COLORS.accent,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceRaised,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+    gap: 5,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
+    color: COLORS.textSecondary,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  accountEmailText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: SPACING.md,
+  },
+  accountActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: SPACING.sm,
+  },
+  accountBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceRaised,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
+  },
+  accountBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  onboardingRelaunchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 168, 48, 0.4)',
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
+    marginTop: 4,
+  },
+  onboardingRelaunchText: {
     color: COLORS.accent,
     fontSize: 11,
     fontWeight: '700',
