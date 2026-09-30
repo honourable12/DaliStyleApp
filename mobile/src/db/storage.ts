@@ -1,4 +1,4 @@
-import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory, AuthUser } from '../types';
+import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory, AuthUser, ThemeMode } from '../types';
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   id: 'user-default-1',
@@ -107,6 +107,15 @@ class LocalWardrobeStore {
   private lookbook: OutfitRecommendation[] = [...INITIAL_LOOKBOOK];
   private hasCompletedOnboarding: boolean = false;
   private currentUser: AuthUser | null = null;
+  private themeMode: ThemeMode = 'editorial';
+
+  getThemeMode(): ThemeMode {
+    return this.themeMode;
+  }
+
+  setThemeMode(mode: ThemeMode): void {
+    this.themeMode = mode;
+  }
 
   getItems(): WardrobeItem[] {
     return [...this.wardrobe];

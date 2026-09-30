@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { UserStyleProfile, WardrobeItem, AuthUser } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { StyloraLogo } from '../components/StyloraLogo';
+import { wardrobeStore } from '../db/storage';
 
 interface ProfileScreenProps {
   profile: UserStyleProfile;
@@ -38,6 +39,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onRelaunchOnboarding,
 }) => {
   const [backendIp, setBackendIp] = useState('10.0.2.2:8000');
+  const { mode, setMode, colors } = useTheme();
 
   const personas: Array<UserStyleProfile['persona']> = ['Minimalist', 'Bold', 'Fluid', 'Classic'];
 
@@ -53,7 +55,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const shoes = wardrobe.filter((i) => i.category === 'shoes').length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       {/* Skin tone */}
       <View style={styles.sectionCard}>
         <View style={styles.cardHeader}>
@@ -110,6 +112,56 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </TouchableOpacity>
             );
           })}
+        </View>
+      </View>
+
+      {/* Theme Switch */}
+      <View style={styles.sectionCard}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.sectionTitle}>Theme</Text>
+          <Text style={styles.themeCurrentLabel}>
+            {mode === 'editorial' ? 'Editorial' : 'Alabaster'}
+          </Text>
+        </View>
+
+        <View style={styles.themeSwitchRow}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              setMode('editorial');
+              wardrobeStore.setThemeMode('editorial');
+            }}
+            style={[styles.themePill, mode === 'editorial' && styles.themePillActive]}
+          >
+            <Ionicons
+              name="moon"
+              size={14}
+              color={mode === 'editorial' ? '#141312' : COLORS.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.themePillText, mode === 'editorial' && styles.themePillTextActive]}>
+              Editorial
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              setMode('alabaster');
+              wardrobeStore.setThemeMode('alabaster');
+            }}
+            style={[styles.themePill, mode === 'alabaster' && styles.themePillActive]}
+          >
+            <Ionicons
+              name="sunny"
+              size={14}
+              color={mode === 'alabaster' ? '#141312' : COLORS.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.themePillText, mode === 'alabaster' && styles.themePillTextActive]}>
+              Alabaster
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -224,7 +276,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   content: {
     padding: SPACING.lg,
@@ -451,5 +503,36 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 11,
     marginTop: 4,
+  },
+  themeCurrentLabel: {
+    color: COLORS.accent,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  themeSwitchRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: SPACING.xs,
+  },
+  themePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+  },
+  themePillActive: {
+    backgroundColor: COLORS.accent,
+  },
+  themePillText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  themePillTextActive: {
+    color: '#141312',
+    fontWeight: '800',
   },
 });

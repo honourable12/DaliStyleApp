@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { WardrobeItem } from '../types';
-import { COLORS, RADIUS, SPACING, SHADOWS } from '../theme';
+import { COLORS, RADIUS, SPACING, SHADOWS, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { WorkbenchTray } from '../components/WorkbenchTray';
 import { batchUploadQueue } from '../uploads/BatchUploadQueue';
@@ -43,6 +43,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   onDeleteItem,
   onOpenStudio,
 }) => {
+  const { colors } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const handleBatchPick = async () => {
@@ -80,7 +81,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
       : items.filter((i) => i.category === selectedCategory);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.filterRow}>
         {categories.map((cat) => {
           const isActive = selectedCategory === cat.id;
@@ -194,7 +195,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   filterRow: {
     flexDirection: 'row',

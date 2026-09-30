@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { StyloraLogo } from '../components/StyloraLogo';
 import { AuthUser } from '../types';
 
@@ -27,6 +27,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   onSkipToGuest,
   backendBaseUrl = 'http://10.0.2.2:8000',
 }) => {
+  const { colors } = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -111,7 +112,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -254,7 +255,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,

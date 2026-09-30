@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { UserStyleProfile } from '../types';
 import { StyloraLogo } from './StyloraLogo';
 
@@ -22,6 +22,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onPressSync,
   isSyncing = false,
 }) => {
+  const { colors } = useTheme();
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -29,12 +30,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   });
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
         <StyloraLogo size={40} />
         <View style={styles.brandText}>
-          <Text style={styles.brandTitle}>Stylora</Text>
-          <Text style={styles.dateSubtitle}>
+          <Text style={[styles.brandTitle, { color: colors.textPrimary }]}>Stylora</Text>
+          <Text style={[styles.dateSubtitle, { color: colors.textSecondary }]}>
             {currentDate} · {tempC}° {weatherCondition}
           </Text>
         </View>
@@ -46,12 +47,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             activeOpacity={0.6}
             onPress={onPressSync}
             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            style={styles.iconBtn}
+            style={[styles.iconBtn, { backgroundColor: colors.surfaceRaised }]}
           >
             <Ionicons
               name={isSyncing ? 'sync' : 'cloud-download-outline'}
               size={20}
-              color={isSyncing ? COLORS.accent : COLORS.textSecondary}
+              color={isSyncing ? colors.accent : colors.textSecondary}
             />
           </TouchableOpacity>
         )}
@@ -60,10 +61,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           activeOpacity={0.6}
           onPress={onPressProfile}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-          style={styles.profilePill}
+          style={[styles.profilePill, { backgroundColor: colors.surfaceRaised }]}
         >
-          <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex }]} />
-          <Text style={styles.monkCode}>{profile.monkLabel}</Text>
+          <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex, borderColor: colors.surfaceBorderStrong }]} />
+          <Text style={[styles.monkCode, { color: colors.textPrimary }]}>{profile.monkLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>

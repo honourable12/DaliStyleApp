@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 
 interface FeedPost {
   id: string;
@@ -68,6 +68,7 @@ const INITIAL_POSTS: FeedPost[] = [
 ];
 
 export const FeedScreen: React.FC = () => {
+  const { colors } = useTheme();
   const [posts, setPosts] = useState<FeedPost[]>(INITIAL_POSTS);
 
   const handleToggleLike = (id: string) => {
@@ -95,7 +96,7 @@ export const FeedScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -167,7 +168,7 @@ export const FeedScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   listContent: {
     padding: SPACING.lg,

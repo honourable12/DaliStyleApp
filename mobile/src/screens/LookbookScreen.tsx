@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OutfitRecommendation } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 
 interface LookbookScreenProps {
@@ -27,12 +27,13 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
   onSavePrecombined,
   onWearLook,
 }) => {
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState<'matched' | 'saved'>('matched');
 
   const displayedList = activeTab === 'matched' ? precombinedLooks : savedLooks;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.tabRow}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -162,7 +163,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
     paddingHorizontal: SPACING.lg,
   },
   tabRow: {

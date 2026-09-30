@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING, SHADOWS } from './src/theme';
+import { COLORS, RADIUS, SPACING, SHADOWS, ThemeProvider, useTheme } from './src/theme';
 import { HeaderBar } from './src/components/HeaderBar';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { ClosetScreen } from './src/screens/ClosetScreen';
@@ -31,6 +31,16 @@ import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/color
 import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser } from './src/types';
 
 export default function App() {
+  const initialMode = wardrobeStore.getThemeMode();
+  return (
+    <ThemeProvider initialMode={initialMode}>
+      <StyloraApp />
+    </ThemeProvider>
+  );
+}
+
+function StyloraApp() {
+  const { colors, mode } = useTheme();
   const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'lookbook' | 'feed' | 'profile'>('today');
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [profile, setProfile] = useState<UserStyleProfile>(wardrobeStore.getProfile());
@@ -268,8 +278,8 @@ export default function App() {
   if (isOnboardingActive) {
     return (
       <SafeAreaProvider>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+          <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
           <OnboardingScreen
             initialProfile={profile}
             seedWardrobe={wardrobe}
@@ -295,8 +305,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
 
         {/* Global DRAPE Header */}
         <HeaderBar
@@ -309,7 +319,7 @@ export default function App() {
         />
 
         {/* Screen Body */}
-        <View style={styles.mainContent}>
+        <View style={[styles.mainContent, { backgroundColor: colors.background }]}>
           {activeTab === 'today' && (
             <TodayScreen
               outfit={todayOutfit}
@@ -379,7 +389,7 @@ export default function App() {
         </View>
 
         {/* Bottom Navigation Bar */}
-        <View style={styles.bottomNav}>
+        <View style={[styles.bottomNav, { backgroundColor: colors.surface, borderTopColor: colors.surfaceBorder, borderTopWidth: 1 }]}>
           {NAV_ITEMS.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -389,14 +399,14 @@ export default function App() {
                 onPress={() => setActiveTab(tab.key)}
                 style={styles.navItem}
               >
-                <View style={[styles.navIconWrap, isActive && styles.navIconWrapActive]}>
+                <View style={[styles.navIconWrap, isActive && { backgroundColor: colors.tagActiveBg }]}>
                   <Ionicons
                     name={isActive ? tab.iconActive : tab.iconInactive}
                     size={22}
-                    color={isActive ? COLORS.accent : COLORS.textSecondary}
+                    color={isActive ? colors.accent : colors.textSecondary}
                   />
                 </View>
-                <Text style={[styles.navText, isActive && styles.navTextActive]}>
+                <Text style={[styles.navText, { color: isActive ? colors.accent : colors.textSecondary, fontWeight: isActive ? '700' : '600' }]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>

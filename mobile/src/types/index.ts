@@ -56,3 +56,5 @@ export interface AuthUser {
   token?: string;
   isAuthenticated: boolean;
 }
+
+export type ThemeMode = 'alabaster' | 'editorial';

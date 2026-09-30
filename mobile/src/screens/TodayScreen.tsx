@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { OutfitRing } from '../components/OutfitRing';
 import { OutfitRecommendation, WardrobeItem } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 
 interface TodayScreenProps {
@@ -25,13 +25,14 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
   onSaveToLookbook,
   onSelectItem,
 }) => {
+  const { colors } = useTheme();
   const [wornLogged, setWornLogged] = useState(false);
 
   if (!outfit) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>Your closet is empty</Text>
-        <Text style={styles.emptySubtitle}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your closet is empty</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
           Add pieces to generate your daily look.
         </Text>
       </View>
@@ -44,10 +45,10 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       <View style={styles.bannerContainer}>
-        <Text style={styles.sectionHeading}>Today's Look</Text>
-        <Text style={styles.subHeading}>
+        <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>Today's Look</Text>
+        <Text style={[styles.subHeading, { color: colors.textSecondary }]}>
           Tuned to your skin tone & the weather
         </Text>
       </View>
@@ -59,22 +60,22 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
         onSelectItem={onSelectItem}
       />
 
-      <View style={styles.blurbCard}>
+      <View style={[styles.blurbCard, { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder, borderWidth: 1 }]}>
         <View style={styles.blurbHeader}>
-          <Text style={styles.blurbTag}>{outfit.harmonyType}</Text>
-          <Text style={styles.contrastPill}>{outfit.skinContrastScore}% contrast</Text>
+          <Text style={[styles.blurbTag, { backgroundColor: colors.tagActiveBg, color: colors.accent }]}>{outfit.harmonyType}</Text>
+          <Text style={[styles.contrastPill, { backgroundColor: colors.tagBg, color: colors.textSecondary }]}>{outfit.skinContrastScore}% contrast</Text>
         </View>
-        <Text style={styles.blurbText}>{outfit.stylingNote}</Text>
+        <Text style={[styles.blurbText, { color: colors.textPrimary }]}>{outfit.stylingNote}</Text>
       </View>
 
       <View style={styles.piecesContainer}>
-        <Text style={styles.piecesTitle}>Pieces</Text>
+        <Text style={[styles.piecesTitle, { color: colors.textSecondary }]}>Pieces</Text>
         {outfit.items.map((item) => (
           <TouchableOpacity
             key={item.id}
             activeOpacity={0.7}
             onPress={() => onSelectItem(item)}
-            style={styles.pieceRow}
+            style={[styles.pieceRow, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder, borderWidth: 1 }]}
           >
             <GarmentVisual
               imageUrl={item.imageUrl}
@@ -86,8 +87,8 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
               iconSize={18}
             />
             <View style={styles.pieceInfo}>
-              <Text style={styles.pieceName}>{item.name}</Text>
-              <Text style={styles.pieceSub}>
+              <Text style={[styles.pieceName, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.pieceSub, { color: colors.textSecondary }]}>
                 {item.category} · {item.primaryColorName}
               </Text>
             </View>
@@ -99,17 +100,17 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onReroll}
-          style={[styles.btn, styles.btnSecondary]}
+          style={[styles.btn, styles.btnSecondary, { backgroundColor: colors.surfaceRaised }]}
         >
-          <Text style={styles.btnSecondaryText}>Reroll</Text>
+          <Text style={[styles.btnSecondaryText, { color: colors.textPrimary }]}>Reroll</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => onSaveToLookbook(outfit)}
-          style={[styles.btn, styles.btnSecondary]}
+          style={[styles.btn, styles.btnSecondary, { backgroundColor: colors.surfaceRaised }]}
         >
-          <Text style={styles.btnSecondaryText}>
+          <Text style={[styles.btnSecondaryText, { color: colors.textPrimary }]}>
             {outfit.savedInLookbook ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
@@ -117,9 +118,9 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleLogWorn}
-          style={[styles.btn, styles.btnPrimary, wornLogged && styles.btnActive]}
+          style={[styles.btn, styles.btnPrimary, wornLogged && styles.btnActive, { backgroundColor: wornLogged ? colors.success : colors.accent }]}
         >
-          <Text style={styles.btnPrimaryText}>{wornLogged ? 'Worn' : 'Wear Today'}</Text>
+          <Text style={[styles.btnPrimaryText, { color: colors.accentContrastText }]}>{wornLogged ? 'Worn' : 'Wear Today'}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -129,7 +130,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   content: {
     alignItems: 'center',
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     padding: SPACING.xl,

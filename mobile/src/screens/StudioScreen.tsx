@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { WardrobeItem, UserStyleProfile } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { calculateGarmentHarmony, calculateSkinContrast } from '../core/colorTheory';
 import { GarmentVisual } from '../components/GarmentVisual';
 
@@ -20,6 +20,7 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
   wardrobe,
   userProfile,
 }) => {
+  const { colors: themeColors } = useTheme();
   const tops = wardrobe.filter((i) => i.category === 'top');
   const bottoms = wardrobe.filter((i) => i.category === 'bottom');
 
@@ -37,7 +38,7 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
     : 80;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
       <View style={styles.gaugeCard}>
         <View style={styles.gaugeRow}>
           <View style={styles.gaugeCol}>
@@ -143,7 +144,7 @@ export const StudioScreen: React.FC<StudioScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   content: {
     padding: SPACING.lg,
