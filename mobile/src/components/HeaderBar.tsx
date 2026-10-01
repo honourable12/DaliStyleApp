@@ -9,7 +9,9 @@ interface HeaderBarProps {
   profile: UserStyleProfile;
   tempC?: number;
   weatherCondition?: string;
+  isWeatherLoaded?: boolean;
   onPressProfile?: () => void;
+  onPressLocation?: () => void;
   onPressSync?: () => void;
   isSyncing?: boolean;
 }
@@ -18,7 +20,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   profile,
   tempC = 24,
   weatherCondition = 'Clear',
+  isWeatherLoaded = false,
   onPressProfile,
+  onPressLocation,
   onPressSync,
   isSyncing = false,
 }) => {
@@ -29,15 +33,38 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     day: 'numeric',
   });
 
+  const hasLocation = Boolean(profile.locationName);
+  const isCalibrated = Boolean(profile.skinHex);
+
   return (
     <View style={[styles.header, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
         <StyloraLogo size={40} />
         <View style={styles.brandText}>
           <Text style={[styles.brandTitle, { color: colors.textPrimary }]}>Stylora</Text>
-          <Text style={[styles.dateSubtitle, { color: colors.textSecondary }]}>
-            {currentDate} · {tempC}° {weatherCondition}
-          </Text>
+          {hasLocation && isWeatherLoaded ? (
+            <TouchableOpacity onPress={onPressLocation} activeOpacity={0.7} style={styles.weatherRow}>
+              <Ionicons name="location-sharp" size={11} color={colors.accent} />
+              <Text style={[styles.dateSubtitle, { color: colors.textSecondary }]}>
+                {profile.locationName} · {tempC}° {weatherCondition}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={onPressLocation}
+              activeOpacity={0.7}
+              style={styles.weatherRow}
+              hitSlop={{ top: 6, bottom: 6, left: 4, right: 8 }}
+            >
+              <Ionicons name="location-outline" size={12} color={colors.accent} />
+              <Text style={[styles.dateSubtitle, { color: colors.accent, fontWeight: '700' }]}>
+                Enable Weather
+              </Text>
+              <Text style={[styles.dateSubtitle, { color: colors.textMuted }]}>
+                · {currentDate}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -65,8 +92,26 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           style={[styles.profilePill, { backgroundColor: colors.surfaceRaised }]}
         >
-          <View style={[styles.skinToneDot, { backgroundColor: profile.skinHex, borderColor: colors.surfaceBorderStrong }]} />
-          <Text style={[styles.monkCode, { color: colors.textPrimary }]}>{profile.monkLabel}</Text>
+          {isCalibrated ? (
+            <>
+              <View
+                style={[
+                  styles.skinToneDot,
+                  { backgroundColor: profile.skinHex, borderColor: colors.surfaceBorderStrong },
+                ]}
+              />
+              <Text style={[styles.monkCode, { color: colors.textPrimary }]}>
+                {profile.monkLabel}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="scan-outline" size={14} color={colors.accent} style={{ marginRight: 4 }} />
+              <Text style={[styles.monkCode, { color: colors.accent, fontWeight: '800' }]}>
+                Scan Tone
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -101,6 +146,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginTop: 1,
+  },
+  weatherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
   },
   actionsRight: {
     flexDirection: 'row',

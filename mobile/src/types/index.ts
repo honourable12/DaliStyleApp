@@ -34,6 +34,22 @@ export interface UserStyleProfile {
   skinName: string;
   persona: 'Minimalist' | 'Bold' | 'Fluid' | 'Classic';
   locationName?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface WardrobeIQData {
+  distribution: {
+    Neutral: number;
+    Vibrant: number;
+    Muted: number;
+    Earthy: number;
+  };
+  totalPieces: number;
+  activeRotationPercent: number;
+  dormantCount: number;
+  consultantReport: string;
+  harmonyIndex: number;
 }
 
 export interface OutfitRecommendation {

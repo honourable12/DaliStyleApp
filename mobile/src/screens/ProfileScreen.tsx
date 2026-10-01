@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { UserStyleProfile, WardrobeItem, AuthUser } from '../types';
@@ -14,6 +15,8 @@ import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { StyloraLogo } from '../components/StyloraLogo';
 import { wardrobeStore } from '../db/storage';
+import { calculateWardrobeIQ } from '../core/colorTheory';
+import { requestAndFetchLocationWeather } from '../services/weatherService';
 
 interface ProfileScreenProps {
   profile: UserStyleProfile;
@@ -25,6 +28,7 @@ interface ProfileScreenProps {
   onOpenAuth?: () => void;
   onLogout?: () => void;
   onRelaunchOnboarding?: () => void;
+  onLocationUpdated?: (locationName: string, tempC: number, condition: 'Sunny' | 'Cold' | 'Rainy' | 'Clear') => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
@@ -37,9 +41,39 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onOpenAuth,
   onLogout,
   onRelaunchOnboarding,
+  onLocationUpdated,
 }) => {
   const [backendIp, setBackendIp] = useState('10.0.2.2:8000');
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const { mode, setMode, colors } = useTheme();
+
+  const isCalibrated = Boolean(profile.skinHex);
+  const wardrobeIQ = calculateWardrobeIQ(wardrobe, profile.monkLabel);
+
+  const handleDetectLocation = async () => {
+    setDetectingLocation(true);
+    try {
+      const weather = await requestAndFetchLocationWeather();
+      if (weather) {
+        if (onLocationUpdated) {
+          onLocationUpdated(weather.locationName, weather.tempC, weather.condition);
+        }
+        Alert.alert(
+          'Weather Synchronized',
+          `Location set to ${weather.locationName} (${weather.tempC}°C, ${weather.condition}).`
+        );
+      } else {
+        Alert.alert(
+          'Location Required',
+          'Could not detect live coordinates. Please ensure location services are enabled.'
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Location Error', e.message || 'Could not fetch weather telemetry.');
+    } finally {
+      setDetectingLocation(false);
+    }
+  };
 
   const personas: Array<UserStyleProfile['persona']> = ['Minimalist', 'Bold', 'Fluid', 'Classic'];
 
@@ -65,32 +99,71 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.toneHero}>
-          <View style={[styles.skinColorOrb, { backgroundColor: profile.skinHex }]} />
-          <View style={styles.toneHeroText}>
-            <Text style={styles.toneTitle}>
-              {profile.monkLabel} · {profile.skinName}
+        {isCalibrated ? (
+          <>
+            <View style={styles.toneHero}>
+              <View style={[styles.skinColorOrb, { backgroundColor: profile.skinHex }]} />
+              <View style={styles.toneHeroText}>
+                <Text style={styles.toneTitle}>
+                  {profile.monkLabel} · {profile.skinName}
+                </Text>
+                <Text style={styles.toneSubtitle}>
+                  {monkProfile.undertone} · {monkProfile.season}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.swatchRow}>
+              {monkProfile.recommendedAccents.map((hex, idx) => (
+                <View key={idx} style={[styles.swatchBox, { backgroundColor: hex }]} />
+              ))}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onOpenSelfieCalibration}
+              style={styles.selfieActionBtn}
+            >
+              <Ionicons name="camera-reverse-outline" size={17} color={COLORS.background} style={styles.btnIcon} />
+              <Text style={styles.selfieBtnText}>Recalibrate with selfie</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: SPACING.md }}>
+            <View
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: colors.surfaceRaised,
+                borderWidth: 2,
+                borderColor: colors.accent,
+                borderStyle: 'dashed',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <Ionicons name="scan-outline" size={28} color={colors.accent} />
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 }}>
+              Awaiting Biometric Calibration
             </Text>
-            <Text style={styles.toneSubtitle}>
-              {monkProfile.undertone} · {monkProfile.season}
+            <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center', maxWidth: 280, marginBottom: 14 }}>
+              Scan your cheek tone with our on-device AI to calibrate precision color contrast.
             </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={onOpenSelfieCalibration}
+              style={[styles.selfieActionBtn, { width: '100%', backgroundColor: colors.accent }]}
+            >
+              <Ionicons name="camera" size={18} color={COLORS.background} style={styles.btnIcon} />
+              <Text style={[styles.selfieBtnText, { color: COLORS.background, fontWeight: '800' }]}>
+                Take Selfie to Calibrate
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.swatchRow}>
-          {monkProfile.recommendedAccents.map((hex, idx) => (
-            <View key={idx} style={[styles.swatchBox, { backgroundColor: hex }]} />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={onOpenSelfieCalibration}
-          style={styles.selfieActionBtn}
-        >
-          <Ionicons name="camera-reverse-outline" size={17} color={COLORS.background} style={styles.btnIcon} />
-          <Text style={styles.selfieBtnText}>Retake selfie</Text>
-        </TouchableOpacity>
+        )}
       </View>
 
       {/* Persona */}
@@ -165,27 +238,139 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </View>
 
-      {/* Wardrobe stats */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Wardrobe</Text>
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>{wardrobe.length}</Text>
-            <Text style={styles.metricLabel}>Total</Text>
+      {/* Wardrobe IQ & Circularity */}
+      <View style={[styles.sectionCard, { backgroundColor: colors.surfaceRaised }]}>
+        <View style={styles.cardHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="analytics" size={18} color={colors.accent} />
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Wardrobe IQ & Circularity</Text>
           </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>{tops}</Text>
-            <Text style={styles.metricLabel}>Tops</Text>
-          </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>{bottoms}</Text>
-            <Text style={styles.metricLabel}>Bottoms</Text>
-          </View>
-          <View style={styles.metricItem}>
-            <Text style={styles.metricValue}>{outer + shoes}</Text>
-            <Text style={styles.metricLabel}>Layers</Text>
+          <View style={[styles.iqBadge, { backgroundColor: colors.accentMuted }]}>
+            <Text style={[styles.iqBadgeText, { color: colors.accent }]}>{wardrobeIQ.harmonyIndex}% Harmony</Text>
           </View>
         </View>
+
+        {wardrobe.length === 0 ? (
+          <View style={styles.emptyIqBox}>
+            <Ionicons name="bar-chart-outline" size={36} color={colors.textMuted} />
+            <Text style={[styles.emptyIqText, { color: colors.textSecondary }]}>
+              Add garments to your digital closet to unlock algorithmic color distribution, circularity metrics, and your strategic consultant report.
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Circularity and vault metrics */}
+            <View style={styles.metricsGrid}>
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{wardrobeIQ.totalPieces}</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Total Pieces</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricValue, { color: colors.accent }]}>{wardrobeIQ.activeRotationPercent}%</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Active Rotation</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{wardrobeIQ.dormantCount}</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Dormant</Text>
+              </View>
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricValue, { color: colors.accent }]}>{wardrobeIQ.harmonyIndex}%</Text>
+                <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>Harmony Index</Text>
+              </View>
+            </View>
+
+            {/* Distribution bars */}
+            <View style={styles.distributionContainer}>
+              <Text style={[styles.distributionSectionTitle, { color: colors.textMuted }]}>
+                CHROMATIC DISTRIBUTION
+              </Text>
+              {[
+                { label: 'Neutral', percent: wardrobeIQ.distribution.Neutral, barColor: mode === 'alabaster' ? '#2B2927' : '#E8E5DF' },
+                { label: 'Vibrant', percent: wardrobeIQ.distribution.Vibrant, barColor: '#D89622' },
+                { label: 'Muted', percent: wardrobeIQ.distribution.Muted, barColor: '#536B78' },
+                { label: 'Earthy', percent: wardrobeIQ.distribution.Earthy, barColor: '#A0633C' },
+              ].map((item) => (
+                <View key={item.label} style={styles.distRow}>
+                  <View style={styles.distHeaderRow}>
+                    <Text style={[styles.distLabel, { color: colors.textPrimary }]}>{item.label}</Text>
+                    <Text style={[styles.distPercent, { color: colors.textSecondary }]}>{item.percent}%</Text>
+                  </View>
+                  <View style={[styles.distTrack, { backgroundColor: colors.surface }]}>
+                    <View
+                      style={[
+                        styles.distFill,
+                        {
+                          width: `${Math.max(item.percent, 2)}%`,
+                          backgroundColor: item.barColor,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Strategic Consultant Report Quote Card */}
+            <View style={[styles.consultantCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
+              <View style={styles.consultantHeader}>
+                <Ionicons name="sparkles" size={14} color={colors.accent} />
+                <Text style={[styles.consultantTitle, { color: colors.accent }]}>
+                  STRATEGIC CONSULTANT REPORT
+                </Text>
+              </View>
+              <Text style={[styles.consultantQuote, { color: colors.textPrimary }]}>
+                "{wardrobeIQ.consultantReport}"
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
+
+      {/* Climate & Location */}
+      <View style={[styles.sectionCard, { backgroundColor: colors.surfaceRaised }]}>
+        <View style={styles.cardHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="location-outline" size={18} color={colors.accent} />
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Climate & Location</Text>
+          </View>
+          {profile.locationName ? (
+            <View style={styles.statusPill}>
+              <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
+              <Text style={styles.statusText}>Active</Text>
+            </View>
+          ) : (
+            <View style={styles.statusPill}>
+              <Ionicons name="alert-circle-outline" size={12} color={colors.accent} />
+              <Text style={[styles.statusText, { color: colors.accent }]}>Unset</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={[styles.locationDetailText, { color: colors.textSecondary }]}>
+          {profile.locationName
+            ? `Synchronized to ${profile.locationName}. Used to contextualize weather-adaptive outfit recommendations with live Open-Meteo telemetry.`
+            : 'No location configured. Daily styling recommendations are operating in ambient fallback mode without live weather adaptation.'}
+        </Text>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleDetectLocation}
+          disabled={detectingLocation}
+          style={[styles.locationDetectBtn, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
+        >
+          {detectingLocation ? (
+            <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 8 }} />
+          ) : (
+            <Ionicons name="navigate-outline" size={16} color={colors.accent} style={{ marginRight: 8 }} />
+          )}
+          <Text style={[styles.locationDetectBtnText, { color: colors.textPrimary }]}>
+            {detectingLocation
+              ? 'Detecting Location & Weather...'
+              : profile.locationName
+              ? 'Refresh Location & Weather'
+              : 'Detect Live Location & Weather'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Account */}
@@ -535,5 +720,100 @@ const styles = StyleSheet.create({
   themePillTextActive: {
     color: '#141312',
     fontWeight: '800',
+  },
+  iqBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  iqBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  emptyIqBox: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+    gap: 8,
+  },
+  emptyIqText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    maxWidth: 300,
+  },
+  distributionContainer: {
+    marginTop: SPACING.md,
+    gap: 10,
+  },
+  distributionSectionTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  distRow: {
+    gap: 4,
+  },
+  distHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  distLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  distPercent: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  distTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  distFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  consultantCard: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  consultantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  consultantTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  consultantQuote: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  locationDetailText: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: SPACING.sm,
+  },
+  locationDetectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  locationDetectBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

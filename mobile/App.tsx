@@ -30,6 +30,7 @@ import { wardrobeStore } from './src/db/storage';
 import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from './src/core/stylingEngine';
 import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
 import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser } from './src/types';
+import { requestAndFetchLocationWeather, fetchOpenMeteoWeather } from './src/services/weatherService';
 
 export default function App() {
   const initialMode = wardrobeStore.getThemeMode();
@@ -67,10 +68,11 @@ function StyloraApp() {
   const [monkModalVisible, setMonkModalVisible] = useState(false);
   const [selfieModalVisible, setSelfieModalVisible] = useState(false);
 
-  const currentWeather: WeatherCondition = {
-    tempC: 26,
+  const [currentWeather, setCurrentWeather] = useState<WeatherCondition>({
+    tempC: 24,
     condition: 'Sunny',
-  };
+  });
+  const [isWeatherLoaded, setIsWeatherLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -89,8 +91,22 @@ function StyloraApp() {
       setHasSeenWelcome(welcomeSeen);
       setIsOnboardingActive(!onboardingCompleted);
 
+      let activeWeather = currentWeather;
+      if (prof.latitude && prof.longitude) {
+        try {
+          const forecast = await fetchOpenMeteoWeather(prof.latitude, prof.longitude);
+          if (forecast) {
+            activeWeather = { tempC: forecast.tempC, condition: forecast.condition };
+            setCurrentWeather(activeWeather);
+            setIsWeatherLoaded(true);
+          }
+        } catch {
+          // Keep ambient weather
+        }
+      }
+
       if (items.length > 0) {
-        const outfit = generateDailyOutfit(items, prof, currentWeather);
+        const outfit = generateDailyOutfit(items, prof, activeWeather);
         setTodayOutfit(outfit);
       } else {
         setTodayOutfit(null);
@@ -258,6 +274,38 @@ function StyloraApp() {
     }
   };
 
+  const handleDetectWeather = async () => {
+    try {
+      const weather = await requestAndFetchLocationWeather();
+      if (weather) {
+        const updatedProf: UserStyleProfile = {
+          ...profile,
+          locationName: weather.locationName,
+          latitude: weather.latitude,
+          longitude: weather.longitude,
+        };
+        wardrobeStore.updateProfile(updatedProf);
+        setProfile(updatedProf);
+        const newWeather: WeatherCondition = { tempC: weather.tempC, condition: weather.condition };
+        setCurrentWeather(newWeather);
+        setIsWeatherLoaded(true);
+        const refreshed = generateDailyOutfit(wardrobe, updatedProf, newWeather);
+        setTodayOutfit(refreshed);
+        Alert.alert(
+          'Weather Synchronized',
+          `Location set to ${weather.locationName} (${weather.tempC}°C, ${weather.condition}).`
+        );
+      } else {
+        Alert.alert(
+          'Location Required',
+          'Could not detect live coordinates. Please enable device location services.'
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Location Error', e.message || 'Could not fetch weather telemetry.');
+    }
+  };
+
   // 5 Canonical Tabs matching DRAPE Design Architecture
   const NAV_ITEMS: Array<{
     key: 'today' | 'closet' | 'studio' | 'lookbook' | 'feed';
@@ -354,7 +402,9 @@ function StyloraApp() {
           profile={profile}
           tempC={currentWeather.tempC}
           weatherCondition={currentWeather.condition}
+          isWeatherLoaded={isWeatherLoaded}
           onPressProfile={() => setActiveTab('profile')}
+          onPressLocation={handleDetectWeather}
           onPressSync={handleLiveBackendSync}
           isSyncing={isSyncing}
         />
@@ -389,6 +439,7 @@ function StyloraApp() {
               onSaveWorkbenchLook={handleSaveWorkbenchLook}
               onDeleteItem={handleDeleteItem}
               onOpenStudio={() => setActiveTab('studio')}
+              onOpenWardrobeIQ={() => setActiveTab('profile')}
             />
           )}
 
@@ -426,6 +477,15 @@ function StyloraApp() {
                 Alert.alert('Signed Out', 'Returned to local offline atelier vault.');
               }}
               onRelaunchOnboarding={() => setIsOnboardingActive(true)}
+              onLocationUpdated={(locationName, tempC, condition) => {
+                const updatedProf = wardrobeStore.getProfile();
+                setProfile(updatedProf);
+                const newWeather: WeatherCondition = { tempC, condition };
+                setCurrentWeather(newWeather);
+                setIsWeatherLoaded(true);
+                const refreshed = generateDailyOutfit(wardrobe, updatedProf, newWeather);
+                setTodayOutfit(refreshed);
+              }}
             />
           )}
         </View>

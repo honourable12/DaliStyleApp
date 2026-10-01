@@ -28,6 +28,7 @@ interface ClosetScreenProps {
   onSaveWorkbenchLook: () => void;
   onDeleteItem: (id: string) => void;
   onOpenStudio?: () => void;
+  onOpenWardrobeIQ?: () => void;
 }
 
 const COLUMN_WIDTH = (Dimensions.get('window').width - SPACING.lg * 3) / 2;
@@ -43,6 +44,7 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
   onSaveWorkbenchLook,
   onDeleteItem,
   onOpenStudio,
+  onOpenWardrobeIQ,
 }) => {
   const { colors } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -94,6 +96,30 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {items.length > 0 && onOpenWardrobeIQ && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onOpenWardrobeIQ}
+          style={[
+            styles.wardrobeIqBanner,
+            { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder },
+          ]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <View style={[styles.iqBannerIconWrap, { backgroundColor: colors.accentMuted }]}>
+              <Ionicons name="analytics" size={16} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.iqBannerTitle, { color: colors.textPrimary }]}>Wardrobe IQ & Circularity</Text>
+              <Text style={[styles.iqBannerSub, { color: colors.textSecondary }]}>
+                {items.length} pieces · Tap to analyze color distribution & rotation
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
+
       <View style={styles.filterRow}>
         {categories.map((cat) => {
           const isActive = selectedCategory === cat.id;
@@ -316,6 +342,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  wardrobeIqBanner: {
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  iqBannerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iqBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  iqBannerSub: {
+    fontSize: 11,
+    marginTop: 2,
   },
   filterRow: {
     flexDirection: 'row',

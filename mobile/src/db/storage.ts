@@ -3,11 +3,11 @@ import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory,
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   id: 'user-default-1',
-  monkLabel: 'MST-6',
-  skinHex: '#a07850',
-  skinName: 'Medium Dark',
+  monkLabel: '',
+  skinHex: '',
+  skinName: 'Awaiting Calibration',
   persona: 'Minimalist',
-  locationName: 'Accra',
+  locationName: '',
 };
 
 // Storage keys for persistent state

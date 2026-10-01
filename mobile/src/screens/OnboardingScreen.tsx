@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
@@ -32,15 +33,22 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [selectedTone, setSelectedTone] = useState<MonkTone>(() => {
-    return (
-      MONK_SCALE.find((t: MonkTone) => t.label === initialProfile.monkLabel) ||
-      MONK_SCALE[4]
-    );
+  const [selectedTone, setSelectedTone] = useState<MonkTone | null>(() => {
+    return initialProfile.monkLabel
+      ? MONK_SCALE.find((t: MonkTone) => t.label === initialProfile.monkLabel) || null
+      : null;
   });
   const [selectedPersona, setSelectedPersona] = useState<UserStyleProfile['persona']>(
     initialProfile.persona || 'Minimalist'
   );
+
+  // Sync when selfie calibration modal updates the profile
+  React.useEffect(() => {
+    if (initialProfile.monkLabel) {
+      const found = MONK_SCALE.find((t) => t.label === initialProfile.monkLabel);
+      if (found) setSelectedTone(found);
+    }
+  }, [initialProfile.monkLabel]);
 
   const personas: Array<{
     id: UserStyleProfile['persona'];
@@ -55,9 +63,24 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   ];
 
   const handleNext = () => {
-    if (currentStep === 1) setCurrentStep(2);
-    else if (currentStep === 2) setCurrentStep(3);
-    else finishOnboarding();
+    if (currentStep === 1) {
+      if (!selectedTone) {
+        if (onOpenSelfie) {
+          onOpenSelfie();
+        } else {
+          Alert.alert(
+            'Selfie Calibration Required',
+            'Please take or upload a selfie to detect your authentic skin undertone.'
+          );
+        }
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    } else {
+      finishOnboarding();
+    }
   };
 
   const handleBack = () => {
@@ -66,11 +89,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   };
 
   const finishOnboarding = () => {
+    const tone = selectedTone || MONK_SCALE[4];
     const updatedProfile: UserStyleProfile = {
       ...initialProfile,
-      monkLabel: selectedTone.label,
-      skinHex: selectedTone.hex,
-      skinName: selectedTone.name,
+      monkLabel: tone.label,
+      skinHex: tone.hex,
+      skinName: tone.name,
       persona: selectedPersona,
     };
     onComplete(updatedProfile);
@@ -79,7 +103,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const topItem = seedWardrobe.find((i) => i.category === 'top') || seedWardrobe[0];
   const bottomItem = seedWardrobe.find((i) => i.category === 'bottom') || seedWardrobe[1];
   const harmony = calculateGarmentHarmony([topItem?.primaryColor, bottomItem?.primaryColor].filter(Boolean) as string[]);
-  const contrast = calculateSkinContrast(selectedTone.hex, topItem?.primaryColor || '#E8A830');
+  const contrast = calculateSkinContrast(selectedTone?.hex || '#A07850', topItem?.primaryColor || '#E8A830');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -134,32 +158,62 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         {currentStep === 1 && (
           <View style={styles.stepCard}>
             <Text style={styles.stepDescription}>
-              Pick your tone on the Monk scale to calibrate color contrast.
+              Calibrate your authentic undertone with a selfie to unlock high-precision color contrast.
             </Text>
 
-            <View style={styles.selectedToneCard}>
-              <View style={[styles.largeToneOrb, { backgroundColor: selectedTone.hex }]} />
-              <View style={styles.selectedToneMeta}>
-                <Text style={styles.selectedToneLabel}>{selectedTone.label}</Text>
-                <Text style={styles.selectedToneName}>{selectedTone.name}</Text>
+            {selectedTone ? (
+              <View style={styles.selectedToneCard}>
+                <View style={[styles.largeToneOrb, { backgroundColor: selectedTone.hex }]} />
+                <View style={styles.selectedToneMeta}>
+                  <Text style={styles.selectedToneLabel}>{selectedTone.label}</Text>
+                  <Text style={styles.selectedToneName}>{selectedTone.name}</Text>
+                </View>
+                <View style={styles.calibratedCheck}>
+                  <Ionicons name="checkmark-circle" size={20} color={COLORS.accent} />
+                </View>
               </View>
-            </View>
+            ) : (
+              <View style={[styles.selectedToneCard, { borderColor: colors.accent, borderWidth: 1.5, borderStyle: 'dashed' }]}>
+                <View style={[styles.largeToneOrb, { backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Ionicons name="scan-outline" size={26} color={colors.accent} />
+                </View>
+                <View style={styles.selectedToneMeta}>
+                  <Text style={[styles.selectedToneLabel, { color: colors.accent }]}>Awaiting Calibration</Text>
+                  <Text style={[styles.selectedToneName, { color: colors.textSecondary }]}>Take a selfie to scan cheek tone</Text>
+                </View>
+              </View>
+            )}
 
             {onOpenSelfie && (
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={onOpenSelfie}
-                style={styles.selfieActionBtn}
+                style={[
+                  styles.selfieActionBtn,
+                  !selectedTone && { backgroundColor: colors.accent, borderColor: colors.accent },
+                ]}
               >
-                <Ionicons name="camera-outline" size={18} color={COLORS.accent} style={{ marginRight: 8 }} />
-                <Text style={styles.selfieActionText}>Calibrate with selfie</Text>
+                <Ionicons
+                  name="camera"
+                  size={18}
+                  color={!selectedTone ? COLORS.background : colors.accent}
+                  style={{ marginRight: 8 }}
+                />
+                <Text
+                  style={[
+                    styles.selfieActionText,
+                    !selectedTone && { color: COLORS.background, fontWeight: '800' },
+                  ]}
+                >
+                  {selectedTone ? 'Recalibrate with selfie' : 'Take Selfie to Calibrate'}
+                </Text>
               </TouchableOpacity>
             )}
 
-            <Text style={styles.gridSectionHeader}>or pick manually</Text>
+            <Text style={styles.gridSectionHeader}>or choose manually</Text>
             <View style={styles.toneGrid}>
               {MONK_SCALE.map((tone: MonkTone) => {
-                const isSelected = selectedTone.label === tone.label;
+                const isSelected = selectedTone?.label === tone.label;
                 return (
                   <TouchableOpacity
                     key={tone.label}
@@ -258,7 +312,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 </View>
 
                 <Text style={styles.lookInsight}>
-                  {contrast}% skin contrast for {selectedTone.label}.
+                  {contrast}% skin contrast for {selectedTone?.label || 'your calibrated tone'}.
                 </Text>
               </View>
             ) : (
@@ -268,14 +322,14 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                     width: 64,
                     height: 64,
                     borderRadius: 32,
-                    backgroundColor: selectedTone.hex,
+                    backgroundColor: selectedTone?.hex || COLORS.accent,
                     borderWidth: 3,
                     borderColor: 'rgba(255,255,255,0.25)',
                     marginBottom: 12,
                   }}
                 />
                 <Text style={[styles.lookTag, { fontSize: 13, marginBottom: 4 }]}>
-                  {selectedTone.label} · {selectedTone.name}
+                  {selectedTone?.label || 'MST'} · {selectedTone?.name || 'Calibrated Tone'}
                 </Text>
                 <Text style={[styles.personaTitle, { fontSize: 16, marginBottom: 8 }]}>
                   Persona: {selectedPersona}
@@ -440,6 +494,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 2,
+  },
+  calibratedCheck: {
+    marginLeft: 8,
   },
   selfieActionBtn: {
     flexDirection: 'row',
