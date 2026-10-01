@@ -23,6 +23,7 @@ import { SelfieCalibrationModal } from './src/screens/SelfieCalibrationModal';
 import { ItemDetailsModal } from './src/components/ItemDetailsModal';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { BatchUploadSheet } from './src/components/BatchUploadSheet';
 import { batchUploadQueue } from './src/uploads/BatchUploadQueue';
 import { wardrobeStore } from './src/db/storage';
@@ -48,8 +49,9 @@ function StyloraApp() {
   const [todayOutfit, setTodayOutfit] = useState<OutfitRecommendation | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Auth & Onboarding Flow
+  // Auth, Welcome & Onboarding Flow
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(wardrobeStore.getCurrentUser());
+  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean>(wardrobeStore.getHasSeenWelcome());
   const [isOnboardingActive, setIsOnboardingActive] = useState<boolean>(!wardrobeStore.getHasCompletedOnboarding());
   const [isAuthActive, setIsAuthActive] = useState<boolean>(false);
 
@@ -71,15 +73,29 @@ function StyloraApp() {
   };
 
   useEffect(() => {
-    const items = wardrobeStore.getItems();
-    const prof = wardrobeStore.getProfile();
-    const saved = wardrobeStore.getLookbook();
-    setWardrobe(items);
-    setProfile(prof);
-    setSavedLooks(saved);
+    (async () => {
+      await wardrobeStore.init();
+      const items = wardrobeStore.getItems();
+      const prof = wardrobeStore.getProfile();
+      const saved = wardrobeStore.getLookbook();
+      const user = wardrobeStore.getCurrentUser();
+      const welcomeSeen = wardrobeStore.getHasSeenWelcome();
+      const onboardingCompleted = wardrobeStore.getHasCompletedOnboarding();
 
-    const outfit = generateDailyOutfit(items, prof, currentWeather);
-    setTodayOutfit(outfit);
+      setWardrobe(items);
+      setProfile(prof);
+      setSavedLooks(saved);
+      setCurrentUser(user);
+      setHasSeenWelcome(welcomeSeen);
+      setIsOnboardingActive(!onboardingCompleted);
+
+      if (items.length > 0) {
+        const outfit = generateDailyOutfit(items, prof, currentWeather);
+        setTodayOutfit(outfit);
+      } else {
+        setTodayOutfit(null);
+      }
+    })();
   }, []);
 
   // Wire the batch upload queue so completed items refresh the wardrobe + today outfit
@@ -141,12 +157,14 @@ function StyloraApp() {
 
     Alert.alert('Piece Deleted', 'Item permanently removed from your vault.');
 
-    // Background delete attempt on live backend
+    // Background delete attempt on live backend commented out for offline test launch
+    /*
     try {
       fetch(`http://10.0.2.2:8000/api/wardrobe/items/${id}`, { method: 'DELETE' }).catch(() => {});
     } catch {
       // offline
     }
+    */
   };
 
   // --- WORKBENCH FUNCTIONS ---
@@ -275,6 +293,29 @@ function StyloraApp() {
     );
   }
 
+  // First launch page telling users about Stylora before onboarding
+  if (!hasSeenWelcome) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+          <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+          <WelcomeScreen
+            onStart={() => {
+              wardrobeStore.setHasSeenWelcome(true);
+              setHasSeenWelcome(true);
+            }}
+            onSignIn={() => {
+              wardrobeStore.setHasSeenWelcome(true);
+              setHasSeenWelcome(true);
+              setIsAuthActive(true);
+            }}
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Onboarding flow (only on first launch or if explicitly relaunched)
   if (isOnboardingActive) {
     return (
       <SafeAreaProvider>
@@ -329,6 +370,7 @@ function StyloraApp() {
                 setSelectedDetailItem(item);
                 setDetailsModalVisible(true);
               }}
+              onOpenCloset={() => setActiveTab('closet')}
             />
           )}
 

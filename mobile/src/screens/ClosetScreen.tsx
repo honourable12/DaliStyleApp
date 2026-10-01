@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -45,8 +46,10 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [addSheetVisible, setAddSheetVisible] = useState(false);
 
   const handleBatchPick = async () => {
+    setAddSheetVisible(false);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Gallery access is required to pick photos.');
@@ -61,10 +64,19 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
       });
       if (!result.canceled && result.assets.length > 0) {
         batchUploadQueue.enqueue(result.assets.map((a) => a.uri));
+        Alert.alert(
+          'Batch Enqueued',
+          `${result.assets.length} piece(s) queued for on-device background processing.`
+        );
       }
     } catch (e: any) {
       Alert.alert('Gallery error', e.message || 'Could not pick photos.');
     }
+  };
+
+  const handleSingleAdd = () => {
+    setAddSheetVisible(false);
+    onPressAdd();
   };
 
   const categories: Array<{ id: string; label: string }> = [
@@ -90,9 +102,18 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
               key={cat.id}
               activeOpacity={0.7}
               onPress={() => setSelectedCategory(cat.id)}
-              style={[styles.filterPill, isActive && styles.filterPillActive]}
+              style={[
+                styles.filterPill,
+                { backgroundColor: isActive ? colors.accent : colors.surfaceRaised },
+              ]}
             >
-              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: isActive ? COLORS.background : colors.textSecondary },
+                  isActive && styles.filterTextActive,
+                ]}
+              >
                 {cat.label}
               </Text>
             </TouchableOpacity>
@@ -115,7 +136,10 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => onSelectItem(item)}
-              style={styles.card}
+              style={[
+                styles.card,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder, borderWidth: 1 },
+              ]}
             >
               <GarmentVisual
                 imageUrl={item.imageUrl}
@@ -132,22 +156,22 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
                 activeOpacity={0.7}
                 onPress={() => onAddToWorkbench(item)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={[styles.quickAddBtn, inWorkbench && styles.quickAddBtnActive]}
+                style={[styles.quickAddBtn, inWorkbench && { backgroundColor: colors.accent }]}
               >
                 <Ionicons
                   name={inWorkbench ? 'checkmark' : 'add'}
                   size={16}
-                  color={inWorkbench ? COLORS.background : COLORS.textPrimary}
+                  color={inWorkbench ? COLORS.background : colors.textPrimary}
                 />
               </TouchableOpacity>
 
               <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                   {item.name}
                 </Text>
                 <View style={styles.cardMetaRow}>
                   <View style={[styles.colorDot, { backgroundColor: item.primaryColor }]} />
-                  <Text style={styles.cardMeta}>
+                  <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
                     {item.category} · {item.primaryColorName}
                   </Text>
                 </View>
@@ -157,29 +181,125 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="shirt-outline" size={44} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>No pieces here yet.</Text>
+            <View
+              style={[
+                styles.emptyIconCircle,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder },
+              ]}
+            >
+              <Ionicons name="shirt-outline" size={48} color={colors.accent} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+              Your Atelier Awaits
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Build your private digital vault. Add your favorite garments to unlock on-device color harmony and tailored daily looks.
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setAddSheetVisible(true)}
+              style={[styles.emptyAddBtn, { backgroundColor: colors.accent }]}
+            >
+              <Ionicons name="add" size={20} color={COLORS.background} />
+              <Text style={[styles.emptyAddBtnText, { color: COLORS.background }]}>
+                Add Your First Piece
+              </Text>
+            </TouchableOpacity>
+
+            <View style={[styles.emptyTipRow, { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder }]}>
+              <Ionicons name="sparkles" size={16} color={colors.accent} />
+              <Text style={[styles.emptyTipText, { color: colors.textSecondary }]}>
+                On-device AI removes backgrounds live in the viewfinder
+              </Text>
+            </View>
           </View>
         }
       />
 
-      {/* Batch upload — multi-select from gallery, processed in the background */}
+      {/* Merged Single & Bulk Add Action Button */}
       <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={handleBatchPick}
-        style={[styles.fabBatch, { bottom: 242 }]}
-      >
-        <Ionicons name="albums-outline" size={20} color={COLORS.textPrimary} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onPressAdd}
-        style={[styles.fab, { bottom: 170 }]}
+        activeOpacity={0.85}
+        onPress={() => setAddSheetVisible(true)}
+        style={[styles.fab, { bottom: 170, backgroundColor: colors.accent }]}
       >
         <Ionicons name="add" size={22} color={COLORS.background} />
-        <Text style={styles.fabText}>Add</Text>
+        <Text style={[styles.fabText, { color: COLORS.background }]}>Add Pieces</Text>
       </TouchableOpacity>
+
+      {/* Unified Add Action Modal */}
+      <Modal
+        visible={addSheetVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddSheetVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setAddSheetVisible(false)}
+        >
+          <View
+            style={[
+              styles.actionSheetContent,
+              { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder },
+            ]}
+          >
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Add Pieces to Closet</Text>
+                <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+                  Choose your preferred capture method
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAddSheetVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleSingleAdd}
+              style={[styles.sheetOption, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
+            >
+              <View style={[styles.sheetOptionIcon, { backgroundColor: colors.accentMuted }]}>
+                <Ionicons name="camera-outline" size={22} color={colors.accent} />
+              </View>
+              <View style={styles.sheetOptionText}>
+                <Text style={[styles.sheetOptionTitle, { color: colors.textPrimary }]}>
+                  Single Piece (Live AI Cutout)
+                </Text>
+                <Text style={[styles.sheetOptionDesc, { color: colors.textSecondary }]}>
+                  Instant camera or single photo with real-time background removal
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleBatchPick}
+              style={[styles.sheetOption, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
+            >
+              <View style={[styles.sheetOptionIcon, { backgroundColor: colors.accentMuted }]}>
+                <Ionicons name="albums-outline" size={22} color={colors.accent} />
+              </View>
+              <View style={styles.sheetOptionText}>
+                <Text style={[styles.sheetOptionTitle, { color: colors.textPrimary }]}>
+                  Bulk Gallery Import
+                </Text>
+                <Text style={[styles.sheetOptionDesc, { color: colors.textSecondary }]}>
+                  Select multiple wardrobe photos to process in the background
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <WorkbenchTray
         items={workbenchItems}
@@ -249,9 +369,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickAddBtnActive: {
-    backgroundColor: COLORS.accent,
-  },
   cardInfo: {
     padding: SPACING.sm + 2,
   },
@@ -281,12 +398,58 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 80,
+    marginTop: 50,
+    paddingHorizontal: SPACING.xl,
     gap: 12,
   },
-  emptyText: {
-    color: COLORS.textSecondary,
+  emptyIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    maxWidth: 290,
+  },
+  emptyAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 22,
+    borderRadius: RADIUS.full,
+    gap: 8,
+    marginTop: SPACING.sm,
+    ...SHADOWS.glow,
+  },
+  emptyAddBtnText: {
     fontSize: 14,
+    fontWeight: '800',
+  },
+  emptyTipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    marginTop: SPACING.md,
+  },
+  emptyTipText: {
+    fontSize: 11,
+    fontWeight: '500',
   },
   fab: {
     position: 'absolute',
@@ -295,7 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.accent,
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     borderRadius: RADIUS.full,
     gap: 6,
     ...SHADOWS.glow,
@@ -304,18 +467,61 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 14,
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  fabBatch: {
-    position: 'absolute',
-    right: SPACING.lg,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.surfaceHigh,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+  actionSheetContent: {
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl + 10,
+    gap: SPACING.md,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xs,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sheetSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    gap: SPACING.md,
+  },
+  sheetOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.surfaceBorderStrong,
-    ...SHADOWS.card,
+  },
+  sheetOptionText: {
+    flex: 1,
+  },
+  sheetOptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  sheetOptionDesc: {
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

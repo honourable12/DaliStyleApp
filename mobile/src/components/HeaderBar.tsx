@@ -42,6 +42,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       </View>
 
       <View style={styles.actionsRight}>
+        {/* Backend sync button commented out for offline test launch
         {onPressSync && (
           <TouchableOpacity
             activeOpacity={0.6}
@@ -56,6 +57,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             />
           </TouchableOpacity>
         )}
+        */}
 
         <TouchableOpacity
           activeOpacity={0.6}

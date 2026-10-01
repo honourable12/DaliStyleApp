@@ -152,3 +152,129 @@ export function calculateSkinContrast(skinHex: string, garmentHex: string): numb
   const lightnessDiff = Math.abs(skin.l - garment.l); // 0 - 100
   return Math.min(100, Math.round(lightnessDiff * 1.1 + 10));
 }
+
+/**
+ * Exact port of rules.py: get_persona_score
+ */
+export function getPersonaScore(
+  persona: string,
+  harmonyScore: number,
+  colorHex: string,
+  pattern?: string
+): number {
+  const hsl = hexToHsl(colorHex);
+  const s = hsl.s / 100;
+  const lum = hsl.l / 100;
+  let score = 1.0;
+
+  const hType = harmonyScore > 0.95 ? 'Complementary' : harmonyScore > 0.85 ? 'Monochromatic' : 'Other';
+
+  if (persona === 'Minimalist') {
+    if (s < 0.2) score += 0.3;
+    if (hType === 'Monochromatic') score += 0.4;
+    if (pattern === 'solid') score += 0.3;
+  } else if (persona === 'Bold') {
+    if (s > 0.6) score += 0.3;
+    if (hType === 'Complementary') score += 0.5;
+    if (pattern && ['floral', 'graphic print', 'leopard print', 'camouflage'].includes(pattern)) {
+      score += 0.5;
+    }
+  } else if (persona === 'Classic' || persona === 'Old Money') {
+    if (s < 0.3 && lum > 0.4) score += 0.4;
+    if (pattern && ['solid', 'striped', 'checkered'].includes(pattern)) score += 0.3;
+  }
+
+  return score;
+}
+
+/**
+ * Exact port of rules.py: get_seasonal_compatibility
+ */
+export function getSeasonalCompatibility(monkLabel: string, clothingHex: string): number {
+  const hsl = hexToHsl(clothingHex);
+  const h = hsl.h / 360;
+
+  const PALETTE_MAPPING: Record<string, string[]> = {
+    'MST-1': ['Cool', 'Clear'],
+    'MST-2': ['Cool', 'Clear'],
+    'MST-3': ['Cool', 'Muted'],
+    'MST-4': ['Warm', 'Light'],
+    'MST-5': ['Warm', 'Neutral'],
+    'MST-6': ['Warm', 'Rich'],
+    'MST-7': ['Warm', 'Deep'],
+    'MST-8': ['Neutral', 'Deep'],
+    'MST-9': ['Cool', 'Deep'],
+    'MST-10': ['Cool', 'Deep'],
+  };
+
+  const season = PALETTE_MAPPING[monkLabel] || ['Neutral', 'Medium'];
+  let score = 0.5;
+  if (season.includes('Cool') && h >= 0.5 && h <= 0.8) score += 0.3;
+  if (season.includes('Warm') && h >= 0.0 && h <= 0.2) score += 0.3;
+  return Math.min(score, 1.0);
+}
+
+/**
+ * Exact port of rules.py: get_skin_compatibility
+ */
+export function getSkinCompatibility(skinHex: string, clothingHex: string): number {
+  const shsl = hexToHsl(skinHex);
+  const chsl = hexToHsl(clothingHex);
+
+  const contrast = Math.abs(shsl.l / 100 - chsl.l / 100);
+  let score = contrast * 0.5;
+
+  const isSkinWarm = (shsl.h / 360 >= 0.0 && shsl.h / 360 <= 0.18);
+  const isColorWarm =
+    (chsl.h / 360 >= 0.0 && chsl.h / 360 <= 0.18) ||
+    (chsl.h / 360 >= 0.8 && chsl.h / 360 <= 1.0);
+
+  if (isSkinWarm === isColorWarm) score += 0.5;
+  return Math.min(score, 1.0);
+}
+
+/**
+ * Exact port of rules.py: get_weather_priority
+ */
+export function getWeatherPriority(weatherCode: string, category: string): number {
+  const cat = String(category || '').toLowerCase();
+  if (weatherCode === 'Rainy') {
+    if (['outerwear', 'jacket', 'boots'].some((x) => cat.includes(x))) return 2.5;
+  } else if (weatherCode === 'Cold') {
+    if (['sweater', 'coat', 'outerwear', 'hoodie'].some((x) => cat.includes(x))) return 2.5;
+  } else if (weatherCode === 'Sunny') {
+    if (['shorts', 't-shirt', 'sandals'].some((x) => cat.includes(x))) return 2.0;
+  }
+  return 1.0;
+}
+
+/**
+ * Exact port of rules.py: get_wardrobe_analytics
+ */
+export function getWardrobeAnalytics(
+  items: Array<{ primaryColor: string }>,
+  monkLabel: string
+): { Neutral: number; Vibrant: number; Muted: number; Earthy: number } {
+  const stats = { Neutral: 0, Vibrant: 0, Muted: 0, Earthy: 0 };
+  const total = items.length;
+  if (total === 0) return stats;
+
+  for (const item of items) {
+    const hsl = hexToHsl(item.primaryColor);
+    const h = hsl.h / 360;
+    const s = hsl.s / 100;
+
+    if (s < 0.15) stats.Neutral++;
+    else if (s > 0.6) stats.Vibrant++;
+    else if (h >= 0.1 && h <= 0.2) stats.Earthy++;
+    else stats.Muted++;
+  }
+
+  return {
+    Neutral: Math.round((stats.Neutral / total) * 100),
+    Vibrant: Math.round((stats.Vibrant / total) * 100),
+    Muted: Math.round((stats.Muted / total) * 100),
+    Earthy: Math.round((stats.Earthy / total) * 100),
+  };
+}
+

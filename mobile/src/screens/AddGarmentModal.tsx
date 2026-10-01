@@ -152,6 +152,8 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
     setUploading(true);
     let finalImageUrl = imageUrl;
 
+    // Backend upload commented out for offline test launch
+    /*
     if (imageUrl.startsWith('file://')) {
       try {
         const formData = new FormData();
@@ -175,6 +177,7 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         // fallback to local URI
       }
     }
+    */
 
     setUploading(false);
 

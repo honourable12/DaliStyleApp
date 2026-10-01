@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { StyloraLogo } from '../components/StyloraLogo';
 import { MONK_SCALE } from '../core/monkScale';
 import { UserStyleProfile, MonkTone, WardrobeItem } from '../types';
@@ -30,6 +30,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   onComplete,
   onOpenSelfie,
 }) => {
+  const { colors } = useTheme();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [selectedTone, setSelectedTone] = useState<MonkTone>(() => {
     return (
@@ -81,7 +82,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const contrast = calculateSkinContrast(selectedTone.hex, topItem?.primaryColor || '#E8A830');
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.topBar}>
         <View style={styles.stepPills}>
           {[1, 2, 3].map((step) => {
@@ -217,19 +218,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         {currentStep === 3 && (
           <View style={styles.stepCard}>
             <Text style={styles.stepDescription}>
-              Your vault is calibrated. Here's your first look.
+              Your styling profile is calibrated. Welcome to your Atelier.
             </Text>
 
-            <View style={styles.firstLookCard}>
-              <View style={styles.lookHeader}>
-                <Text style={styles.lookTag}>First look</Text>
-                <View style={styles.scorePill}>
-                  <Text style={styles.scoreText}>{harmony.score}% harmony</Text>
+            {topItem && bottomItem ? (
+              <View style={styles.firstLookCard}>
+                <View style={styles.lookHeader}>
+                  <Text style={styles.lookTag}>First look</Text>
+                  <View style={styles.scorePill}>
+                    <Text style={styles.scoreText}>{harmony.score}% harmony</Text>
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.lookItemsRow}>
-                {topItem && (
+                <View style={styles.lookItemsRow}>
                   <View style={styles.lookItemPreview}>
                     <GarmentVisual
                       imageUrl={topItem.imageUrl}
@@ -242,8 +243,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                     />
                     <Text style={styles.lookItemName} numberOfLines={1}>{topItem.name}</Text>
                   </View>
-                )}
-                {bottomItem && (
                   <View style={styles.lookItemPreview}>
                     <GarmentVisual
                       imageUrl={bottomItem.imageUrl}
@@ -256,18 +255,43 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                     />
                     <Text style={styles.lookItemName} numberOfLines={1}>{bottomItem.name}</Text>
                   </View>
-                )}
-              </View>
+                </View>
 
-              <Text style={styles.lookInsight}>
-                {contrast}% skin contrast for {selectedTone.label}.
-              </Text>
-            </View>
+                <Text style={styles.lookInsight}>
+                  {contrast}% skin contrast for {selectedTone.label}.
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.firstLookCard, { alignItems: 'center', paddingVertical: SPACING.lg }]}>
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: selectedTone.hex,
+                    borderWidth: 3,
+                    borderColor: 'rgba(255,255,255,0.25)',
+                    marginBottom: 12,
+                  }}
+                />
+                <Text style={[styles.lookTag, { fontSize: 13, marginBottom: 4 }]}>
+                  {selectedTone.label} · {selectedTone.name}
+                </Text>
+                <Text style={[styles.personaTitle, { fontSize: 16, marginBottom: 8 }]}>
+                  Persona: {selectedPersona}
+                </Text>
+                <Text style={[styles.lookInsight, { textAlign: 'center', paddingHorizontal: 12 }]}>
+                  Your biometric profile is ready. Once inside, add your pieces to unlock algorithmic color harmony and curated daily outfits.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.capsuleInfoRow}>
               <Ionicons name="sparkles" size={15} color={COLORS.accent} />
               <Text style={styles.capsuleInfoText}>
-                {seedWardrobe.length} starter pieces in your vault
+                {seedWardrobe.length > 0
+                  ? `${seedWardrobe.length} starter pieces in your vault`
+                  : 'Start fresh by adding your own garments'}
               </Text>
             </View>
           </View>
@@ -306,7 +330,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   topBar: {
     flexDirection: 'row',

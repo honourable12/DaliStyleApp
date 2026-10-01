@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { OutfitRing } from '../components/OutfitRing';
 import { OutfitRecommendation, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
@@ -17,6 +18,7 @@ interface TodayScreenProps {
   onReroll: () => void;
   onSaveToLookbook: (outfit: OutfitRecommendation) => void;
   onSelectItem: (item: WardrobeItem) => void;
+  onOpenCloset?: () => void;
 }
 
 export const TodayScreen: React.FC<TodayScreenProps> = ({
@@ -24,6 +26,7 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
   onReroll,
   onSaveToLookbook,
   onSelectItem,
+  onOpenCloset,
 }) => {
   const { colors } = useTheme();
   const [wornLogged, setWornLogged] = useState(false);
@@ -31,10 +34,46 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
   if (!outfit) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your closet is empty</Text>
+        <View
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: colors.surfaceRaised,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: colors.surfaceBorder,
+          }}
+        >
+          <Ionicons name="sparkles-outline" size={40} color={colors.accent} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your Closet Is Ready</Text>
         <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          Add pieces to generate your daily look.
+          Add pieces to your wardrobe to unlock your personalized, color-calibrated daily looks.
         </Text>
+        {onOpenCloset && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={onOpenCloset}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.accent,
+              paddingVertical: 14,
+              paddingHorizontal: 24,
+              borderRadius: RADIUS.full,
+              gap: 8,
+              marginTop: SPACING.lg,
+            }}
+          >
+            <Ionicons name="shirt-outline" size={18} color={COLORS.background} />
+            <Text style={{ color: COLORS.background, fontSize: 14, fontWeight: '800' }}>
+              Add Clothes in Closet
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }

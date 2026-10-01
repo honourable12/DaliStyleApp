@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory, AuthUser, ThemeMode } from '../types';
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
@@ -9,88 +10,16 @@ export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   locationName: 'Accra',
 };
 
-// Initial offline items with verified reliable CDN endpoints and instant visual fallbacks
-export const INITIAL_WARDROBE: WardrobeItem[] = [
-  {
-    id: 'w-1',
-    name: 'Ochre Turmeric Overshirt',
-    category: 'top',
-    primaryColor: '#E8A830', // Turmeric
-    primaryColorName: 'Rust / Turmeric',
-    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 3,
-  },
-  {
-    id: 'w-2',
-    name: 'Pleated Raw Wool Trousers',
-    category: 'bottom',
-    primaryColor: '#1A1917', // Ash / Charcoal
-    primaryColorName: 'Charcoal',
-    imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: 'w-3',
-    name: 'Minimalist Poplin Shirt',
-    category: 'top',
-    primaryColor: '#F2EDE6', // Cream
-    primaryColorName: 'Cream',
-    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 2,
-  },
-  {
-    id: 'w-4',
-    name: 'Tailored Indigo Denim',
-    category: 'bottom',
-    primaryColor: '#141E30', // Deep Indigo
-    primaryColorName: 'Navy',
-    imageUrl: 'https://images.unsplash.com/photo-1542272604-780c96856592?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'w-5',
-    name: 'Wool Trench Coat',
-    category: 'outerwear',
-    primaryColor: '#825C43', // Deep Camel
-    primaryColorName: 'Brown',
-    imageUrl: 'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 4,
-  },
-  {
-    id: 'w-6',
-    name: 'Derby Leather Shoes',
-    category: 'shoes',
-    primaryColor: '#1A1917',
-    primaryColorName: 'Black',
-    imageUrl: 'https://images.unsplash.com/photo-1614252369475-531eba835eb1?auto=format&fit=crop&w=600&q=80',
-    createdAt: Date.now() - 86400000 * 10,
-  },
-];
-
-export const INITIAL_LOOKBOOK: OutfitRecommendation[] = [
-  {
-    id: 'seed-look-1',
-    items: [INITIAL_WARDROBE[0], INITIAL_WARDROBE[1], INITIAL_WARDROBE[5]],
-    harmonyScore: 94,
-    skinContrastScore: 88,
-    weatherAppropriate: true,
-    weatherType: 'Clear',
-    harmonyType: 'Analogous',
-    stylingNote: 'Warm ochre turmeric overshirt grounded by tailored raw wool trousers and classic leather derbies.',
-    savedInLookbook: true,
-  },
-  {
-    id: 'seed-look-2',
-    items: [INITIAL_WARDROBE[2], INITIAL_WARDROBE[3], INITIAL_WARDROBE[4]],
-    harmonyScore: 91,
-    skinContrastScore: 82,
-    weatherAppropriate: true,
-    weatherType: 'Cold',
-    harmonyType: 'Complementary',
-    stylingNote: 'Crisp poplin shirt contrasted against deep indigo denim, layered beneath a structured wool trench.',
-    savedInLookbook: true,
-  },
-];
+// Storage keys for persistent state
+const STORAGE_KEYS = {
+  WARDROBE: '@stylora_wardrobe_v1',
+  PROFILE: '@stylora_profile_v1',
+  LOOKBOOK: '@stylora_lookbook_v1',
+  ONBOARDING_COMPLETED: '@stylora_onboarding_completed_v1',
+  WELCOME_SEEN: '@stylora_welcome_seen_v1',
+  THEME_MODE: '@stylora_theme_mode_v1',
+  CURRENT_USER: '@stylora_current_user_v1',
+};
 
 function normalizeCategory(cat: string): ClothingCategory {
   const c = String(cat || '').toLowerCase();
@@ -102,12 +31,67 @@ function normalizeCategory(cat: string): ClothingCategory {
 }
 
 class LocalWardrobeStore {
-  private wardrobe: WardrobeItem[] = [...INITIAL_WARDROBE];
+  // Empty wardrobe for test launch - encouraging users to digitize and add their own pieces
+  private wardrobe: WardrobeItem[] = [];
   private profile: UserStyleProfile = { ...DEFAULT_USER_PROFILE };
-  private lookbook: OutfitRecommendation[] = [...INITIAL_LOOKBOOK];
+  private lookbook: OutfitRecommendation[] = [];
   private hasCompletedOnboarding: boolean = false;
+  private hasSeenWelcome: boolean = false;
   private currentUser: AuthUser | null = null;
   private themeMode: ThemeMode = 'editorial';
+  private initialized: boolean = false;
+
+  /**
+   * Initializes store by loading persisted records from AsyncStorage
+   */
+  async init(): Promise<void> {
+    if (this.initialized) return;
+    try {
+      const [
+        savedWardrobe,
+        savedProfile,
+        savedLookbook,
+        savedOnboarding,
+        savedWelcome,
+        savedTheme,
+        savedUser,
+      ] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.WARDROBE),
+        AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
+        AsyncStorage.getItem(STORAGE_KEYS.LOOKBOOK),
+        AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED),
+        AsyncStorage.getItem(STORAGE_KEYS.WELCOME_SEEN),
+        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE),
+        AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER),
+      ]);
+
+      if (savedWardrobe) {
+        this.wardrobe = JSON.parse(savedWardrobe);
+      }
+      if (savedProfile) {
+        this.profile = JSON.parse(savedProfile);
+      }
+      if (savedLookbook) {
+        this.lookbook = JSON.parse(savedLookbook);
+      }
+      if (savedOnboarding !== null) {
+        this.hasCompletedOnboarding = savedOnboarding === 'true';
+      }
+      if (savedWelcome !== null) {
+        this.hasSeenWelcome = savedWelcome === 'true';
+      }
+      if (savedTheme === 'editorial' || savedTheme === 'alabaster') {
+        this.themeMode = savedTheme;
+      }
+      if (savedUser) {
+        this.currentUser = JSON.parse(savedUser);
+      }
+    } catch {
+      // Graceful fallback to memory defaults
+    } finally {
+      this.initialized = true;
+    }
+  }
 
   getThemeMode(): ThemeMode {
     return this.themeMode;
@@ -115,6 +99,7 @@ class LocalWardrobeStore {
 
   setThemeMode(mode: ThemeMode): void {
     this.themeMode = mode;
+    AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, mode).catch(() => {});
   }
 
   getItems(): WardrobeItem[] {
@@ -123,14 +108,17 @@ class LocalWardrobeStore {
 
   addItem(item: WardrobeItem): void {
     this.wardrobe.unshift(item);
+    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
   }
 
   setItems(items: WardrobeItem[]): void {
     this.wardrobe = [...items];
+    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
   }
 
   removeItem(id: string): void {
     this.wardrobe = this.wardrobe.filter((i) => i.id !== id);
+    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
   }
 
   getProfile(): UserStyleProfile {
@@ -139,6 +127,7 @@ class LocalWardrobeStore {
 
   updateProfile(newProfile: Partial<UserStyleProfile>): void {
     this.profile = { ...this.profile, ...newProfile };
+    AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(this.profile)).catch(() => {});
   }
 
   getLookbook(): OutfitRecommendation[] {
@@ -148,11 +137,13 @@ class LocalWardrobeStore {
   saveToLookbook(outfit: OutfitRecommendation): void {
     if (!this.lookbook.some((o) => o.id === outfit.id)) {
       this.lookbook.unshift({ ...outfit, savedInLookbook: true });
+      AsyncStorage.setItem(STORAGE_KEYS.LOOKBOOK, JSON.stringify(this.lookbook)).catch(() => {});
     }
   }
 
   removeFromLookbook(id: string): void {
     this.lookbook = this.lookbook.filter((o) => o.id !== id);
+    AsyncStorage.setItem(STORAGE_KEYS.LOOKBOOK, JSON.stringify(this.lookbook)).catch(() => {});
   }
 
   getHasCompletedOnboarding(): boolean {
@@ -161,6 +152,16 @@ class LocalWardrobeStore {
 
   setHasCompletedOnboarding(completed: boolean): void {
     this.hasCompletedOnboarding = completed;
+    AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, String(completed)).catch(() => {});
+  }
+
+  getHasSeenWelcome(): boolean {
+    return this.hasSeenWelcome;
+  }
+
+  setHasSeenWelcome(seen: boolean): void {
+    this.hasSeenWelcome = seen;
+    AsyncStorage.setItem(STORAGE_KEYS.WELCOME_SEEN, String(seen)).catch(() => {});
   }
 
   getCurrentUser(): AuthUser | null {
@@ -169,68 +170,23 @@ class LocalWardrobeStore {
 
   setCurrentUser(user: AuthUser | null): void {
     this.currentUser = user ? { ...user } : null;
+    if (user) {
+      AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_USER).catch(() => {});
+    }
   }
 
   logout(): void {
     this.currentUser = null;
+    AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_USER).catch(() => {});
   }
 
   /**
-   * Attempts to sync items from the live FastAPI backend server
+   * Sync with backend commented out / inactive for offline test launch
    */
   async syncWithBackend(baseUrl = 'http://10.0.2.2:8000'): Promise<{ count: number; error?: string }> {
-    try {
-      const endpoints = [
-        `${baseUrl}/api/wardrobe/items`,
-        `${baseUrl}/wardrobe/items`,
-        'http://localhost:8000/api/wardrobe/items',
-      ];
-
-      let data: any[] | null = null;
-      let activeHost = baseUrl;
-
-      for (const ep of endpoints) {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
-          const res = await fetch(ep, { signal: controller.signal });
-          clearTimeout(timeout);
-          if (res.ok) {
-            data = await res.json();
-            activeHost = ep.split('/api')[0].split('/wardrobe')[0];
-            break;
-          }
-        } catch {
-          // try next endpoint
-        }
-      }
-
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        return { count: 0, error: 'No live items returned from backend. Using local wardrobe.' };
-      }
-
-      const liveItems: WardrobeItem[] = data.map((raw: any) => {
-        let img = raw.image_url || '';
-        if (img && !img.startsWith('http')) {
-          img = `${activeHost}/static/${img.replace(/^users\//, 'users/')}`;
-        }
-        return {
-          id: String(raw.id || `live-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
-          name: raw.name || 'Tailored Garment',
-          category: normalizeCategory(raw.category),
-          primaryColor: raw.color_primary && raw.color_primary !== 'unknown' ? raw.color_primary : '#1A1917',
-          primaryColorName: raw.color_primary_name || 'Neutral',
-          imageUrl: img,
-          pattern: raw.pattern || 'solid',
-          createdAt: Date.now(),
-        };
-      });
-
-      this.wardrobe = liveItems;
-      return { count: liveItems.length };
-    } catch (e: any) {
-      return { count: 0, error: e.message || 'Sync failed' };
-    }
+    return { count: 0, error: 'Offline mode active for test launch' };
   }
 }
 

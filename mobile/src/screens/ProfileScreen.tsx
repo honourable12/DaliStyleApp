@@ -242,26 +242,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         )}
       </View>
 
-      {/* Backend */}
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Backend</Text>
-        <View style={styles.ipInputRow}>
-          <TextInput
-            style={styles.ipInput}
-            value={backendIp}
-            onChangeText={setBackendIp}
-            placeholder="192.168.1.100:8000"
-            placeholderTextColor={COLORS.textMuted}
-          />
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => Alert.alert('Saved', `Backend set to http://${backendIp}`)}
-            style={styles.saveIpBtn}
-          >
-            <Text style={styles.saveIpBtnText}>Save</Text>
-          </TouchableOpacity>
+        {/* Backend card commented out for offline testing launch
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Backend</Text>
+          <View style={styles.ipInputRow}>
+            <TextInput
+              style={styles.ipInput}
+              value={backendIp}
+              onChangeText={setBackendIp}
+              placeholder="192.168.1.100:8000"
+              placeholderTextColor={COLORS.textMuted}
+            />
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => Alert.alert('Saved', `Backend set to http://${backendIp}`)}
+              style={styles.saveIpBtn}
+            >
+              <Text style={styles.saveIpBtnText}>Save</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+        */}
 
       {/* Brand footer */}
       <View style={styles.brandFooter}>
