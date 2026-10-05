@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
@@ -16,6 +15,7 @@ import { UserStyleProfile, MonkTone, WardrobeItem } from '../types';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { calculateGarmentHarmony, calculateSkinContrast } from '../core/colorTheory';
 import { wardrobeStore } from '../db/storage';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface OnboardingScreenProps {
   initialProfile: UserStyleProfile;
@@ -69,9 +69,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         if (onOpenSelfie) {
           onOpenSelfie();
         } else {
-          Alert.alert(
-            'Selfie Calibration Required',
-            'Please take or upload a selfie to detect your authentic skin undertone.'
+          showAtelierToast(
+            'Calibration Required',
+            'Please take or upload a selfie to detect your authentic skin undertone.',
+            'info'
           );
         }
         return;

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,7 @@ import { MONK_SCALE, MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { MonkTone } from '../types';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
 import { wardrobeStore } from '../db/storage';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface SelfieCalibrationModalProps {
   visible: boolean;
@@ -47,7 +47,7 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
   const handleTakePhoto = async () => {
     const granted = await requestPermission(true);
     if (!granted) {
-      Alert.alert('Permission needed', 'Camera permission is required.');
+      showAtelierToast('Permission Needed', 'Camera permission is required for selfie calibration.', 'info');
       return;
     }
     try {
@@ -61,14 +61,14 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
         processSelfie(result.assets[0].uri);
       }
     } catch (e: any) {
-      Alert.alert('Camera error', e.message || 'Could not open camera.');
+      showAtelierToast('Camera Error', e.message || 'Could not open camera.', 'error');
     }
   };
 
   const handlePickPhoto = async () => {
     const granted = await requestPermission(false);
     if (!granted) {
-      Alert.alert('Permission needed', 'Photo library permission is required.');
+      showAtelierToast('Permission Needed', 'Photo library permission is required to select a portrait.', 'info');
       return;
     }
     try {
@@ -82,7 +82,7 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
         processSelfie(result.assets[0].uri);
       }
     } catch (e: any) {
-      Alert.alert('Picker error', e.message || 'Could not pick image.');
+      showAtelierToast('Picker Error', e.message || 'Could not pick image.', 'error');
     }
   };
 
@@ -107,7 +107,7 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
         landmarkProvider: edgeResult.landmarkProvider,
       });
     } catch {
-      Alert.alert('Calibration note', 'Recalibrated using on-device default baseline.');
+      showAtelierToast('Baseline Calibrated', 'Recalibrated using on-device default baseline.', 'info');
       setDetectedResult({
         ...MONK_SCALE[4],
         confidence: 0.9,
@@ -128,9 +128,10 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
       });
       onCalibrate(detectedResult);
       onClose();
-      Alert.alert(
-        'Calibrated',
-        `Your profile is now ${detectedResult.label} (${detectedResult.name}).`
+      showAtelierToast(
+        'Tone Calibrated',
+        `Your profile is now ${detectedResult.label} (${detectedResult.name}).`,
+        'success'
       );
     }
   };

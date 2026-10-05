@@ -66,21 +66,40 @@ export function analyzeBackgroundCleanliness(
 }
 
 /**
- * Predicts rough clothing category based on bounding box aspect ratio and geometry
+ * Predicts clothing category based on silhouette geometry, aspect ratio, and filename cues
  */
-export function estimateCategoryFromGeometry(aspectRatio: number): ClothingCategory {
-  // aspectRatio = Height / Width
-  if (aspectRatio > 1.4) {
-    // Tall elongated silhouettes are almost always trousers, jeans, or maxi coats
+export function estimateCategoryFromGeometry(aspectRatio: number, hintText?: string): ClothingCategory {
+  if (hintText) {
+    const lower = hintText.toLowerCase();
+    if (['pant', 'trouser', 'jean', 'short', 'skirt', 'legging', 'sweatpant', 'chino', 'cargo'].some((w) => lower.includes(w))) {
+      return 'bottom';
+    }
+    if (['jacket', 'coat', 'blazer', 'hoodie', 'cardigan', 'parka', 'windbreaker', 'trench', 'overcoat', 'bomber', 'fleece'].some((w) => lower.includes(w))) {
+      return 'outerwear';
+    }
+    if (['shoe', 'sneaker', 'boot', 'derby', 'loafer', 'sandal', 'heel', 'mule', 'slide', 'oxford', 'trainer'].some((w) => lower.includes(w))) {
+      return 'shoes';
+    }
+    if (['bag', 'hat', 'cap', 'belt', 'scarf', 'glass', 'watch', 'tie', 'jewelry', 'beanie', 'wallet'].some((w) => lower.includes(w))) {
+      return 'accessory';
+    }
+    if (['shirt', 'tee', 'top', 't-shirt', 'polo', 'sweater', 'blouse', 'knit', 'tank', 'vest', 'camisole'].some((w) => lower.includes(w))) {
+      return 'top';
+    }
+  }
+
+  // Fallback to silhouette bounding box aspect ratio (Height / Width)
+  if (aspectRatio > 1.35) {
+    // Tall elongated silhouettes are almost always trousers, jeans, or skirts
     return 'bottom';
-  } else if (aspectRatio >= 0.85 && aspectRatio <= 1.4) {
-    // Square to medium-tall are tops, shirts, and sweaters
+  } else if (aspectRatio >= 0.85 && aspectRatio <= 1.35) {
+    // Square to medium-tall are tops, shirts, and knitwear
     return 'top';
   } else if (aspectRatio >= 0.65 && aspectRatio < 0.85) {
-    // Wider than tall silhouettes
+    // Wider horizontal volume is characteristic of outerwear, blazers, and jackets
     return 'outerwear';
   } else {
-    // Very wide items are typically footwear or accessories (belts, bags)
+    // Low aspect ratio horizontal items are footwear or accessories
     return 'shoes';
   }
 }

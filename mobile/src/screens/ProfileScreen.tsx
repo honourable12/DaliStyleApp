@@ -17,6 +17,7 @@ import { StyloraLogo } from '../components/StyloraLogo';
 import { wardrobeStore } from '../db/storage';
 import { calculateWardrobeIQ } from '../core/colorTheory';
 import { requestAndFetchLocationWeather } from '../services/weatherService';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface ProfileScreenProps {
   profile: UserStyleProfile;
@@ -58,18 +59,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         if (onLocationUpdated) {
           onLocationUpdated(weather.locationName, weather.tempC, weather.condition);
         }
-        Alert.alert(
-          'Weather Synchronized',
-          `Location set to ${weather.locationName} (${weather.tempC}°C, ${weather.condition}).`
-        );
+        showAtelierToast({
+          title: 'WEATHER SYNCHRONIZED',
+          message: `${weather.locationName} (${weather.tempC}°C, ${weather.condition})`,
+          type: 'success',
+          icon: 'partly-sunny',
+        });
       } else {
-        Alert.alert(
-          'Location Required',
-          'Could not detect live coordinates. Please ensure location services are enabled.'
-        );
+        showAtelierToast({
+          title: 'LOCATION REQUIRED',
+          message: 'Could not detect live coordinates. Please enable device location.',
+          type: 'warning',
+        });
       }
     } catch (e: any) {
-      Alert.alert('Location Error', e.message || 'Could not fetch weather telemetry.');
+      showAtelierToast({
+        title: 'LOCATION ERROR',
+        message: e.message || 'Could not fetch weather telemetry.',
+        type: 'error',
+      });
     } finally {
       setDetectingLocation(false);
     }
@@ -440,7 +448,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             />
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => Alert.alert('Saved', `Backend set to http://${backendIp}`)}
+              onPress={() => showAtelierToast('Saved', `Backend set to http://${backendIp}`, 'success')}
               style={styles.saveIpBtn}
             >
               <Text style={styles.saveIpBtnText}>Save</Text>

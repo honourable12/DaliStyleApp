@@ -31,6 +31,7 @@ export class EdgeAIPipeline {
   static async processGarment(
     imageUri: string,
     aspectRatio = 1.0,
+    hintText?: string,
     platform: 'ios' | 'android' | 'auto' = 'auto'
   ): Promise<ProcessedGarmentEdgeResult> {
     const startTime = Date.now();
@@ -66,8 +67,8 @@ export class EdgeAIPipeline {
       cleanliness.backgroundRgb
     );
 
-    // 5. Geometry-based category estimation
-    const suggestedCategory = estimateCategoryFromGeometry(aspectRatio);
+    // 5. Geometry and hint-based category estimation
+    const suggestedCategory = estimateCategoryFromGeometry(aspectRatio, hintText);
 
     const processingTimeMs = Date.now() - startTime;
 

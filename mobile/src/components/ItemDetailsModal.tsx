@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { GarmentVisual } from './GarmentVisual';
+import { showAtelierConfirm } from '../context/ToastContext';
 
 interface ItemDetailsModalProps {
   item: WardrobeItem | null;
@@ -30,21 +31,18 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   if (!item) return null;
 
   const handleDeleteConfirm = () => {
-    Alert.alert(
-      'Delete piece?',
-      `Remove "${item.name}" from your closet?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            onDelete(item.id);
-            onClose();
-          },
-        },
-      ]
-    );
+    showAtelierConfirm({
+      title: 'Remove Piece',
+      message: `Permanently remove "${item.name}" from your atelier vault?`,
+      confirmText: 'Remove',
+      cancelText: 'Keep',
+      destructive: true,
+      icon: 'trash-outline',
+      onConfirm: () => {
+        onDelete(item.id);
+        onClose();
+      },
+    });
   };
 
   return (

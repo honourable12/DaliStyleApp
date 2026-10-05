@@ -16,6 +16,7 @@ import { COLORS, RADIUS, SPACING, SHADOWS, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { WorkbenchTray } from '../components/WorkbenchTray';
 import { batchUploadQueue } from '../uploads/BatchUploadQueue';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface ClosetScreenProps {
   items: WardrobeItem[];
@@ -54,7 +55,11 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
     setAddSheetVisible(false);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Gallery access is required to pick photos.');
+      showAtelierToast({
+        title: 'PERMISSION REQUIRED',
+        message: 'Gallery access is required to import wardrobe photos.',
+        type: 'warning',
+      });
       return;
     }
     try {
@@ -66,13 +71,19 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
       });
       if (!result.canceled && result.assets.length > 0) {
         batchUploadQueue.enqueue(result.assets.map((a) => a.uri));
-        Alert.alert(
-          'Batch Enqueued',
-          `${result.assets.length} piece(s) queued for on-device background processing.`
-        );
+        showAtelierToast({
+          title: 'BATCH IMPORT ENQUEUED',
+          message: `${result.assets.length} piece(s) queued for on-device processing.`,
+          type: 'success',
+          icon: 'albums',
+        });
       }
     } catch (e: any) {
-      Alert.alert('Gallery error', e.message || 'Could not pick photos.');
+      showAtelierToast({
+        title: 'IMPORT ERROR',
+        message: e.message || 'Could not select photos.',
+        type: 'error',
+      });
     }
   };
 

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface FeedPost {
   id: string;
@@ -90,9 +91,9 @@ export const FeedScreen: React.FC = () => {
   const handleComment = (id: string) => {
     Alert.prompt
       ? Alert.prompt('Comment', 'Share your thoughts:', (text) => {
-          if (text) Alert.alert('Posted', 'Your comment was shared.');
+          if (text) showAtelierToast('Editorial Comment', 'Your note has been submitted to the salon.', 'success');
         })
-      : Alert.alert('Comment', 'Commenting is enabled on the community server.');
+      : showAtelierToast('Editorial Salon', 'Curated salon commenting is active.', 'info');
   };
 
   return (
@@ -149,7 +150,7 @@ export const FeedScreen: React.FC = () => {
 
               <TouchableOpacity
                 activeOpacity={0.6}
-                onPress={() => Alert.alert('Share', `Sharing ${item.creatorName}'s look`)}
+                onPress={() => showAtelierToast('Editorial Shared', `Sharing ${item.creatorName}'s look`, 'atelier')}
                 hitSlop={{ top: 10, bottom: 10, left: 8, right: 4 }}
                 style={styles.actionBtn}
               >

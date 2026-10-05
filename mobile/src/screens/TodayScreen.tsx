@@ -12,6 +12,7 @@ import { OutfitRing } from '../components/OutfitRing';
 import { OutfitRecommendation, WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface TodayScreenProps {
   outfit: OutfitRecommendation | null;
@@ -80,7 +81,12 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
 
   const handleLogWorn = () => {
     setWornLogged(true);
-    Alert.alert('Logged', "Today's outfit saved to your history.");
+    showAtelierToast({
+      title: 'OUTFIT LOGGED',
+      message: "Today's look saved to your rotation archive.",
+      type: 'success',
+      icon: 'sparkles',
+    });
   };
 
   return (

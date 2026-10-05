@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { OutfitRecommendation } from '../types';
 import { COLORS, RADIUS, SPACING, useTheme } from '../theme';
 import { GarmentVisual } from '../components/GarmentVisual';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface LookbookScreenProps {
   savedLooks: OutfitRecommendation[];
@@ -128,7 +129,12 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                 onPress={() => {
                   if (onWearLook) {
                     onWearLook(item);
-                    Alert.alert('Applied', 'This look is now your outfit for today.');
+                    showAtelierToast({
+                      title: 'OUTFIT SELECTED',
+                      message: 'This look is now your outfit for today.',
+                      type: 'success',
+                      icon: 'sparkles',
+                    });
                   }
                 }}
                 style={styles.wearBtn}

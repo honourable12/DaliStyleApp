@@ -32,6 +32,7 @@ import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from 
 import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
 import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser, ThemeMode } from './src/types';
 import { requestAndFetchLocationWeather, fetchOpenMeteoWeather } from './src/services/weatherService';
+import { ToastProvider, showAtelierToast } from './src/context/ToastContext';
 
 export default function App() {
   const [isStoreReady, setIsStoreReady] = useState(false);
@@ -62,7 +63,9 @@ export default function App() {
 
   return (
     <ThemeProvider initialMode={initialMode}>
-      <StyloraApp />
+      <ToastProvider>
+        <StyloraApp />
+      </ToastProvider>
     </ThemeProvider>
   );
 }
@@ -156,7 +159,12 @@ function StyloraApp() {
     if (todayOutfit?.id === outfit.id) {
       setTodayOutfit({ ...outfit, savedInLookbook: true });
     }
-    Alert.alert('Saved to Lookbook', 'Outfit archived for future inspiration.');
+    showAtelierToast({
+      title: 'LOOKBOOK ARCHIVED',
+      message: 'Outfit saved to your editorial collection.',
+      type: 'success',
+      icon: 'bookmark',
+    });
   };
 
   const handleRemoveFromLookbook = (id: string) => {
@@ -185,7 +193,12 @@ function StyloraApp() {
     const refreshed = generateDailyOutfit(updated, profile, currentWeather);
     setTodayOutfit(refreshed);
 
-    Alert.alert('Piece Deleted', 'Item permanently removed from your vault.');
+    showAtelierToast({
+      title: 'PIECE REMOVED',
+      message: 'Item removed from your atelier vault.',
+      type: 'info',
+      icon: 'trash',
+    });
 
     // Background delete attempt on live backend commented out for offline test launch
     /*
@@ -200,7 +213,11 @@ function StyloraApp() {
   // --- WORKBENCH FUNCTIONS ---
   const handleAddToWorkbench = (item: WardrobeItem) => {
     if (workbenchItems.some((w) => w.id === item.id)) {
-      Alert.alert('Workbench', 'This piece is already on your workbench.');
+      showAtelierToast({
+        title: 'WORKBENCH',
+        message: 'This piece is already active on your workbench.',
+        type: 'info',
+      });
       return;
     }
 
@@ -243,7 +260,12 @@ function StyloraApp() {
 
     wardrobeStore.saveToLookbook(newLook);
     setSavedLooks(wardrobeStore.getLookbook());
-    Alert.alert('Look Saved', 'Your custom workbench outfit was saved to your Lookbook!');
+    showAtelierToast({
+      title: 'BESPOKE LOOK SAVED',
+      message: 'Custom workbench outfit saved to your Lookbook.',
+      type: 'success',
+      icon: 'sparkles',
+    });
   };
 
   const handleSelectTone = (tone: MonkTone) => {
@@ -265,7 +287,11 @@ function StyloraApp() {
     setProfile(updatedProf);
     const recalibrated = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
     setTodayOutfit(recalibrated);
-    Alert.alert('Persona Updated', `Style persona set to: ${persona}`);
+    showAtelierToast({
+      title: 'PERSONA UPDATED',
+      message: `Style persona calibrated to: ${persona}`,
+      type: 'success',
+    });
   };
 
   const handleLiveBackendSync = async () => {
@@ -278,12 +304,17 @@ function StyloraApp() {
       setWardrobe(liveItems);
       const newOutfit = generateDailyOutfit(liveItems, profile, currentWeather);
       setTodayOutfit(newOutfit);
-      Alert.alert('Live Sync Complete', `Synced ${result.count} live clothing items from your backend!`);
+      showAtelierToast({
+        title: 'LIVE SYNC COMPLETE',
+        message: `Synced ${result.count} live clothing items from your backend.`,
+        type: 'success',
+      });
     } else {
-      Alert.alert(
-        'Live Backend Sync',
-        'Could not reach local FastAPI server (default: http://10.0.2.2:8000). Your offline wardrobe is active and ready.'
-      );
+      showAtelierToast({
+        title: 'ATELIER VAULT READY',
+        message: 'Your offline wardrobe is fully active and calibrated.',
+        type: 'info',
+      });
     }
   };
 
@@ -304,18 +335,25 @@ function StyloraApp() {
         setIsWeatherLoaded(true);
         const refreshed = generateDailyOutfit(wardrobe, updatedProf, newWeather);
         setTodayOutfit(refreshed);
-        Alert.alert(
-          'Weather Synchronized',
-          `Location set to ${weather.locationName} (${weather.tempC}°C, ${weather.condition}).`
-        );
+        showAtelierToast({
+          title: 'WEATHER SYNCHRONIZED',
+          message: `${weather.locationName} · ${weather.tempC}°C ${weather.condition}`,
+          type: 'success',
+          icon: 'partly-sunny',
+        });
       } else {
-        Alert.alert(
-          'Location Required',
-          'Could not detect live coordinates. Please enable device location services.'
-        );
+        showAtelierToast({
+          title: 'LOCATION REQUIRED',
+          message: 'Enable device location to adapt daily recommendations.',
+          type: 'warning',
+        });
       }
     } catch (e: any) {
-      Alert.alert('Location Error', e.message || 'Could not fetch weather telemetry.');
+      showAtelierToast({
+        title: 'LOCATION ERROR',
+        message: e.message || 'Could not fetch weather telemetry.',
+        type: 'error',
+      });
     }
   };
 
@@ -343,7 +381,11 @@ function StyloraApp() {
               wardrobeStore.setCurrentUser(user);
               setCurrentUser(user);
               setIsAuthActive(false);
-              Alert.alert('Atelier Authenticated', `Welcome back, ${user.name || user.email}!`);
+              showAtelierToast({
+                title: 'ATELIER AUTHENTICATED',
+                message: `Welcome back, ${user.name || user.email}!`,
+                type: 'success',
+              });
             }}
             onSkipToGuest={() => {
               setIsAuthActive(false);
@@ -494,7 +536,11 @@ function StyloraApp() {
               onLogout={() => {
                 wardrobeStore.logout();
                 setCurrentUser(null);
-                Alert.alert('Signed Out', 'Returned to local offline atelier vault.');
+                showAtelierToast({
+                  title: 'SIGNED OUT',
+                  message: 'Returned to local offline atelier vault.',
+                  type: 'info',
+                });
               }}
               onRelaunchOnboarding={() => setIsOnboardingActive(true)}
               onLocationUpdated={(locationName, tempC, condition) => {

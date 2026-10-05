@@ -8,14 +8,14 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { ClothingCategory, WardrobeItem } from '../types';
-import { COLORS, RADIUS, SPACING } from '../theme';
+import { COLORS, RADIUS, SPACING, SHADOWS, useTheme } from '../theme';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
+import { showAtelierToast } from '../context/ToastContext';
 
 interface AddGarmentModalProps {
   visible: boolean;
@@ -52,6 +52,13 @@ const SAMPLE_PRESETS = [
     colorName: 'Navy',
     imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=400&q=80',
   },
+  {
+    name: 'Derby Oxford Shoes',
+    category: 'shoes' as ClothingCategory,
+    hex: '#1A1817',
+    colorName: 'Espresso Black',
+    imageUrl: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=400&q=80',
+  },
 ];
 
 export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
@@ -59,11 +66,15 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const { colors, mode } = useTheme();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ClothingCategory>('top');
+  const [autoIdentifiedCategory, setAutoIdentifiedCategory] = useState<ClothingCategory | null>('top');
   const [selectedHex, setSelectedHex] = useState('#E8A830');
   const [colorName, setColorName] = useState('Rust / Turmeric');
   const [imageUrl, setImageUrl] = useState(SAMPLE_PRESETS[0].imageUrl);
+  const [hasCustomImage, setHasCustomImage] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const categories: ClothingCategory[] = ['top', 'bottom', 'outerwear', 'shoes', 'accessory'];
@@ -81,27 +92,41 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const handleCaptureCamera = async () => {
     const granted = await requestPermission(true);
     if (!granted) {
-      Alert.alert('Permission needed', 'Camera permission is required.');
+      showAtelierToast({
+        title: 'PERMISSION REQUIRED',
+        message: 'Camera permission is required to photograph your garment.',
+        type: 'warning',
+      });
       return;
     }
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.85,
       });
       if (!result.canceled && result.assets[0]) {
-        handlePhotoSelected(result.assets[0].uri);
+        const asset = result.assets[0];
+        const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
+        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'camera_garment.jpg');
       }
     } catch (e: any) {
-      Alert.alert('Camera error', e.message || 'Could not open camera.');
+      showAtelierToast({
+        title: 'CAMERA ERROR',
+        message: e.message || 'Could not open camera.',
+        type: 'error',
+      });
     }
   };
 
   const handlePickGallery = async () => {
     const granted = await requestPermission(false);
     if (!granted) {
-      Alert.alert('Permission needed', 'Gallery permission is required.');
+      showAtelierToast({
+        title: 'PERMISSION REQUIRED',
+        message: 'Gallery access is required to import your garment photo.',
+        type: 'warning',
+      });
       return;
     }
     try {
@@ -109,77 +134,86 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.85,
       });
       if (!result.canceled && result.assets[0]) {
-        handlePhotoSelected(result.assets[0].uri);
+        const asset = result.assets[0];
+        const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
+        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'gallery_garment.jpg');
       }
     } catch (e: any) {
-      Alert.alert('Gallery error', e.message || 'Could not select photo.');
+      showAtelierToast({
+        title: 'GALLERY ERROR',
+        message: e.message || 'Could not select photo.',
+        type: 'error',
+      });
     }
   };
 
-  const handlePhotoSelected = async (uri: string) => {
+  /**
+   * On-device real-time garment identification:
+   * Immediately identifies category, color, and silhouette geometry without user having to select it.
+   */
+  const identifyAndProcessPhoto = async (uri: string, aspectRatio = 1.0, hintText?: string) => {
     setImageUrl(uri);
+    setHasCustomImage(true);
+    setIsAnalyzing(true);
+
     try {
-      const edgeResult = await EdgeAIPipeline.processGarment(uri);
+      // Execute 100% on-device AI classification & chroma analysis
+      const edgeResult = await EdgeAIPipeline.processGarment(uri, aspectRatio, hintText);
+
+      const identifiedCat = edgeResult.suggestedCategory;
+      setCategory(identifiedCat);
+      setAutoIdentifiedCategory(identifiedCat);
       setSelectedHex(edgeResult.primaryHex);
       setColorName(edgeResult.primaryName);
-      setCategory(edgeResult.suggestedCategory);
-      if (!name.trim()) {
-        setName(`Tailored ${edgeResult.primaryName} ${edgeResult.suggestedCategory}`);
-      }
+
+      // Auto-generate haute-couture name if currently empty or default
+      const catLabel = identifiedCat === 'top' ? 'Top' : identifiedCat === 'bottom' ? 'Trousers' : identifiedCat === 'outerwear' ? 'Outerwear' : identifiedCat === 'shoes' ? 'Shoes' : 'Piece';
+      setName(`Tailored ${edgeResult.primaryName} ${catLabel}`);
+
+      showAtelierToast({
+        title: 'AI CLASSIFICATION COMPLETE',
+        message: `Identified as ${identifiedCat.toUpperCase()} · ${edgeResult.primaryName}`,
+        type: 'success',
+        icon: 'sparkles',
+      });
     } catch {
+      // Graceful fallback to default tone
       setSelectedHex('#E8A830');
       setColorName('Rust / Turmeric');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
   const handleSelectPreset = (preset: typeof SAMPLE_PRESETS[0]) => {
     setName(preset.name);
     setCategory(preset.category);
+    setAutoIdentifiedCategory(preset.category);
     setSelectedHex(preset.hex);
     setColorName(preset.colorName);
     setImageUrl(preset.imageUrl);
+    setHasCustomImage(true);
+    showAtelierToast({
+      title: 'PRESET LOADED',
+      message: `Identified as ${preset.category.toUpperCase()} (${preset.colorName})`,
+      type: 'info',
+    });
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Name required', 'Give this piece a name.');
+      showAtelierToast({
+        title: 'NAME REQUIRED',
+        message: 'Please give your garment an atelier name.',
+        type: 'warning',
+      });
       return;
     }
 
     setUploading(true);
-    let finalImageUrl = imageUrl;
-
-    // Backend upload commented out for offline test launch
-    /*
-    if (imageUrl.startsWith('file://')) {
-      try {
-        const formData = new FormData();
-        const filename = imageUrl.split('/').pop() || 'cloth.jpg';
-        formData.append('file', { uri: imageUrl, name: filename, type: 'image/jpeg' } as any);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch('http://10.0.2.2:8000/api/wardrobe/upload', {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.image_url) {
-            finalImageUrl = `http://10.0.2.2:8000/static/${data.image_url}`;
-          }
-        }
-      } catch {
-        // fallback to local URI
-      }
-    }
-    */
-
-    setUploading(false);
 
     const newItem: WardrobeItem = {
       id: `w-${Date.now()}`,
@@ -187,83 +221,183 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       category,
       primaryColor: selectedHex,
       primaryColorName: colorName,
-      imageUrl: finalImageUrl,
+      imageUrl: imageUrl,
       createdAt: Date.now(),
     };
 
     onSave(newItem);
+    setUploading(false);
     onClose();
     setName('');
+    setHasCustomImage(false);
+
+    showAtelierToast({
+      title: 'PIECE VAULTED',
+      message: `${newItem.name} added to your digital wardrobe.`,
+      type: 'success',
+      icon: 'shirt',
+    });
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={styles.header}>
-            <Text style={styles.title}>Add a piece</Text>
+            <View>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>Add a Piece</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                Real-time AI categorization & color extraction
+              </Text>
+            </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={22} color={COLORS.textSecondary} />
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.imagePreviewWrap}>
+            {/* Viewfinder Preview & Action Bar */}
+            <View
+              style={[
+                styles.imagePreviewWrap,
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder },
+              ]}
+            >
               <Image source={{ uri: imageUrl }} style={styles.previewImage} resizeMode="cover" />
 
+              {/* Live Analyzing Shimmer */}
+              {isAnalyzing && (
+                <View style={styles.analyzingOverlay}>
+                  <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 8 }} />
+                  <Text style={styles.analyzingText}>AI Classifying Silhouette...</Text>
+                </View>
+              )}
+
+              {/* Camera & Gallery Action Buttons */}
               <View style={styles.captureOverlay}>
-                <TouchableOpacity activeOpacity={0.7} onPress={handleCaptureCamera} style={styles.captureBtn}>
-                  <Ionicons name="camera" size={16} color={COLORS.textPrimary} />
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleCaptureCamera}
+                  style={[styles.captureBtn, { backgroundColor: 'rgba(20, 19, 18, 0.88)' }]}
+                >
+                  <Ionicons name="camera" size={15} color="#FFFFFF" />
                   <Text style={styles.captureBtnText}>Camera</Text>
                 </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.7} onPress={handlePickGallery} style={styles.captureBtn}>
-                  <Ionicons name="images" size={16} color={COLORS.textPrimary} />
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handlePickGallery}
+                  style={[styles.captureBtn, { backgroundColor: 'rgba(20, 19, 18, 0.88)' }]}
+                >
+                  <Ionicons name="images" size={15} color="#FFFFFF" />
                   <Text style={styles.captureBtnText}>Gallery</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.scanBadge}>
+              {/* Real-Time Extracted Color & Identified Silhouette Badge */}
+              <View style={[styles.scanBadge, { backgroundColor: 'rgba(20, 19, 18, 0.92)' }]}>
                 <View style={[styles.scanDot, { backgroundColor: selectedHex }]} />
                 <Text style={styles.scanText}>{colorName}</Text>
+                <View style={styles.badgeDivider} />
+                <Ionicons name="sparkles" size={12} color={colors.accent} />
+                <Text style={[styles.scanText, { color: colors.accent, fontWeight: '800' }]}>
+                  {category.toUpperCase()}
+                </Text>
               </View>
             </View>
 
-            <Text style={styles.label}>Quick examples</Text>
+            {/* Quick Inspiration Presets */}
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Quick Presets</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
               {SAMPLE_PRESETS.map((p, idx) => (
                 <TouchableOpacity
                   key={idx}
                   activeOpacity={0.8}
                   onPress={() => handleSelectPreset(p)}
-                  style={styles.presetCard}
+                  style={[
+                    styles.presetCard,
+                    {
+                      backgroundColor: colors.surfaceRaised,
+                      borderColor: p.imageUrl === imageUrl ? colors.accent : colors.surfaceBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
                 >
                   <Image source={{ uri: p.imageUrl }} style={styles.presetThumb} />
-                  <Text style={styles.presetText} numberOfLines={1}>{p.name}</Text>
+                  <Text style={[styles.presetText, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {p.name}
+                  </Text>
+                  <Text style={[styles.presetSub, { color: colors.accent }]} numberOfLines={1}>
+                    {p.category}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={styles.label}>Name</Text>
+            {/* Piece Name Input */}
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Garment Name</Text>
             <TextInput
-              style={styles.input}
-              placeholder="e.g. Linen camp shirt"
-              placeholderTextColor={COLORS.textMuted}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  color: colors.textPrimary,
+                  borderColor: colors.surfaceBorder,
+                },
+              ]}
+              placeholder="e.g. Linen Relaxed Overshirt"
+              placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.label}>Category</Text>
+            {/* Category Selector with Immediate Auto-Identification */}
+            <View style={styles.catHeaderRow}>
+              <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 0, marginTop: 0 }]}>
+                Category
+              </Text>
+              {autoIdentifiedCategory && (
+                <View style={styles.autoIdentifiedTag}>
+                  <Ionicons name="sparkles" size={11} color={colors.accent} />
+                  <Text style={[styles.autoIdentifiedTagText, { color: colors.accent }]}>
+                    Auto-Identified · Tap to adjust
+                  </Text>
+                </View>
+              )}
+            </View>
+
             <View style={styles.catRow}>
               {categories.map((c) => {
                 const isActive = category === c;
+                const isAuto = autoIdentifiedCategory === c;
                 return (
                   <TouchableOpacity
                     key={c}
                     activeOpacity={0.7}
                     onPress={() => setCategory(c)}
-                    style={[styles.catBtn, isActive && styles.catBtnActive]}
+                    style={[
+                      styles.catBtn,
+                      {
+                        backgroundColor: isActive ? colors.accent : colors.surfaceRaised,
+                        borderColor: isActive ? colors.accent : colors.surfaceBorder,
+                      },
+                    ]}
                   >
-                    <Text style={[styles.catText, isActive && styles.catTextActive]}>
+                    {isAuto && (
+                      <Ionicons
+                        name="sparkles"
+                        size={11}
+                        color={isActive ? '#141312' : colors.accent}
+                        style={{ marginRight: 4 }}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.catText,
+                        { color: isActive ? '#141312' : colors.textSecondary },
+                        isActive && styles.catTextActive,
+                      ]}
+                    >
                       {c}
                     </Text>
                   </TouchableOpacity>
@@ -271,16 +405,24 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
               })}
             </View>
 
+            {/* Save to Closet Action */}
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={handleSave}
-              disabled={uploading}
-              style={[styles.saveBtn, uploading && styles.saveBtnDisabled]}
+              disabled={uploading || isAnalyzing}
+              style={[
+                styles.saveBtn,
+                { backgroundColor: colors.accent },
+                (uploading || isAnalyzing) && styles.saveBtnDisabled,
+              ]}
             >
               {uploading ? (
-                <ActivityIndicator size="small" color={COLORS.background} />
+                <ActivityIndicator size="small" color="#141312" />
               ) : (
-                <Text style={styles.saveBtnText}>Save to closet</Text>
+                <View style={styles.saveBtnContent}>
+                  <Ionicons name="checkmark-circle" size={18} color="#141312" style={{ marginRight: 6 }} />
+                  <Text style={[styles.saveBtnText, { color: '#141312' }]}>Save to Atelier Closet</Text>
+                </View>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -297,7 +439,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.surface,
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
     padding: SPACING.lg,
@@ -310,21 +451,43 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    color: COLORS.textPrimary,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  subtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   imagePreviewWrap: {
     width: '100%',
-    height: 200,
+    height: 220,
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
     marginBottom: SPACING.md,
-    backgroundColor: COLORS.surfaceRaised,
+    borderWidth: 1,
   },
   previewImage: {
     width: '100%',
     height: '100%',
+  },
+  analyzingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(14, 13, 12, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    zIndex: 10,
+  },
+  analyzingText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   captureOverlay: {
     position: 'absolute',
@@ -332,76 +495,113 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     gap: 8,
+    zIndex: 5,
   },
   captureBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(14, 13, 12, 0.8)',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: RADIUS.full,
     gap: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   captureBtnText: {
-    color: COLORS.textPrimary,
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   scanBadge: {
     position: 'absolute',
     bottom: 12,
+    left: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(14, 13, 12, 0.85)',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: RADIUS.full,
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    zIndex: 5,
   },
   scanDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   scanText: {
-    color: COLORS.textPrimary,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },
+  badgeDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
   label: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     marginBottom: 8,
-    marginTop: 6,
+    marginTop: 8,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   presetScroll: {
     marginBottom: SPACING.sm,
   },
   presetCard: {
-    width: 84,
-    marginRight: 12,
+    width: 90,
+    marginRight: 10,
     alignItems: 'center',
-  },
-  presetThumb: {
-    width: 64,
-    height: 64,
+    padding: 8,
     borderRadius: RADIUS.md,
   },
+  presetThumb: {
+    width: 58,
+    height: 58,
+    borderRadius: RADIUS.sm,
+    marginBottom: 6,
+  },
   presetText: {
-    color: COLORS.textPrimary,
-    fontSize: 10,
-    marginTop: 5,
+    fontSize: 11,
+    fontWeight: '700',
     textAlign: 'center',
   },
+  presetSub: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+    textTransform: 'capitalize',
+  },
   input: {
-    backgroundColor: COLORS.surfaceRaised,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: 12,
-    color: COLORS.textPrimary,
     fontSize: 14,
+    borderWidth: 1,
     marginBottom: SPACING.sm,
+  },
+  catHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  autoIdentifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  autoIdentifiedTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   catRow: {
     flexDirection: 'row',
@@ -410,38 +610,41 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   catBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceRaised,
-  },
-  catBtnActive: {
-    backgroundColor: COLORS.accent,
+    borderWidth: 1,
   },
   catText: {
-    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   catTextActive: {
-    color: COLORS.background,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   saveBtn: {
-    backgroundColor: COLORS.accent,
     paddingVertical: 15,
     borderRadius: RADIUS.md,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: SPACING.sm,
     marginBottom: 24,
+    ...SHADOWS.float,
+  },
+  saveBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBtnDisabled: {
     opacity: 0.6,
   },
   saveBtnText: {
-    color: COLORS.background,
     fontSize: 15,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });
