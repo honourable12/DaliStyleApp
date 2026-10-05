@@ -127,7 +127,7 @@ export function generatePrecombinedLooks(
 
   for (const top of availableTops) {
     for (const bottom of availableBottoms) {
-      if (top.id === bottom.id && wardrobe.length > 1) continue;
+      if (top.id === bottom.id) continue;
 
       const comboKey = `${top.id}_${bottom.id}`;
       if (seenCombos.has(comboKey)) continue;
@@ -154,7 +154,7 @@ export function generatePrecombinedLooks(
         const stylingNote = `Precombined ${harmony.type} look. Blends ${top.primaryColorName} with ${bottom.primaryColorName} for a balanced silhouette.`;
 
         results.push({
-          id: `matched-${top.id.slice(0, 4)}-${bottom.id.slice(0, 4)}`,
+          id: `matched-${top.id}-${bottom.id}-${results.length}`,
           items,
           harmonyScore: harmony.score,
           skinContrastScore: skinContrast,

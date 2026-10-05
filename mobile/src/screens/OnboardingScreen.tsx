@@ -15,6 +15,7 @@ import { MONK_SCALE } from '../core/monkScale';
 import { UserStyleProfile, MonkTone, WardrobeItem } from '../types';
 import { GarmentVisual } from '../components/GarmentVisual';
 import { calculateGarmentHarmony, calculateSkinContrast } from '../core/colorTheory';
+import { wardrobeStore } from '../db/storage';
 
 interface OnboardingScreenProps {
   initialProfile: UserStyleProfile;
@@ -89,7 +90,14 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   };
 
   const finishOnboarding = () => {
-    const tone = selectedTone || MONK_SCALE[4];
+    const tone = selectedTone;
+    if (!tone) return;
+    wardrobeStore.completeCalibration({
+      monkLabel: tone.label,
+      skinHex: tone.hex,
+      skinName: tone.name,
+      persona: selectedPersona,
+    });
     const updatedProfile: UserStyleProfile = {
       ...initialProfile,
       monkLabel: tone.label,

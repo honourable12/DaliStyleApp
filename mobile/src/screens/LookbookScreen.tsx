@@ -58,7 +58,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
 
       <FlatList
         data={displayedList}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => (item.id ? `${item.id}-${index}` : String(index))}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
@@ -105,8 +105,8 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
               </View>
 
               <View style={styles.thumbRow}>
-                {item.items.map((garment) => (
-                  <View key={garment.id} style={styles.thumbWrap}>
+                {item.items.map((garment, gIdx) => (
+                  <View key={`${garment.id}-${gIdx}`} style={styles.thumbWrap}>
                     <GarmentVisual
                       imageUrl={garment.imageUrl}
                       category={garment.category}

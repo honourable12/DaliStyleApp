@@ -60,7 +60,7 @@ export const OutfitRing: React.FC<OutfitRingProps> = ({
 
           return (
             <TouchableOpacity
-              key={item.id}
+              key={`${item.id}-${index}`}
               activeOpacity={0.85}
               onPress={() => onSelectItem && onSelectItem(item)}
               style={[

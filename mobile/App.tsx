@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,11 +30,36 @@ import { batchUploadQueue } from './src/uploads/BatchUploadQueue';
 import { wardrobeStore } from './src/db/storage';
 import { generateDailyOutfit, generatePrecombinedLooks, WeatherCondition } from './src/core/stylingEngine';
 import { calculateGarmentHarmony, calculateSkinContrast } from './src/core/colorTheory';
-import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser } from './src/types';
+import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUser, ThemeMode } from './src/types';
 import { requestAndFetchLocationWeather, fetchOpenMeteoWeather } from './src/services/weatherService';
 
 export default function App() {
-  const initialMode = wardrobeStore.getThemeMode();
+  const [isStoreReady, setIsStoreReady] = useState(false);
+  const [initialMode, setInitialMode] = useState<ThemeMode>('editorial');
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      await wardrobeStore.init();
+      if (mounted) {
+        setInitialMode(wardrobeStore.getThemeMode());
+        setIsStoreReady(true);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!isStoreReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#141312', alignItems: 'center', justifyContent: 'center' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#141312" />
+        <ActivityIndicator size="large" color="#E8A830" />
+      </View>
+    );
+  }
+
   return (
     <ThemeProvider initialMode={initialMode}>
       <StyloraApp />
@@ -44,9 +70,9 @@ export default function App() {
 function StyloraApp() {
   const { colors, mode } = useTheme();
   const [activeTab, setActiveTab] = useState<'today' | 'closet' | 'studio' | 'lookbook' | 'feed' | 'profile'>('today');
-  const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
+  const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([...wardrobeStore.getItems()]);
   const [profile, setProfile] = useState<UserStyleProfile>(wardrobeStore.getProfile());
-  const [savedLooks, setSavedLooks] = useState<OutfitRecommendation[]>([]);
+  const [savedLooks, setSavedLooks] = useState<OutfitRecommendation[]>([...wardrobeStore.getLookbook()]);
   const [todayOutfit, setTodayOutfit] = useState<OutfitRecommendation | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -76,20 +102,8 @@ function StyloraApp() {
 
   useEffect(() => {
     (async () => {
-      await wardrobeStore.init();
       const items = wardrobeStore.getItems();
       const prof = wardrobeStore.getProfile();
-      const saved = wardrobeStore.getLookbook();
-      const user = wardrobeStore.getCurrentUser();
-      const welcomeSeen = wardrobeStore.getHasSeenWelcome();
-      const onboardingCompleted = wardrobeStore.getHasCompletedOnboarding();
-
-      setWardrobe(items);
-      setProfile(prof);
-      setSavedLooks(saved);
-      setCurrentUser(user);
-      setHasSeenWelcome(welcomeSeen);
-      setIsOnboardingActive(!onboardingCompleted);
 
       let activeWeather = currentWeather;
       if (prof.latitude && prof.longitude) {
@@ -233,13 +247,12 @@ function StyloraApp() {
   };
 
   const handleSelectTone = (tone: MonkTone) => {
-    const updatedProf: UserStyleProfile = {
-      ...profile,
+    wardrobeStore.completeCalibration({
       monkLabel: tone.label,
       skinHex: tone.hex,
       skinName: tone.name,
-    };
-    wardrobeStore.updateProfile(updatedProf);
+    });
+    const updatedProf = wardrobeStore.getProfile();
     setProfile(updatedProf);
 
     const recalibrated = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
@@ -363,8 +376,9 @@ function StyloraApp() {
     );
   }
 
-  // Onboarding flow (only on first launch or if explicitly relaunched)
-  if (isOnboardingActive) {
+  // Calibration & Onboarding Gate (Blocks access until biometric calibration is completed)
+  const isCalibrated = wardrobeStore.isProfileCalibrated();
+  if (isOnboardingActive || !isCalibrated) {
     return (
       <SafeAreaProvider>
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
@@ -374,11 +388,17 @@ function StyloraApp() {
             seedWardrobe={wardrobe}
             onOpenSelfie={() => setSelfieModalVisible(true)}
             onComplete={(newProfile) => {
-              wardrobeStore.updateProfile(newProfile);
+              wardrobeStore.completeCalibration({
+                monkLabel: newProfile.monkLabel,
+                skinHex: newProfile.skinHex,
+                skinName: newProfile.skinName,
+                persona: newProfile.persona,
+              });
               wardrobeStore.setHasCompletedOnboarding(true);
-              setProfile(newProfile);
+              const updatedProf = wardrobeStore.getProfile();
+              setProfile(updatedProf);
               setIsOnboardingActive(false);
-              const refreshed = generateDailyOutfit(wardrobe, newProfile, currentWeather);
+              const refreshed = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
               setTodayOutfit(refreshed);
             }}
           />

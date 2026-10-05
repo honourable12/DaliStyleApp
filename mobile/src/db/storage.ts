@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WardrobeItem, UserStyleProfile, OutfitRecommendation, ClothingCategory, AuthUser, ThemeMode } from '../types';
+import { useSyncExternalStore } from 'react';
+import {
+  WardrobeItem,
+  UserStyleProfile,
+  OutfitRecommendation,
+  ClothingCategory,
+  AuthUser,
+  ThemeMode,
+} from '../types';
 
 export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   id: 'user-default-1',
@@ -10,7 +18,6 @@ export const DEFAULT_USER_PROFILE: UserStyleProfile = {
   locationName: '',
 };
 
-// Storage keys for persistent state
 const STORAGE_KEYS = {
   WARDROBE: '@stylora_wardrobe_v1',
   PROFILE: '@stylora_profile_v1',
@@ -19,9 +26,13 @@ const STORAGE_KEYS = {
   WELCOME_SEEN: '@stylora_welcome_seen_v1',
   THEME_MODE: '@stylora_theme_mode_v1',
   CURRENT_USER: '@stylora_current_user_v1',
+} as const;
+
+const log = (msg: string, err?: unknown) => {
+  if (__DEV__) console.warn(`[wardrobeStore] ${msg}`, err ?? '');
 };
 
-function normalizeCategory(cat: string): ClothingCategory {
+export function normalizeCategory(cat: string): ClothingCategory {
   const c = String(cat || '').toLowerCase();
   if (['top', 'shirt', 't-shirt', 'sweater', 'hoodie', 'blouse'].some((k) => c.includes(k))) return 'top';
   if (['bottom', 'trousers', 'pants', 'jeans', 'shorts', 'skirt'].some((k) => c.includes(k))) return 'bottom';
@@ -30,68 +41,112 @@ function normalizeCategory(cat: string): ClothingCategory {
   return 'accessory';
 }
 
+/** Parse JSON safely: a corrupt key returns the fallback instead of breaking everything. */
+function safeParse<T>(raw: string | null, fallback: T, key: string): T {
+  if (raw === null) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    log(`Corrupt data for ${key}, using default`, e);
+    return fallback;
+  }
+}
+
+type Listener = () => void;
+
 class LocalWardrobeStore {
-  // Empty wardrobe for test launch - encouraging users to digitize and add their own pieces
+  // NOTE: state is treated as immutable. We always replace arrays/objects, never mutate them.
+  // That lets getters return stable references (needed for useSyncExternalStore).
   private wardrobe: WardrobeItem[] = [];
   private profile: UserStyleProfile = { ...DEFAULT_USER_PROFILE };
   private lookbook: OutfitRecommendation[] = [];
-  private hasCompletedOnboarding: boolean = false;
-  private hasSeenWelcome: boolean = false;
+  private hasCompletedOnboarding = false;
+  private hasSeenWelcome = false;
   private currentUser: AuthUser | null = null;
   private themeMode: ThemeMode = 'editorial';
-  private initialized: boolean = false;
 
-  /**
-   * Initializes store by loading persisted records from AsyncStorage
-   */
-  async init(): Promise<void> {
-    if (this.initialized) return;
+  private initialized = false;
+  private initPromise: Promise<void> | null = null;
+
+  // Writes are queued so they hit disk in order and never overlap.
+  private writeQueue: Promise<void> = Promise.resolve();
+  private listeners = new Set<Listener>();
+
+
+  /** Safe to call many times; every caller gets the same promise. Await it before rendering. */
+  init(): Promise<void> {
+    if (!this.initPromise) this.initPromise = this.loadFromDisk();
+    return this.initPromise;
+  }
+
+  isReady(): boolean {
+    return this.initialized;
+  }
+
+  private async loadFromDisk(): Promise<void> {
     try {
-      const [
-        savedWardrobe,
-        savedProfile,
-        savedLookbook,
-        savedOnboarding,
-        savedWelcome,
-        savedTheme,
-        savedUser,
-      ] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.WARDROBE),
-        AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
-        AsyncStorage.getItem(STORAGE_KEYS.LOOKBOOK),
-        AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED),
-        AsyncStorage.getItem(STORAGE_KEYS.WELCOME_SEEN),
-        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE),
-        AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER),
-      ]);
+      const entries = await AsyncStorage.multiGet(Object.values(STORAGE_KEYS));
+      const raw = Object.fromEntries(entries) as Record<string, string | null>;
 
-      if (savedWardrobe) {
-        this.wardrobe = JSON.parse(savedWardrobe);
-      }
-      if (savedProfile) {
-        this.profile = JSON.parse(savedProfile);
-      }
-      if (savedLookbook) {
-        this.lookbook = JSON.parse(savedLookbook);
-      }
-      if (savedOnboarding !== null) {
-        this.hasCompletedOnboarding = savedOnboarding === 'true';
-      }
-      if (savedWelcome !== null) {
-        this.hasSeenWelcome = savedWelcome === 'true';
-      }
-      if (savedTheme === 'editorial' || savedTheme === 'alabaster') {
-        this.themeMode = savedTheme;
-      }
-      if (savedUser) {
-        this.currentUser = JSON.parse(savedUser);
-      }
-    } catch {
-      // Graceful fallback to memory defaults
+      const wardrobe = safeParse<WardrobeItem[]>(raw[STORAGE_KEYS.WARDROBE], [], 'wardrobe');
+      // Re-normalize categories so older/messy saved data is cleaned on load
+      this.wardrobe = wardrobe.map((i) => ({ ...i, category: normalizeCategory((i as any).category) }));
+
+      this.profile = { ...DEFAULT_USER_PROFILE, ...safeParse(raw[STORAGE_KEYS.PROFILE], {}, 'profile') };
+      this.lookbook = safeParse<OutfitRecommendation[]>(raw[STORAGE_KEYS.LOOKBOOK], [], 'lookbook');
+      this.hasCompletedOnboarding = raw[STORAGE_KEYS.ONBOARDING_COMPLETED] === 'true';
+      this.hasSeenWelcome = raw[STORAGE_KEYS.WELCOME_SEEN] === 'true';
+
+      const theme = raw[STORAGE_KEYS.THEME_MODE];
+      if (theme === 'editorial' || theme === 'alabaster') this.themeMode = theme;
+
+      this.currentUser = safeParse<AuthUser | null>(raw[STORAGE_KEYS.CURRENT_USER], null, 'user');
+    } catch (e) {
+      log('Failed to load from storage, using defaults', e);
     } finally {
       this.initialized = true;
+      this.emit();
     }
   }
+
+  // ---------- Subscriptions (makes the UI reactive) ----------
+
+  subscribe = (listener: Listener): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  private emit() {
+    this.listeners.forEach((l) => l());
+  }
+
+  // ---------- Persistence ----------
+
+  private persist(key: string, value: string | null) {
+    if (!this.initialized) {
+      log(`Write to ${key} before init() finished. Await wardrobeStore.init() first.`);
+    }
+    this.writeQueue = this.writeQueue.then(async () => {
+      try {
+        if (value === null) await AsyncStorage.removeItem(key);
+        else await AsyncStorage.setItem(key, value);
+      } catch (e) {
+        log(`Failed to save ${key}`, e);
+      }
+    });
+  }
+
+  /** Resolves once all pending writes are on disk (useful before app close / in tests). */
+  flush(): Promise<void> {
+    return this.writeQueue;
+  }
+
+  private commit(key: string, value: unknown) {
+    this.persist(key, JSON.stringify(value));
+    this.emit();
+  }
+
+  // ---------- Theme ----------
 
   getThemeMode(): ThemeMode {
     return this.themeMode;
@@ -99,52 +154,73 @@ class LocalWardrobeStore {
 
   setThemeMode(mode: ThemeMode): void {
     this.themeMode = mode;
-    AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, mode).catch(() => {});
+    this.persist(STORAGE_KEYS.THEME_MODE, mode);
+    this.emit();
   }
 
+  // ---------- Wardrobe ----------
+
   getItems(): WardrobeItem[] {
-    return [...this.wardrobe];
+    return this.wardrobe;
   }
 
   addItem(item: WardrobeItem): void {
-    this.wardrobe.unshift(item);
-    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
+    const normalized = { ...item, category: normalizeCategory((item as any).category) };
+    this.wardrobe = [normalized, ...this.wardrobe];
+    this.commit(STORAGE_KEYS.WARDROBE, this.wardrobe);
   }
 
   setItems(items: WardrobeItem[]): void {
-    this.wardrobe = [...items];
-    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
+    this.wardrobe = items.map((i) => ({ ...i, category: normalizeCategory((i as any).category) }));
+    this.commit(STORAGE_KEYS.WARDROBE, this.wardrobe);
   }
 
   removeItem(id: string): void {
     this.wardrobe = this.wardrobe.filter((i) => i.id !== id);
-    AsyncStorage.setItem(STORAGE_KEYS.WARDROBE, JSON.stringify(this.wardrobe)).catch(() => {});
+    this.commit(STORAGE_KEYS.WARDROBE, this.wardrobe);
   }
+
+  // ---------- Profile ----------
 
   getProfile(): UserStyleProfile {
-    return { ...this.profile };
+    return this.profile;
   }
 
-  updateProfile(newProfile: Partial<UserStyleProfile>): void {
-    this.profile = { ...this.profile, ...newProfile };
-    AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(this.profile)).catch(() => {});
+  updateProfile(patch: Partial<UserStyleProfile>): void {
+    this.profile = { ...this.profile, ...patch };
+    this.commit(STORAGE_KEYS.PROFILE, this.profile);
   }
+
+  /** True once the user has completed skin-tone calibration. Use this to gate the app. */
+  isProfileCalibrated(): boolean {
+    return !!this.profile.skinHex && !!this.profile.monkLabel;
+  }
+
+  /** Saves the calibration only if the required fields are present. Returns false if rejected. */
+  completeCalibration(data: Pick<UserStyleProfile, 'monkLabel' | 'skinHex' | 'skinName'> & Partial<UserStyleProfile>): boolean {
+    if (!data.monkLabel?.trim() || !data.skinHex?.trim()) return false;
+    this.updateProfile(data);
+    return true;
+  }
+
+  // ---------- Lookbook ----------
 
   getLookbook(): OutfitRecommendation[] {
-    return [...this.lookbook];
+    return this.lookbook;
   }
 
   saveToLookbook(outfit: OutfitRecommendation): void {
-    if (!this.lookbook.some((o) => o.id === outfit.id)) {
-      this.lookbook.unshift({ ...outfit, savedInLookbook: true });
-      AsyncStorage.setItem(STORAGE_KEYS.LOOKBOOK, JSON.stringify(this.lookbook)).catch(() => {});
-    }
+    if (this.lookbook.some((o) => o.id === outfit.id)) return;
+    this.lookbook = [{ ...outfit, savedInLookbook: true }, ...this.lookbook];
+    this.commit(STORAGE_KEYS.LOOKBOOK, this.lookbook);
   }
 
   removeFromLookbook(id: string): void {
     this.lookbook = this.lookbook.filter((o) => o.id !== id);
-    AsyncStorage.setItem(STORAGE_KEYS.LOOKBOOK, JSON.stringify(this.lookbook)).catch(() => {});
+    this.commit(STORAGE_KEYS.LOOKBOOK, this.lookbook);
   }
+
+  // ---------- Onboarding flags ----------
 
   getHasCompletedOnboarding(): boolean {
     return this.hasCompletedOnboarding;
@@ -152,7 +228,8 @@ class LocalWardrobeStore {
 
   setHasCompletedOnboarding(completed: boolean): void {
     this.hasCompletedOnboarding = completed;
-    AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, String(completed)).catch(() => {});
+    this.persist(STORAGE_KEYS.ONBOARDING_COMPLETED, String(completed));
+    this.emit();
   }
 
   getHasSeenWelcome(): boolean {
@@ -161,33 +238,56 @@ class LocalWardrobeStore {
 
   setHasSeenWelcome(seen: boolean): void {
     this.hasSeenWelcome = seen;
-    AsyncStorage.setItem(STORAGE_KEYS.WELCOME_SEEN, String(seen)).catch(() => {});
+    this.persist(STORAGE_KEYS.WELCOME_SEEN, String(seen));
+    this.emit();
   }
 
+  // ---------- Auth (local cache only, not real authentication) ----------
+
   getCurrentUser(): AuthUser | null {
-    return this.currentUser ? { ...this.currentUser } : null;
+    return this.currentUser;
   }
 
   setCurrentUser(user: AuthUser | null): void {
     this.currentUser = user ? { ...user } : null;
-    if (user) {
-      AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user)).catch(() => {});
-    } else {
-      AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_USER).catch(() => {});
-    }
+    this.persist(STORAGE_KEYS.CURRENT_USER, user ? JSON.stringify(user) : null);
+    this.emit();
   }
 
   logout(): void {
-    this.currentUser = null;
-    AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_USER).catch(() => {});
+    this.setCurrentUser(null);
   }
 
-  /**
-   * Sync with backend commented out / inactive for offline test launch
-   */
-  async syncWithBackend(baseUrl = 'http://10.0.2.2:8000'): Promise<{ count: number; error?: string }> {
+  /** Wipe everything (e.g. "Delete my data"). Optionally keep nothing at all. */
+  async clearAll(): Promise<void> {
+    this.wardrobe = [];
+    this.lookbook = [];
+    this.profile = { ...DEFAULT_USER_PROFILE };
+    this.currentUser = null;
+    this.hasCompletedOnboarding = false;
+    this.hasSeenWelcome = false;
+    this.themeMode = 'editorial';
+    this.writeQueue = this.writeQueue.then(() =>
+      AsyncStorage.multiRemove(Object.values(STORAGE_KEYS)).catch((e) => log('clearAll failed', e)),
+    );
+    this.emit();
+    await this.writeQueue;
+  }
+
+  async syncWithBackend(_baseUrl = 'http://10.0.2.2:8000'): Promise<{ count: number; error?: string }> {
     return { count: 0, error: 'Offline mode active for test launch' };
   }
 }
 
 export const wardrobeStore = new LocalWardrobeStore();
+
+/**
+ * React hook: re-renders the component whenever the store changes.
+ * The selector must return a stable reference (the getters above do).
+ *
+ *   const items = useWardrobe((s) => s.getItems());
+ *   const theme = useWardrobe((s) => s.getThemeMode());
+ */
+export function useWardrobe<T>(selector: (s: LocalWardrobeStore) => T): T {
+  return useSyncExternalStore(wardrobeStore.subscribe, () => selector(wardrobeStore));
+}

@@ -15,6 +15,7 @@ import { COLORS, RADIUS, SPACING } from '../theme';
 import { MONK_SCALE, MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { MonkTone } from '../types';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
+import { wardrobeStore } from '../db/storage';
 
 interface SelfieCalibrationModalProps {
   visible: boolean;
@@ -120,6 +121,11 @@ export const SelfieCalibrationModal: React.FC<SelfieCalibrationModalProps> = ({
 
   const handleConfirm = () => {
     if (detectedResult) {
+      wardrobeStore.completeCalibration({
+        monkLabel: detectedResult.label,
+        skinHex: detectedResult.hex,
+        skinName: detectedResult.name,
+      });
       onCalibrate(detectedResult);
       onClose();
       Alert.alert(

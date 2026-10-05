@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MONK_SCALE, MONK_PALETTE_PROFILES } from '../core/monkScale';
 import { COLORS, RADIUS, SPACING } from '../theme';
 import { MonkTone } from '../types';
+import { wardrobeStore } from '../db/storage';
 
 interface MonkCalibrationModalProps {
   visible: boolean;
@@ -46,6 +47,11 @@ export const MonkCalibrationModal: React.FC<MonkCalibrationModalProps> = ({
                   key={tone.label}
                   activeOpacity={0.7}
                   onPress={() => {
+                    wardrobeStore.completeCalibration({
+                      monkLabel: tone.label,
+                      skinHex: tone.hex,
+                      skinName: tone.name,
+                    });
                     onSelectTone(tone);
                     onClose();
                   }}
