@@ -8,7 +8,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, RADIUS, SPACING, SHADOWS, TYPOGRAPHY } from '../theme';
 
@@ -83,7 +83,8 @@ export function showAtelierConfirm(options: ConfirmOptions) {
 }
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const insets = useSafeAreaInsets();
+  const contextInsets = useContext(SafeAreaInsetsContext);
+  const insets = contextInsets ?? { top: 0, bottom: 0, left: 0, right: 0 };
   const { colors } = useTheme();
 
   // Toast state

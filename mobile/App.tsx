@@ -5,13 +5,13 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING, SHADOWS, ThemeProvider, useTheme } from './src/theme';
 import { HeaderBar } from './src/components/HeaderBar';
+import { StyloraLogo } from './src/components/StyloraLogo';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { ClosetScreen } from './src/screens/ClosetScreen';
 import { StudioScreen } from './src/screens/StudioScreen';
@@ -34,6 +34,57 @@ import { WardrobeItem, OutfitRecommendation, MonkTone, UserStyleProfile, AuthUse
 import { requestAndFetchLocationWeather, fetchOpenMeteoWeather } from './src/services/weatherService';
 import { ToastProvider, showAtelierToast } from './src/context/ToastContext';
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class AtelierErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: any) {
+    if (__DEV__) {
+      console.error('[Atelier Error Boundary Catch]', error, info);
+    }
+  }
+
+  handleRestart = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={errorStyles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#0E0D0C" />
+          <StyloraLogo size={56} />
+          <Text style={errorStyles.kicker}>ATELIER RECOVERY ENGINE</Text>
+          <Text style={errorStyles.headline}>Session Safely Intercepted</Text>
+          <Text style={errorStyles.message}>
+            {this.state.error?.message ||
+              'A runtime exception was contained to preserve your wardrobe data integrity.'}
+          </Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={this.handleRestart}
+            style={errorStyles.button}
+          >
+            <Text style={errorStyles.buttonText}>Restart Atelier</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [isStoreReady, setIsStoreReady] = useState(false);
   const [initialMode, setInitialMode] = useState<ThemeMode>('editorial');
@@ -41,7 +92,11 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      await wardrobeStore.init();
+      try {
+        await wardrobeStore.init();
+      } catch (e) {
+        if (__DEV__) console.warn('Failed initializing wardrobeStore', e);
+      }
       if (mounted) {
         setInitialMode(wardrobeStore.getThemeMode());
         setIsStoreReady(true);
@@ -52,21 +107,23 @@ export default function App() {
     };
   }, []);
 
-  if (!isStoreReady) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#141312', alignItems: 'center', justifyContent: 'center' }}>
-        <StatusBar barStyle="light-content" backgroundColor="#141312" />
-        <ActivityIndicator size="large" color="#E8A830" />
-      </View>
-    );
-  }
-
   return (
-    <ThemeProvider initialMode={initialMode}>
-      <ToastProvider>
-        <StyloraApp />
-      </ToastProvider>
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AtelierErrorBoundary>
+        {!isStoreReady ? (
+          <View style={{ flex: 1, backgroundColor: '#141312', alignItems: 'center', justifyContent: 'center' }}>
+            <StatusBar barStyle="light-content" backgroundColor="#141312" />
+            <ActivityIndicator size="large" color="#E8A830" />
+          </View>
+        ) : (
+          <ThemeProvider initialMode={initialMode}>
+            <ToastProvider>
+              <StyloraApp />
+            </ToastProvider>
+          </ThemeProvider>
+        )}
+      </AtelierErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
@@ -373,48 +430,44 @@ function StyloraApp() {
 
   if (isAuthActive) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-          <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-          <AuthScreen
-            onAuthSuccess={(user) => {
-              wardrobeStore.setCurrentUser(user);
-              setCurrentUser(user);
-              setIsAuthActive(false);
-              showAtelierToast({
-                title: 'ATELIER AUTHENTICATED',
-                message: `Welcome back, ${user.name || user.email}!`,
-                type: 'success',
-              });
-            }}
-            onSkipToGuest={() => {
-              setIsAuthActive(false);
-            }}
-          />
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+        <AuthScreen
+          onAuthSuccess={(user) => {
+            wardrobeStore.setCurrentUser(user);
+            setCurrentUser(user);
+            setIsAuthActive(false);
+            showAtelierToast({
+              title: 'ATELIER AUTHENTICATED',
+              message: `Welcome back, ${user.name || user.email}!`,
+              type: 'success',
+            });
+          }}
+          onSkipToGuest={() => {
+            setIsAuthActive(false);
+          }}
+        />
+      </SafeAreaView>
     );
   }
 
   // First launch page telling users about Stylora before onboarding
   if (!hasSeenWelcome) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
-          <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
-          <WelcomeScreen
-            onStart={() => {
-              wardrobeStore.setHasSeenWelcome(true);
-              setHasSeenWelcome(true);
-            }}
-            onSignIn={() => {
-              wardrobeStore.setHasSeenWelcome(true);
-              setHasSeenWelcome(true);
-              setIsAuthActive(true);
-            }}
-          />
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+        <WelcomeScreen
+          onStart={() => {
+            wardrobeStore.setHasSeenWelcome(true);
+            setHasSeenWelcome(true);
+          }}
+          onSignIn={() => {
+            wardrobeStore.setHasSeenWelcome(true);
+            setHasSeenWelcome(true);
+            setIsAuthActive(true);
+          }}
+        />
+      </SafeAreaView>
     );
   }
 
@@ -422,42 +475,39 @@ function StyloraApp() {
   const isCalibrated = wardrobeStore.isProfileCalibrated();
   if (isOnboardingActive || !isCalibrated) {
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
-          <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
-          <OnboardingScreen
-            initialProfile={profile}
-            seedWardrobe={wardrobe}
-            onOpenSelfie={() => setSelfieModalVisible(true)}
-            onComplete={(newProfile) => {
-              wardrobeStore.completeCalibration({
-                monkLabel: newProfile.monkLabel,
-                skinHex: newProfile.skinHex,
-                skinName: newProfile.skinName,
-                persona: newProfile.persona,
-              });
-              wardrobeStore.setHasCompletedOnboarding(true);
-              const updatedProf = wardrobeStore.getProfile();
-              setProfile(updatedProf);
-              setIsOnboardingActive(false);
-              const refreshed = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
-              setTodayOutfit(refreshed);
-            }}
-          />
-          <SelfieCalibrationModal
-            visible={selfieModalVisible}
-            onClose={() => setSelfieModalVisible(false)}
-            onCalibrate={handleSelectTone}
-          />
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+        <OnboardingScreen
+          initialProfile={profile}
+          seedWardrobe={wardrobe}
+          onOpenSelfie={() => setSelfieModalVisible(true)}
+          onComplete={(newProfile) => {
+            wardrobeStore.completeCalibration({
+              monkLabel: newProfile.monkLabel,
+              skinHex: newProfile.skinHex,
+              skinName: newProfile.skinName,
+              persona: newProfile.persona,
+            });
+            wardrobeStore.setHasCompletedOnboarding(true);
+            const updatedProf = wardrobeStore.getProfile();
+            setProfile(updatedProf);
+            setIsOnboardingActive(false);
+            const refreshed = generateDailyOutfit(wardrobe, updatedProf, currentWeather);
+            setTodayOutfit(refreshed);
+          }}
+        />
+        <SelfieCalibrationModal
+          visible={selfieModalVisible}
+          onClose={() => setSelfieModalVisible(false)}
+          onCalibrate={handleSelectTone}
+        />
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
-        <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
 
         {/* Global DRAPE Header */}
         <HeaderBar
@@ -616,9 +666,8 @@ function StyloraApp() {
         {/* Batch Upload Progress Overlay — auto-shows when jobs exist */}
         <BatchUploadSheet />
       </SafeAreaView>
-    </SafeAreaProvider>
-  );
-}
+    );
+  }
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -664,5 +713,51 @@ const styles = StyleSheet.create({
   navTextActive: {
     color: COLORS.accent,
     fontWeight: '700',
+  },
+});
+
+const errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0E0D0C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.xl,
+  },
+  kicker: {
+    color: '#E8A830',
+    fontSize: 12,
+    letterSpacing: 2,
+    fontWeight: '700',
+    marginTop: SPACING.lg,
+    textTransform: 'uppercase',
+  },
+  headline: {
+    color: '#F2EDE6',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+  },
+  message: {
+    color: 'rgba(242, 237, 230, 0.65)',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
+  button: {
+    marginTop: SPACING.xl,
+    backgroundColor: '#E8A830',
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  buttonText: {
+    color: '#0E0D0C',
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
 });

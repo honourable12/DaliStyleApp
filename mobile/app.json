@@ -15,8 +15,22 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.stylora.app"
     },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Stylora to access your photo library to add garments to your atelier wardrobe.",
+          "cameraPermission": "Allow Stylora to access your camera to capture garments and calibrate authentic undertones."
+        }
+      ]
+    ],
     "android": {
       "package": "com.stylora.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#F2EDE6",
         "foregroundImage": "./assets/android-icon-foreground.png",
