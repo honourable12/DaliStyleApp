@@ -175,11 +175,12 @@ class BatchUploadQueue {
       this.updateJob(jobId, { status: 'processing', progress: 0.6 });
 
       // 2. On-device edge AI: extract color + suggest category
-      let primaryHex = '#E8A830';
-      let primaryName = 'Rust / Turmeric';
+      let primaryHex = '#1A1917';
+      let primaryName = 'Black';
       let category: ClothingCategory = 'top';
       try {
-        const edgeResult = await EdgeAIPipeline.processGarment(job.localUri);
+        const filename = job.localUri.split('/').pop() || '';
+        const edgeResult = await EdgeAIPipeline.processGarment(job.localUri, 1.0, filename);
         primaryHex = edgeResult.primaryHex;
         primaryName = edgeResult.primaryName;
         category = edgeResult.suggestedCategory;

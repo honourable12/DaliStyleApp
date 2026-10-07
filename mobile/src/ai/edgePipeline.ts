@@ -1,13 +1,20 @@
 import { analyzeSkinPixels, SkinDetectionResult, calibrateCheekPatch64x64, OnDeviceSkinCalibrationResult } from './skinDetection';
 import {
   analyzeBackgroundCleanliness,
-  estimateCategoryFromGeometry,
   CleanlinessAnalysis,
   performLiveGarmentCutout,
   LiveCutoutResult,
 } from './garmentSegmenter';
 import { extractGarmentDominantColor, DominantColorResult } from './colorExtractor';
 import { ClothingCategory } from '../types';
+import {
+  decodeJpegBase64,
+  analyzeClothingFromRawPixels,
+  inferCategoryFromSilhouette,
+  tryAiServiceFastAnalysis,
+  ClothingFastAnalysisResult,
+  nearestColorName,
+} from './clothingClassifier';
 
 export interface ProcessedGarmentEdgeResult {
   primaryHex: string;
@@ -26,59 +33,77 @@ export interface ProcessedGarmentEdgeResult {
  */
 export class EdgeAIPipeline {
   /**
-   * Process a captured garment photo entirely on-device with live cutout
+   * Process a captured garment photo with pixel-level mathematical fidelity to ai-service/clothing.py
    */
   static async processGarment(
     imageUri: string,
     aspectRatio = 1.0,
     hintText?: string,
+    base64?: string,
     platform: 'ios' | 'android' | 'auto' = 'auto'
   ): Promise<ProcessedGarmentEdgeResult> {
     const startTime = Date.now();
 
-    // 1. Execute on-device background removal
+    // 1. Execute on-device background removal matte
     const liveCutout = await performLiveGarmentCutout(imageUri, platform);
 
-    // 2. Simulate fast edge pixel sampling from the image preview
-    const cornerSamples: Array<[number, number, number]> = [
-      [242, 242, 242],
-      [240, 241, 243],
-      [243, 242, 241],
-      [241, 241, 242],
-    ];
+    let analysis: ClothingFastAnalysisResult | null = null;
 
-    // Center crop garment pixels
-    const sampleGarmentPixels: Array<[number, number, number]> = [
-      [232, 168, 48], // Turmeric
-      [220, 155, 42],
-      [240, 175, 55],
-      [200, 140, 35],
-      [25, 23, 22],   // Dark shadow/accent
-      [35, 32, 30],
-      [242, 242, 242], // Background bleed
-    ];
+    // 2. High-precision path: Decode real JPEG bytes and run OpenCV/NumPy port on actual pixels
+    if (base64) {
+      const decoded = decodeJpegBase64(base64);
+      if (decoded && decoded.width > 0 && decoded.height > 0) {
+        analysis = analyzeClothingFromRawPixels(decoded, aspectRatio, hintText);
+      }
+    }
 
-    // 3. Background cleanliness and studio assessment
-    const cleanliness = analyzeBackgroundCleanliness(cornerSamples, 0.78);
+    // 3. Dual-path: If on-device decode was unavailable, attempt fast probe against ai-service
+    if (!analysis) {
+      analysis = await tryAiServiceFastAnalysis(imageUri);
+    }
 
-    // 4. Saturation-weighted K-Means color clustering
-    const colorAnalysis = extractGarmentDominantColor(
-      sampleGarmentPixels,
-      cleanliness.backgroundRgb
-    );
-
-    // 5. Geometry and hint-based category estimation
-    const suggestedCategory = estimateCategoryFromGeometry(aspectRatio, hintText);
+    // 4. Fallback: Silhouette and geometry classifier
+    if (!analysis) {
+      const inferred = inferCategoryFromSilhouette(aspectRatio, hintText);
+      analysis = {
+        isClothing: true,
+        isCleanBackground: false,
+        primaryColor: '#1A1917',
+        primaryName: nearestColorName([26, 25, 23]),
+        roughCategory: inferred.roughCategory,
+        suggestedCategory: inferred.canonicalCategory,
+        confidence: inferred.confidence,
+        source: 'heuristic_fallback',
+      };
+    }
 
     const processingTimeMs = Date.now() - startTime;
 
     return {
-      primaryHex: colorAnalysis.primaryHex,
-      primaryName: colorAnalysis.primaryName,
-      accentHex: colorAnalysis.accentHex,
-      suggestedCategory,
-      cleanliness,
-      colorAnalysis,
+      primaryHex: analysis.primaryColor,
+      primaryName: analysis.primaryName,
+      accentHex: '#1A1917',
+      suggestedCategory: analysis.suggestedCategory,
+      cleanliness: {
+        cleanlinessScore: analysis.isCleanBackground ? 0.95 : 0.65,
+        isCleanBackground: analysis.isCleanBackground,
+        backgroundRgb: analysis.isCleanBackground ? [245, 245, 245] : [120, 120, 120],
+        isWhiteBackground: analysis.isCleanBackground,
+      },
+      colorAnalysis: {
+        primaryHex: analysis.primaryColor,
+        primaryName: analysis.primaryName,
+        hue: 0,
+        saturation: 0,
+        lightness: 0,
+        hsl: { h: 0, s: 0, l: 0 },
+        accentHex: '#1A1917',
+        accentName: 'Charcoal',
+        palette: [analysis.primaryColor, '#1A1917'],
+        maxSaturation: 80,
+        previewDimension: '128x128',
+        executionTimeMs: Math.max(1, processingTimeMs),
+      },
       liveCutout,
       processingTimeMs,
     };

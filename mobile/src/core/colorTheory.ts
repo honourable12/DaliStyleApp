@@ -61,25 +61,35 @@ export function hexToHsl(hex: string): HSL {
 }
 
 export const STANDARD_COLORS: Array<[string, [number, number, number]]> = [
-  ['Black', [20, 20, 20]],
-  ['White', [245, 245, 245]],
-  ['Charcoal', [54, 69, 79]],
-  ['Navy', [20, 30, 70]],
-  ['Blue', [30, 80, 160]],
-  ['Light Blue', [135, 206, 235]],
-  ['Beige', [215, 195, 160]],
-  ['Cream', [240, 235, 215]],
-  ['Brown', [100, 60, 30]],
-  ['Olive', [85, 107, 47]],
-  ['Forest Green', [34, 85, 34]],
-  ['Burgundy', [128, 0, 32]],
-  ['Rust / Turmeric', [180, 75, 25]],
-  ['Gray', [140, 140, 140]],
+  ['Black', [0, 0, 0]],
+  ['White', [255, 255, 255]],
+  ['Gray', [128, 128, 128]],
+  ['Red', [255, 0, 0]],
+  ['Maroon', [128, 0, 0]],
+  ['Yellow', [255, 255, 0]],
+  ['Olive', [128, 128, 0]],
+  ['Lime', [0, 255, 0]],
+  ['Green', [0, 128, 0]],
+  ['Aqua', [0, 255, 255]],
+  ['Teal', [0, 128, 128]],
+  ['Blue', [0, 0, 255]],
+  ['Navy', [0, 0, 128]],
+  ['Fuchsia', [255, 0, 255]],
+  ['Purple', [128, 0, 128]],
+  ['Orange', [255, 165, 0]],
+  ['Brown', [165, 42, 42]],
+  ['Tan', [210, 180, 140]],
+  ['Pink', [255, 192, 203]],
+  ['Gold', [255, 215, 0]],
+  ['Beige', [245, 245, 220]],
+  ['Ivory', [255, 255, 240]],
+  ['Khaki', [240, 230, 140]],
+  ['Lavender', [230, 230, 250]],
 ];
 
 export function getNearestColorName(hex: string): string {
   const rgb = hexToRgb(hex);
-  let bestName = 'Neutral';
+  let bestName = 'Black';
   let minDistance = Infinity;
 
   for (const [name, targetRgb] of STANDARD_COLORS) {

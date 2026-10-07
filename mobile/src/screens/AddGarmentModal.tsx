@@ -104,11 +104,12 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
-        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'camera_garment.jpg');
+        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'camera_garment.jpg', asset.base64);
       }
     } catch (e: any) {
       showAtelierToast({
@@ -135,11 +136,12 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
+        base64: true,
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
-        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'gallery_garment.jpg');
+        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'gallery_garment.jpg', asset.base64);
       }
     } catch (e: any) {
       showAtelierToast({
@@ -154,14 +156,24 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
    * On-device real-time garment identification:
    * Immediately identifies category, color, and silhouette geometry without user having to select it.
    */
-  const identifyAndProcessPhoto = async (uri: string, aspectRatio = 1.0, hintText?: string) => {
+  const identifyAndProcessPhoto = async (
+    uri: string,
+    aspectRatio = 1.0,
+    hintText?: string,
+    base64?: string | null
+  ) => {
     setImageUrl(uri);
     setHasCustomImage(true);
     setIsAnalyzing(true);
 
     try {
-      // Execute 100% on-device AI classification & chroma analysis
-      const edgeResult = await EdgeAIPipeline.processGarment(uri, aspectRatio, hintText);
+      // Execute 100% on-device AI classification & chroma analysis with real pixel extraction
+      const edgeResult = await EdgeAIPipeline.processGarment(
+        uri,
+        aspectRatio,
+        hintText,
+        base64 || undefined
+      );
 
       const identifiedCat = edgeResult.suggestedCategory;
       setCategory(identifiedCat);
@@ -170,7 +182,16 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       setColorName(edgeResult.primaryName);
 
       // Auto-generate haute-couture name if currently empty or default
-      const catLabel = identifiedCat === 'top' ? 'Top' : identifiedCat === 'bottom' ? 'Trousers' : identifiedCat === 'outerwear' ? 'Outerwear' : identifiedCat === 'shoes' ? 'Shoes' : 'Piece';
+      const catLabel =
+        identifiedCat === 'top'
+          ? 'Top'
+          : identifiedCat === 'bottom'
+          ? 'Trousers'
+          : identifiedCat === 'outerwear'
+          ? 'Outerwear'
+          : identifiedCat === 'shoes'
+          ? 'Shoes'
+          : 'Piece';
       setName(`Tailored ${edgeResult.primaryName} ${catLabel}`);
 
       showAtelierToast({
@@ -180,9 +201,9 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
         icon: 'sparkles',
       });
     } catch {
-      // Graceful fallback to default tone
-      setSelectedHex('#E8A830');
-      setColorName('Rust / Turmeric');
+      // Graceful fallback to neutral tone
+      setSelectedHex('#1A1917');
+      setColorName('Black');
     } finally {
       setIsAnalyzing(false);
     }

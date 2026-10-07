@@ -29,18 +29,18 @@ export function extractGarmentDominantColor(
   const startTime = Date.now();
 
   if (!pixels || pixels.length === 0) {
-    const defaultHsl = hexToHsl('#E8A830');
+    const defaultHsl = hexToHsl('#000000');
     return {
-      primaryHex: '#E8A830',
-      primaryName: 'Rust / Turmeric',
+      primaryHex: '#000000',
+      primaryName: 'Black',
       hue: defaultHsl.h,
       saturation: defaultHsl.s,
       lightness: defaultHsl.l,
       hsl: defaultHsl,
-      accentHex: '#1A1917',
-      accentName: 'Charcoal',
-      palette: ['#E8A830', '#1A1917'],
-      maxSaturation: 80,
+      accentHex: '#808080',
+      accentName: 'Gray',
+      palette: ['#000000', '#808080'],
+      maxSaturation: 0,
       previewDimension: '128x128',
       executionTimeMs: 1,
     };
