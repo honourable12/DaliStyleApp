@@ -5,6 +5,7 @@ import {
   getPersonaScore,
   getSeasonalCompatibility,
   getWeatherPriority,
+  findNearestCoutureColor,
 } from './colorTheory';
 import { MONK_PALETTE_PROFILES } from './monkScale';
 
@@ -83,10 +84,12 @@ export function generateDailyOutfit(
       if (totalScore > highestTotalScore) {
         highestTotalScore = totalScore;
 
+        const topCouture = findNearestCoutureColor(top.primaryColor);
+        const bottomCouture = findNearestCoutureColor(bottom.primaryColor);
         const profileInfo = MONK_PALETTE_PROFILES[userProfile.monkLabel] || { undertone: 'Neutral', season: 'All-Year' };
         
-        // Smart offline editorial blurb generator
-        const stylingNote = `A calibrated ${harmony.type.toLowerCase()} composition. The ${top.primaryColorName.toLowerCase()} top generates strong visual clarity against your ${userProfile.monkLabel} ${profileInfo.undertone.toLowerCase()} undertone, paired seamlessly with ${bottom.primaryColorName.toLowerCase()} for ${weather.tempC}°C ${weather.condition.toLowerCase()} weather.`;
+        // Dynamic Haute-Couture styling blurb
+        const stylingNote = `A calibrated ${harmony.type.toLowerCase()} composition. The tailored ${topCouture.name} ${top.category} generates resonant clarity against your ${userProfile.monkLabel} ${profileInfo.undertone.toLowerCase()} undertone, paired seamlessly with ${bottomCouture.name} ${bottom.category} for ${weather.tempC}°C ${weather.condition.toLowerCase()} weather.`;
 
         bestOutfit = {
           id: `outfit-${Date.now()}-${top.id.slice(0, 4)}`,
@@ -151,7 +154,9 @@ export function generatePrecombinedLooks(
 
       // Only include high harmony or high contrast combinations
       if (harmony.score >= 75) {
-        const stylingNote = `Precombined ${harmony.type} look. Blends ${top.primaryColorName} with ${bottom.primaryColorName} for a balanced silhouette.`;
+        const topCouture = findNearestCoutureColor(top.primaryColor);
+        const bottomCouture = findNearestCoutureColor(bottom.primaryColor);
+        const stylingNote = `Curated ${harmony.type} ensemble. Grounds ${topCouture.name} against ${bottomCouture.name} for an architecturally balanced silhouette.`;
 
         results.push({
           id: `matched-${top.id}-${bottom.id}-${results.length}`,

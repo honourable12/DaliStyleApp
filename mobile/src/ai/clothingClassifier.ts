@@ -84,26 +84,15 @@ export const COLOR_NAMES: Array<[string, [number, number, number]]> = [
   ['Lavender', [230, 230, 250]],
 ];
 
+import { findNearestCoutureColor } from '../core/couturePalette';
+
 /**
- * Exact port of _nearest_color_name from ai-service/clothing.py line 136-140
- * Calculates Euclidean distance against all 24 color reference vectors.
+ * Enhanced Color Matcher:
+ * Uses CIELAB Delta-E perceptual matching against the 120+ Haute-Couture Editorial Palette
  */
 export function nearestColorName(rgb: [number, number, number]): string {
-  let minDistance = Infinity;
-  let nearestName = 'Gray';
-
-  for (const [name, refRgb] of COLOR_NAMES) {
-    const dr = rgb[0] - refRgb[0];
-    const dg = rgb[1] - refRgb[1];
-    const db = rgb[2] - refRgb[2];
-    const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-    if (dist < minDistance) {
-      minDistance = dist;
-      nearestName = name;
-    }
-  }
-
-  return nearestName;
+  const hex = rgbToHex(rgb);
+  return findNearestCoutureColor(hex).name;
 }
 
 /**
