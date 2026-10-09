@@ -1,4 +1,4 @@
-import { WardrobeItem, ClothingCategory } from '../types';
+import { WardrobeItem, ClothingCategory, PatternType, PatternScale } from '../types';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
 import { wardrobeStore } from '../db/storage';
 
@@ -174,16 +174,20 @@ class BatchUploadQueue {
 
       this.updateJob(jobId, { status: 'processing', progress: 0.6 });
 
-      // 2. On-device edge AI: extract color + suggest category
+      // 2. On-device edge AI: extract color + suggest category and pattern
       let primaryHex = '#1A1917';
       let primaryName = 'Black';
       let category: ClothingCategory = 'top';
+      let pattern: PatternType = 'solid';
+      let patternScale: PatternScale = 'medium';
       try {
         const filename = job.localUri.split('/').pop() || '';
         const edgeResult = await EdgeAIPipeline.processGarment(job.localUri, 1.0, filename);
         primaryHex = edgeResult.primaryHex;
         primaryName = edgeResult.primaryName;
         category = edgeResult.suggestedCategory;
+        if (edgeResult.pattern) pattern = edgeResult.pattern;
+        if (edgeResult.patternScale) patternScale = edgeResult.patternScale;
       } catch {
         // defaults
       }
@@ -191,12 +195,15 @@ class BatchUploadQueue {
       this.updateJob(jobId, { progress: 0.9 });
 
       // 3. Build the wardrobe item and save
+      const patternPrefix = pattern && pattern !== 'solid' ? `${pattern} ` : '';
       const newItem: WardrobeItem = {
         id: `w-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        name: `Tailored ${primaryName} ${category}`,
+        name: `Tailored ${patternPrefix}${primaryName} ${category}`,
         category,
         primaryColor: primaryHex,
         primaryColorName: primaryName,
+        pattern,
+        patternScale,
         imageUrl: finalImageUrl,
         createdAt: Date.now(),
       };

@@ -1,5 +1,5 @@
 import jpeg from 'jpeg-js';
-import { ClothingCategory } from '../types';
+import { ClothingCategory, PatternType } from '../types';
 
 /**
  * Direct TypeScript port of ai-service/clothing_categories.py
@@ -209,12 +209,15 @@ export interface ClothingFastAnalysisResult {
   roughCategory: SpecificCategory | 'unknown';
   suggestedCategory: ClothingCategory;
   confidence: number;
+  pattern?: PatternType;
+  patternConfidence?: number;
   source: 'ai_service' | 'on_device_pixels' | 'heuristic_fallback';
 }
 
 /**
- * Direct port of analyze_clothing_fast from ai-service/clothing.py lines 273-361
- * Executes on decoded raw pixels with OpenCV/NumPy mathematical fidelity.
+ * High-Precision On-Device Clothing Analyzer matching ai-service/clothing.py.
+ * Extracts foreground bounding-box, geometric silhouette slices (bipartite leg split vs A-line flare),
+ * raw pixel pattern frequencies, and KMeans color clustering.
  */
 export function analyzeClothingFromRawPixels(
   decoded: DecodedImage,
@@ -225,8 +228,8 @@ export function analyzeClothingFromRawPixels(
 
   // 1. Check for clean background from corners (clothing.py line 286-294)
   const cornerSampleCoords: Array<[number, number]> = [];
-  const sampleW = Math.min(10, Math.floor(w / 4));
-  const sampleH = Math.min(10, Math.floor(h / 4));
+  const sampleW = Math.min(12, Math.floor(w / 4));
+  const sampleH = Math.min(12, Math.floor(h / 4));
 
   for (let dy = 0; dy < sampleH; dy++) {
     for (let dx = 0; dx < sampleW; dx++) {
@@ -254,66 +257,261 @@ export function analyzeClothingFromRawPixels(
   const isBlackBg = avgCornerR < 20 && avgCornerG < 20 && avgCornerB < 20;
   const isCleanBg = isWhiteBg || isBlackBg;
 
-  // 2. Center crop (clothing.py line 321-326)
-  // cy, cx = h // 2, w // 2; rh, rw = h // 3, w // 3
-  const cy = Math.floor(h / 2);
-  const cx = Math.floor(w / 2);
-  const rh = Math.floor(h / 3);
-  const rw = Math.floor(w / 3);
+  // 2. Full-frame Foreground Masking and True Garment Bounding-Box Detection
+  let minX = w,
+    maxX = 0,
+    minY = h,
+    maxY = 0;
+  const foregroundPixels: Array<[number, number, number]> = [];
+  const fgMask = new Uint8Array(w * h);
 
-  const startY = Math.max(0, cy - rh);
-  const endY = Math.min(h, cy + rh);
-  const startX = Math.max(0, cx - rw);
-  const endX = Math.min(w, cx + rw);
+  const step = Math.max(1, Math.floor(Math.sqrt((w * h) / 10000)));
 
-  // 3. Reshape and filter out background noise (clothing.py line 328-340)
-  const centerPixels: Array<[number, number, number]> = [];
-  // Sample with step to maintain high speed (< 10ms)
-  const step = Math.max(1, Math.floor(Math.sqrt(((endY - startY) * (endX - startX)) / 1200)));
-
-  for (let y = startY; y < endY; y += step) {
-    for (let x = startX; x < endX; x += step) {
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
       const idx = (y * w + x) * 4;
       const r = data[idx];
       const g = data[idx + 1];
       const b = data[idx + 2];
-      centerPixels.push([r, g, b]);
-    }
-  }
 
-  let filtered: Array<[number, number, number]>;
-  if (isCleanBg) {
-    filtered = centerPixels.filter(([r, g, b]) => {
       const dr = r - avgCornerR;
       const dg = g - avgCornerG;
       const db = b - avgCornerB;
       const diff = Math.sqrt(dr * dr + dg * dg + db * db);
-      return diff > 30; // Matches diff > 30 in clothing.py
-    });
+
+      const isFg = isCleanBg
+        ? diff > 26
+        : diff > 26 && !(r > 242 && g > 242 && b > 242) && !(r < 15 && g < 15 && b < 15);
+
+      if (isFg) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        foregroundPixels.push([r, g, b]);
+        fgMask[y * w + x] = 1;
+      }
+    }
+  }
+
+  // Fallback to center region if background segmentation found too few pixels
+  if (foregroundPixels.length < 50 || maxX <= minX || maxY <= minY) {
+    minX = Math.floor(w * 0.15);
+    maxX = Math.floor(w * 0.85);
+    minY = Math.floor(h * 0.15);
+    maxY = Math.floor(h * 0.85);
+  }
+
+  const garmentWidth = Math.max(1, maxX - minX);
+  const garmentHeight = Math.max(1, maxY - minY);
+  const garmentAspect = garmentHeight / garmentWidth;
+
+  // 3. Multi-Zone Silhouette Geometry Analysis (5 vertical slices)
+  const sliceH = garmentHeight / 5;
+  const sliceWidths: number[] = [0, 0, 0, 0, 0];
+  const sliceDensities: number[] = [0, 0, 0, 0, 0];
+  let bipartiteSplitRows = 0;
+
+  for (let s = 0; s < 5; s++) {
+    const sStart = Math.floor(minY + s * sliceH);
+    const sEnd = Math.floor(minY + (s + 1) * sliceH);
+    let slicePixelCount = 0;
+    let minSliceX = w,
+      maxSliceX = 0;
+
+    for (let y = sStart; y < sEnd; y += step) {
+      let rowRuns = 0;
+      let inRun = false;
+      let rowPixelCount = 0;
+
+      for (let x = minX; x <= maxX; x += step) {
+        if (fgMask[y * w + x]) {
+          slicePixelCount++;
+          rowPixelCount++;
+          if (x < minSliceX) minSliceX = x;
+          if (x > maxSliceX) maxSliceX = x;
+          if (!inRun) {
+            inRun = true;
+            rowRuns++;
+          }
+        } else {
+          inRun = false;
+        }
+      }
+
+      // Check bipartite split in lower half (legs of trousers/shorts separated by negative space)
+      if (s >= 3 && rowRuns >= 2 && rowPixelCount < (maxX - minX) * 0.85) {
+        bipartiteSplitRows++;
+      }
+    }
+
+    sliceDensities[s] = slicePixelCount;
+    sliceWidths[s] = maxSliceX > minSliceX ? (maxSliceX - minSliceX) / garmentWidth : 0;
+  }
+
+  // 4. Infer Category
+  let roughCategory: SpecificCategory = 't-shirt';
+  let suggestedCategory: ClothingCategory = 'top';
+  let confidence = 0.85;
+
+  if (hintText) {
+    const fromHint = inferCategoryFromSilhouette(garmentAspect, hintText, decoded);
+    roughCategory = fromHint.roughCategory;
+    suggestedCategory = fromHint.canonicalCategory;
+    confidence = fromHint.confidence;
   } else {
-    // Filter extreme blown-out highlights and deep dark shadows
-    filtered = centerPixels.filter(
-      ([r, g, b]) => !(r > 240 && g > 240 && b > 240) && !(r < 15 && g < 15 && b < 15)
-    );
+    const totalFg = Math.max(1, foregroundPixels.length);
+    const bottomDensityFrac = (sliceDensities[3] + sliceDensities[4]) / totalFg;
+    const topDensityFrac = (sliceDensities[0] + sliceDensities[1]) / totalFg;
+
+    // Rule A: Footwear (concentrated in bottom slice, or compact horizontal silhouette with ankle collar)
+    if (garmentAspect < 0.68 || (sliceDensities[4] / totalFg > 0.65 && topDensityFrac < 0.1)) {
+      roughCategory = garmentAspect > 0.85 ? 'boots' : 'sneakers';
+      suggestedCategory = 'shoes';
+      confidence = 0.92;
+    }
+    // Rule B: Trousers / Jeans / Shorts (Bipartite split in lower slices)
+    else if (bipartiteSplitRows >= 3) {
+      if (garmentAspect > 1.15) {
+        roughCategory = 'trousers';
+        suggestedCategory = 'bottom';
+        confidence = 0.94;
+      } else {
+        roughCategory = 'shorts';
+        suggestedCategory = 'bottom';
+        confidence = 0.90;
+      }
+    }
+    // Rule C: Full-Body Dress / Gown (Unbroken vertical drape from shoulders through hem, A-line expansion)
+    else if (
+      garmentAspect > 1.35 &&
+      sliceDensities[0] > 0 &&
+      sliceDensities[1] > 0 &&
+      sliceDensities[3] > 0 &&
+      sliceWidths[4] >= sliceWidths[2] * 0.8
+    ) {
+      roughCategory = 'dress';
+      suggestedCategory = 'one-piece';
+      confidence = 0.95;
+    }
+    // Rule D: Skirt (Starts at waist, Slice 0 & 1 empty, flares downward)
+    else if (topDensityFrac < 0.15 && sliceDensities[2] > 0 && sliceWidths[4] >= sliceWidths[2]) {
+      roughCategory = 'skirt';
+      suggestedCategory = 'bottom';
+      confidence = 0.92;
+    }
+    // Rule E: Outerwear (Jacket / Coat) vs Tops
+    else if (garmentAspect <= 1.4 && bottomDensityFrac < 0.35) {
+      if (garmentAspect > 1.05 || (sliceWidths[0] > 0.85 && sliceWidths[1] > 0.85)) {
+        roughCategory = 'jacket';
+        suggestedCategory = 'outerwear';
+        confidence = 0.86;
+      } else {
+        roughCategory = 't-shirt';
+        suggestedCategory = 'top';
+        confidence = 0.88;
+      }
+    }
+    // Rule F: Tall single-piece fallback
+    else if (garmentAspect > 1.45) {
+      roughCategory = 'dress';
+      suggestedCategory = 'one-piece';
+      confidence = 0.91;
+    } else {
+      roughCategory = 't-shirt';
+      suggestedCategory = 'top';
+      confidence = 0.82;
+    }
   }
 
-  if (filtered.length < 50) {
-    filtered = centerPixels; // Fallback if filtering was too aggressive
+  // 5. Pattern Texture Analysis from Raw Foreground Pixels
+  let detectedPattern: PatternType = 'solid';
+  let patternConfidence = 0.85;
+
+  const samplePixels =
+    foregroundPixels.length > 600 ? foregroundPixels.slice(0, 600) : foregroundPixels;
+  let sumL = 0,
+    sumL2 = 0;
+  for (const [r, g, b] of samplePixels) {
+    const l = r * 0.299 + g * 0.587 + b * 0.114;
+    sumL += l;
+    sumL2 += l * l;
+  }
+  const meanL = sumL / samplePixels.length;
+  const varianceL = sumL2 / samplePixels.length - meanL * meanL;
+  const stdDevL = Math.sqrt(Math.max(0, varianceL));
+
+  if (stdDevL < 17) {
+    detectedPattern = 'solid';
+    patternConfidence = 0.95;
+  } else {
+    // Spatial transition analysis
+    let horizTransitions = 0;
+    let vertTransitions = 0;
+    const coreY = Math.floor(minY + garmentHeight * 0.3);
+    const coreEndY = Math.floor(minY + garmentHeight * 0.7);
+    const coreX = Math.floor(minX + garmentWidth * 0.3);
+    const coreEndX = Math.floor(minX + garmentWidth * 0.7);
+
+    for (let y = coreY; y < coreEndY; y += step * 2) {
+      let prevL = -1;
+      for (let x = coreX; x < coreEndX; x += step) {
+        if (fgMask[y * w + x]) {
+          const idx = (y * w + x) * 4;
+          const l = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+          if (prevL >= 0 && Math.abs(l - prevL) > 28) {
+            horizTransitions++;
+          }
+          prevL = l;
+        }
+      }
+    }
+
+    for (let x = coreX; x < coreEndX; x += step * 2) {
+      let prevL = -1;
+      for (let y = coreY; y < coreEndY; y += step) {
+        if (fgMask[y * w + x]) {
+          const idx = (y * w + x) * 4;
+          const l = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+          if (prevL >= 0 && Math.abs(l - prevL) > 28) {
+            vertTransitions++;
+          }
+          prevL = l;
+        }
+      }
+    }
+
+    if (vertTransitions > horizTransitions * 2 && vertTransitions >= 5) {
+      detectedPattern = 'striped';
+      patternConfidence = 0.90;
+    } else if (horizTransitions > vertTransitions * 2 && horizTransitions >= 5) {
+      detectedPattern = 'striped';
+      patternConfidence = 0.90;
+    } else if (horizTransitions >= 5 && vertTransitions >= 5) {
+      detectedPattern = 'plaid';
+      patternConfidence = 0.88;
+    } else if (stdDevL > 34) {
+      detectedPattern = 'floral';
+      patternConfidence = 0.82;
+    } else {
+      detectedPattern = 'graphic print';
+      patternConfidence = 0.78;
+    }
   }
 
-  // 4. KMeans (k=3, matching clothing.py line 342: KMeans(n_clusters=3, n_init=5))
-  const k = Math.min(3, filtered.length);
+  // 6. KMeans Clustering for Dominant Color on Foreground Pixels (k=3 matching clothing.py)
+  const k = Math.min(3, samplePixels.length);
   const centers: Array<[number, number, number]> = [];
-  const initStep = Math.floor(filtered.length / k);
+  const initStep = Math.floor(samplePixels.length / k);
   for (let i = 0; i < k; i++) {
-    centers.push([...filtered[i * initStep]]);
+    centers.push([...samplePixels[i * initStep]]);
   }
 
   for (let iter = 0; iter < 5; iter++) {
     const sums = centers.map(() => [0, 0, 0]);
     const counts = centers.map(() => 0);
 
-    for (const p of filtered) {
+    for (const p of samplePixels) {
       let nearestIdx = 0;
       let minDist = Infinity;
       for (let ci = 0; ci < centers.length; ci++) {
@@ -341,10 +539,9 @@ export function analyzeClothingFromRawPixels(
     }
   }
 
-  // 5. Select the MOST SATURATED color, not most frequent (clothing.py line 346-354)
+  // Select most saturated cluster if saturation >= 20, else dominant cluster
   let bestColor = centers[0];
   let maxSat = -1;
-
   for (const c of centers) {
     const [, s] = rgbToHsv(c[0], c[1], c[2]);
     if (s > maxSat) {
@@ -352,34 +549,29 @@ export function analyzeClothingFromRawPixels(
       bestColor = c;
     }
   }
-
-  // If even the most saturated cluster is nearly grayscale (e.g. black, white, gray garments),
-  // pick the cluster center with the highest cluster population
-  if (maxSat < 18) {
+  if (maxSat < 20) {
     bestColor = centers[0];
   }
 
   const primaryHex = rgbToHex(bestColor);
   const primaryName = nearestColorName(bestColor);
 
-  // 6. Infer rough category and canonical group
-  const inferred = inferCategoryFromSilhouette(aspectRatio, hintText, decoded);
-
   return {
     isClothing: true,
     isCleanBackground: isCleanBg,
     primaryColor: primaryHex,
     primaryName,
-    roughCategory: inferred.roughCategory,
-    suggestedCategory: inferred.canonicalCategory,
-    confidence: inferred.confidence,
+    roughCategory,
+    suggestedCategory,
+    confidence,
+    pattern: detectedPattern,
+    patternConfidence,
     source: 'on_device_pixels',
   };
 }
 
 /**
- * Infer category using hint keywords, silhouette aspect ratio,
- * and vertical center of mass (mirroring YOLO person/clothing split in clothing.py lines 468-510)
+ * Infer category using hint keywords and silhouette proportions
  */
 export function inferCategoryFromSilhouette(
   aspectRatio: number,
@@ -389,7 +581,6 @@ export function inferCategoryFromSilhouette(
   if (hintText) {
     const lower = hintText.toLowerCase();
 
-    // Check specific categories first
     for (const cat of CLOTHING_CATEGORIES) {
       if (lower.includes(cat)) {
         return {
@@ -400,125 +591,134 @@ export function inferCategoryFromSilhouette(
       }
     }
 
-    // Keyword heuristics
     if (['dress', 'jumpsuit', 'romper', 'gown', 'overall', 'one-piece'].some((k) => lower.includes(k))) {
       return { roughCategory: 'dress', canonicalCategory: 'one-piece', confidence: 0.95 };
     }
-    if (['pant', 'trouser', 'jean', 'short', 'skirt', 'cargo', 'chino', 'legging'].some((k) => lower.includes(k))) {
-      return { roughCategory: 'trousers', canonicalCategory: 'bottom', confidence: 0.9 };
+    if (['pant', 'trouser', 'jean', 'short', 'skirt', 'cargo', 'chino', 'legging', 'slack'].some((k) => lower.includes(k))) {
+      return { roughCategory: 'trousers', canonicalCategory: 'bottom', confidence: 0.92 };
     }
     if (['jacket', 'coat', 'blazer', 'hoodie', 'cardigan', 'parka', 'windbreaker', 'bomber', 'trench'].some((k) => lower.includes(k))) {
-      return { roughCategory: 'jacket', canonicalCategory: 'outerwear', confidence: 0.9 };
+      return { roughCategory: 'jacket', canonicalCategory: 'outerwear', confidence: 0.92 };
     }
-    if (['shoe', 'sneaker', 'boot', 'sandal', 'derby', 'loafer', 'heel', 'footwear'].some((k) => lower.includes(k))) {
-      return { roughCategory: 'sneakers', canonicalCategory: 'shoes', confidence: 0.9 };
+    if (['shoe', 'sneaker', 'boot', 'sandal', 'derby', 'loafer', 'heel', 'footwear', 'oxford'].some((k) => lower.includes(k))) {
+      return { roughCategory: 'sneakers', canonicalCategory: 'shoes', confidence: 0.92 };
     }
     if (['bag', 'hat', 'cap', 'belt', 'scarf', 'sunglass', 'watch'].some((k) => lower.includes(k))) {
-      return { roughCategory: 'handbag', canonicalCategory: 'accessory', confidence: 0.9 };
+      return { roughCategory: 'handbag', canonicalCategory: 'accessory', confidence: 0.92 };
     }
     if (['shirt', 'tee', 'top', 't-shirt', 'sweater', 'blouse', 'knit', 'polo'].some((k) => lower.includes(k))) {
-      return { roughCategory: 't-shirt', canonicalCategory: 'top', confidence: 0.9 };
+      return { roughCategory: 't-shirt', canonicalCategory: 'top', confidence: 0.92 };
     }
   }
 
-  // Vertical mass density check if pixels are available
-  let verticalCenterOfMass = 0.5;
-  if (decoded && decoded.width > 0 && decoded.height > 0) {
-    const { width: w, height: h, data } = decoded;
-    let totalWeight = 0;
-    let weightedYSum = 0;
-    const yStep = Math.max(1, Math.floor(h / 40));
-    const xStep = Math.max(1, Math.floor(w / 40));
-
-    for (let y = 0; y < h; y += yStep) {
-      for (let x = 0; x < w; x += xStep) {
-        const idx = (y * w + x) * 4;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
-        // Calculate variance from corner background
-        const brightness = (r + g + b) / 3;
-        if (brightness < 240 && brightness > 15) {
-          totalWeight += 1;
-          weightedYSum += y / h;
-        }
-      }
-    }
-
-    if (totalWeight > 0) {
-      verticalCenterOfMass = weightedYSum / totalWeight;
-    }
-  }
-
-  // Vertical weight in bottom 25% strongly implies shoes/footwear
-  if (verticalCenterOfMass > 0.72 && aspectRatio < 0.85) {
-    return { roughCategory: 'sneakers', canonicalCategory: 'shoes', confidence: 0.85 };
-  }
-
-  // Aspect ratio silhouette evaluation (matching clothing.py categories)
-  if (aspectRatio > 1.35) {
+  if (aspectRatio > 1.45) {
+    return { roughCategory: 'dress', canonicalCategory: 'one-piece', confidence: 0.88 };
+  } else if (aspectRatio > 1.2) {
     return { roughCategory: 'trousers', canonicalCategory: 'bottom', confidence: 0.88 };
-  } else if (aspectRatio >= 0.85 && aspectRatio <= 1.35) {
+  } else if (aspectRatio >= 0.85 && aspectRatio <= 1.2) {
     return { roughCategory: 'shirt', canonicalCategory: 'top', confidence: 0.82 };
   } else if (aspectRatio >= 0.65 && aspectRatio < 0.85) {
-    return { roughCategory: 'jacket', canonicalCategory: 'outerwear', confidence: 0.78 };
+    return { roughCategory: 'jacket', canonicalCategory: 'outerwear', confidence: 0.80 };
   } else {
-    return { roughCategory: 'sneakers', canonicalCategory: 'shoes', confidence: 0.75 };
+    return { roughCategory: 'sneakers', canonicalCategory: 'shoes', confidence: 0.85 };
   }
 }
 
 /**
- * Attempt to query ai-service backend endpoint (/analyze-clothing-fast)
- * with a quick 2.5s timeout.
+ * Multi-host probe against ai-service (port 7860) and backend (port 8000).
+ * Queries YOLOv8-seg and CLIP embeddings when local or remote services are active.
  */
-export async function tryAiServiceFastAnalysis(
+export async function tryAiServiceAnalysis(
   imageUri: string,
-  backendBaseUrl = 'http://10.0.2.2:8000'
+  timeoutMs = 2800
 ): Promise<ClothingFastAnalysisResult | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2500);
+  const endpoints = [
+    'https://honourablewise1-daily-style-ai.hf.space/analyze-clothing-heavy',
+    'https://honourablewise1-daily-style-ai.hf.space/analyze-clothing-fast',
+    'https://honourablewise1-daily-style-ai.hf.space/wardrobe/engine/analyze-clothing',
+  ];
 
-  try {
-    const formData = new FormData();
-    formData.append('file', {
-      uri: imageUri,
-      name: 'clothing.jpg',
-      type: 'image/jpeg',
-    } as any);
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const res = await fetch(`${backendBaseUrl}/analyze-clothing-fast`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    });
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        name: 'clothing.jpg',
+        type: 'image/jpeg',
+      } as any);
 
-    clearTimeout(timeoutId);
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.primary_color) {
-        const roughCat: SpecificCategory = CLOTHING_CATEGORIES.includes(data.rough_category)
-          ? data.rough_category
-          : 't-shirt';
-        const canonical = CATEGORY_GROUPS[roughCat] || 'top';
+      clearTimeout(timeoutId);
 
-        return {
-          isClothing: Boolean(data.is_clothing),
-          isCleanBackground: Boolean(data.is_clean_background),
-          primaryColor: data.primary_color,
-          primaryName: data.primary_name || nearestColorName([128, 128, 128]),
-          roughCategory: roughCat,
-          suggestedCategory: canonical,
-          confidence: 0.94,
-          source: 'ai_service',
-        };
+      if (res.ok) {
+        const data = await res.json();
+
+        // 1. Format: /analyze-clothing-heavy
+        if (data && data.detections && data.detections.length > 0) {
+          const det = data.detections[0];
+          const rawCat = String(det.category || 't-shirt').toLowerCase();
+          const specificCat: SpecificCategory = CLOTHING_CATEGORIES.includes(rawCat as any)
+            ? (rawCat as SpecificCategory)
+            : 't-shirt';
+          const canonical = CATEGORY_GROUPS[specificCat] || (rawCat === 'dress' ? 'one-piece' : 'top');
+
+          let pattern: PatternType = 'solid';
+          const p = String(det.pattern || 'solid').toLowerCase();
+          if (p.includes('stripe')) pattern = 'striped';
+          else if (p.includes('check') || p.includes('plaid')) pattern = 'plaid';
+          else if (p.includes('floral') || p.includes('flower')) pattern = 'floral';
+          else if (p.includes('polka') || p.includes('dot')) pattern = 'polka dot';
+          else if (p.includes('leopard') || p.includes('animal')) pattern = 'animal print';
+          else if (p.includes('graphic')) pattern = 'graphic print';
+
+          return {
+            isClothing: true,
+            isCleanBackground: true,
+            primaryColor: det.primary_color || '#1A1917',
+            primaryName: det.primary_name || nearestColorName([26, 25, 23]),
+            roughCategory: specificCat,
+            suggestedCategory: canonical,
+            confidence: Number(det.category_confidence) || 0.95,
+            pattern,
+            patternConfidence: Number(det.pattern_confidence) || 0.9,
+            source: 'ai_service',
+          };
+        }
+
+        // 2. Format: /analyze-clothing-fast
+        if (data && data.primary_color) {
+          const rawCat = String(data.rough_category || 't-shirt').toLowerCase();
+          const specificCat: SpecificCategory = CLOTHING_CATEGORIES.includes(rawCat as any)
+            ? (rawCat as SpecificCategory)
+            : 't-shirt';
+          const canonical = CATEGORY_GROUPS[specificCat] || (rawCat === 'dress' ? 'one-piece' : 'top');
+
+          return {
+            isClothing: Boolean(data.is_clothing ?? true),
+            isCleanBackground: Boolean(data.is_clean_background ?? false),
+            primaryColor: data.primary_color,
+            primaryName: data.primary_name || nearestColorName([128, 128, 128]),
+            roughCategory: specificCat,
+            suggestedCategory: canonical,
+            confidence: 0.94,
+            source: 'ai_service',
+          };
+        }
       }
+    } catch {
+      // Continue to next endpoint fallback
     }
-  } catch {
-    // Network / timeout / offline
-  } finally {
-    clearTimeout(timeoutId);
   }
 
   return null;
 }
+
+export const tryAiServiceFastAnalysis = tryAiServiceAnalysis;

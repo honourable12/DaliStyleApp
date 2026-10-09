@@ -177,7 +177,6 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        aspect: [1, 1],
         quality: 0.85,
         base64: true,
       });
@@ -209,7 +208,6 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [1, 1],
         quality: 0.85,
         base64: true,
       });

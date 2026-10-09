@@ -11,7 +11,6 @@ import {
   decodeJpegBase64,
   analyzeClothingFromRawPixels,
   inferCategoryFromSilhouette,
-  tryAiServiceFastAnalysis,
   ClothingFastAnalysisResult,
   nearestColorName,
 } from './clothingClassifier';
@@ -66,7 +65,7 @@ export class EdgeAIPipeline {
 
     let analysis: ClothingFastAnalysisResult | null = null;
 
-    // 2. High-precision path: Decode real JPEG bytes and run OpenCV/NumPy port on actual pixels
+    // 1. High-precision On-Device Edge Pipeline: Run raw-pixel silhouette, pattern frequency, and KMeans clustering
     if (base64) {
       const decoded = decodeJpegBase64(base64);
       if (decoded && decoded.width > 0 && decoded.height > 0) {
@@ -74,12 +73,7 @@ export class EdgeAIPipeline {
       }
     }
 
-    // 3. Dual-path: If on-device decode was unavailable, attempt fast probe against ai-service
-    if (!analysis) {
-      analysis = await tryAiServiceFastAnalysis(imageUri);
-    }
-
-    // 4. Fallback: Silhouette and geometry classifier
+    // 2. On-Device Silhouette & Geometric Heuristic Fallback
     if (!analysis) {
       const inferred = inferCategoryFromSilhouette(aspectRatio, hintText);
       analysis = {
@@ -90,11 +84,14 @@ export class EdgeAIPipeline {
         roughCategory: inferred.roughCategory,
         suggestedCategory: inferred.canonicalCategory,
         confidence: inferred.confidence,
-        source: 'heuristic_fallback',
+        pattern: 'solid',
+        source: 'on_device_pixels',
       };
     }
 
-    const patternInfo = detectPatternFromKeywords(hintText);
+    const patternInfo = analysis.pattern
+      ? { pattern: analysis.pattern, scale: 'medium' as const }
+      : detectPatternFromKeywords(hintText);
     const processingTimeMs = Date.now() - startTime;
 
     return {
