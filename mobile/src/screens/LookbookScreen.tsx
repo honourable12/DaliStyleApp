@@ -74,6 +74,17 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                     <View style={styles.typeBadge}>
                       <Text style={styles.typeText}>{item.harmonyType}</Text>
                     </View>
+                    {item.topology && (
+                      <View style={[styles.typeBadge, { backgroundColor: colors.tagBg }]}>
+                        <Text style={[styles.typeText, { color: colors.accent, fontWeight: '700' }]}>
+                          {item.topology === 'full-body'
+                            ? 'Full-Body'
+                            : item.topology === 'co-ord'
+                            ? 'Co-ord'
+                            : 'Two-Piece'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.piecesCountText}>
                     {item.items.length} pieces · {item.skinContrastScore}% contrast

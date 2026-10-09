@@ -108,6 +108,15 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
       <View style={[styles.blurbCard, { backgroundColor: colors.surfaceRaised, borderColor: colors.surfaceBorder, borderWidth: 1 }]}>
         <View style={styles.blurbHeader}>
           <Text style={[styles.blurbTag, { backgroundColor: colors.tagActiveBg, color: colors.accent }]}>{outfit.harmonyType}</Text>
+          {outfit.topology && (
+            <Text style={[styles.contrastPill, { backgroundColor: colors.tagBg, color: colors.accent, fontWeight: '700' }]}>
+              {outfit.topology === 'full-body'
+                ? 'Full-Body'
+                : outfit.topology === 'co-ord'
+                ? 'Co-ord'
+                : 'Two-Piece'}
+            </Text>
+          )}
           <Text style={[styles.contrastPill, { backgroundColor: colors.tagBg, color: colors.textSecondary }]}>{outfit.skinContrastScore}% contrast</Text>
         </View>
         <Text style={[styles.blurbText, { color: colors.textPrimary }]}>{outfit.stylingNote}</Text>
@@ -134,7 +143,8 @@ export const TodayScreen: React.FC<TodayScreenProps> = ({
             <View style={styles.pieceInfo}>
               <Text style={[styles.pieceName, { color: colors.textPrimary }]}>{item.name}</Text>
               <Text style={[styles.pieceSub, { color: colors.textSecondary }]}>
-                {item.category} · {item.primaryColorName}
+                {item.category === 'one-piece' ? 'Dress / 1-Piece' : item.category} · {item.primaryColorName}
+                {item.pattern && item.pattern !== 'solid' ? ` · ${item.pattern}` : ''}
               </Text>
             </View>
           </TouchableOpacity>

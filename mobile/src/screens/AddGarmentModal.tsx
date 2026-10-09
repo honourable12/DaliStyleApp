@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { ClothingCategory, WardrobeItem } from '../types';
+import { ClothingCategory, WardrobeItem, PatternType, PatternScale } from '../types';
 import { COLORS, RADIUS, SPACING, SHADOWS, useTheme } from '../theme';
 import { EdgeAIPipeline } from '../ai/edgePipeline';
 import { showAtelierToast } from '../context/ToastContext';
@@ -25,10 +25,30 @@ interface AddGarmentModalProps {
 
 const SAMPLE_PRESETS = [
   {
+    name: 'Emerald Pleated Midi Dress',
+    category: 'one-piece' as ClothingCategory,
+    hex: '#0A5C36',
+    colorName: 'Emerald Silk',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
+    imageUrl: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    name: 'Breton Striped Knit',
+    category: 'top' as ClothingCategory,
+    hex: '#1E293B',
+    colorName: 'Midnight Navy',
+    pattern: 'striped' as PatternType,
+    patternScale: 'medium' as PatternScale,
+    imageUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=400&q=80',
+  },
+  {
     name: 'Turmeric Silk Overshirt',
     category: 'top' as ClothingCategory,
     hex: '#E8A830',
     colorName: 'Rust / Turmeric',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
     imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&q=80',
   },
   {
@@ -36,6 +56,8 @@ const SAMPLE_PRESETS = [
     category: 'bottom' as ClothingCategory,
     hex: '#2A2B2D',
     colorName: 'Charcoal',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
     imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=400&q=80',
   },
   {
@@ -43,6 +65,8 @@ const SAMPLE_PRESETS = [
     category: 'top' as ClothingCategory,
     hex: '#F2EDE6',
     colorName: 'Cream',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
     imageUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=400&q=80',
   },
   {
@@ -50,6 +74,8 @@ const SAMPLE_PRESETS = [
     category: 'outerwear' as ClothingCategory,
     hex: '#141E30',
     colorName: 'Navy',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
     imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=400&q=80',
   },
   {
@@ -57,8 +83,54 @@ const SAMPLE_PRESETS = [
     category: 'shoes' as ClothingCategory,
     hex: '#1A1817',
     colorName: 'Espresso Black',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
     imageUrl: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=400&q=80',
   },
+  {
+    name: 'Midnight Navy Suit Trousers',
+    category: 'bottom' as ClothingCategory,
+    hex: '#141E30',
+    colorName: 'Navy',
+    pattern: 'solid' as PatternType,
+    patternScale: 'medium' as PatternScale,
+    imageUrl: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    name: 'Silk Leopard Scarf',
+    category: 'accessory' as ClothingCategory,
+    hex: '#C19A6B',
+    colorName: 'Camel / Leopard',
+    pattern: 'animal print' as PatternType,
+    patternScale: 'medium' as PatternScale,
+    imageUrl: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=400&q=80',
+  },
+];
+
+const CATEGORY_LABELS: Record<ClothingCategory, string> = {
+  top: 'Top',
+  bottom: 'Bottom',
+  'one-piece': 'Dresses / Gowns',
+  outerwear: 'Outerwear',
+  shoes: 'Shoes',
+  accessory: 'Accessory',
+};
+
+const PATTERNS: Array<{ id: PatternType; label: string }> = [
+  { id: 'solid', label: 'Solid' },
+  { id: 'striped', label: 'Striped' },
+  { id: 'plaid', label: 'Plaid' },
+  { id: 'floral', label: 'Floral' },
+  { id: 'polka dot', label: 'Polka Dot' },
+  { id: 'animal print', label: 'Animal' },
+  { id: 'geometric', label: 'Geometric' },
+  { id: 'graphic print', label: 'Graphic' },
+];
+
+const SCALES: Array<{ id: PatternScale; label: string }> = [
+  { id: 'micro', label: 'Micro' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'macro', label: 'Macro' },
 ];
 
 export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
@@ -70,14 +142,17 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ClothingCategory>('top');
   const [autoIdentifiedCategory, setAutoIdentifiedCategory] = useState<ClothingCategory | null>('top');
-  const [selectedHex, setSelectedHex] = useState('#E8A830');
-  const [colorName, setColorName] = useState('Rust / Turmeric');
+  const [pattern, setPattern] = useState<PatternType>('solid');
+  const [patternScale, setPatternScale] = useState<PatternScale>('medium');
+  const [autoIdentifiedPattern, setAutoIdentifiedPattern] = useState<PatternType | null>(null);
+  const [selectedHex, setSelectedHex] = useState('#0A5C36');
+  const [colorName, setColorName] = useState('Emerald Silk');
   const [imageUrl, setImageUrl] = useState(SAMPLE_PRESETS[0].imageUrl);
   const [hasCustomImage, setHasCustomImage] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const categories: ClothingCategory[] = ['top', 'bottom', 'outerwear', 'shoes', 'accessory'];
+  const categories: ClothingCategory[] = ['top', 'bottom', 'one-piece', 'outerwear', 'shoes', 'accessory'];
 
   const requestPermission = async (isCamera: boolean) => {
     if (isCamera) {
@@ -181,9 +256,19 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       setSelectedHex(edgeResult.primaryHex);
       setColorName(edgeResult.primaryName);
 
+      if (edgeResult.pattern) {
+        setPattern(edgeResult.pattern);
+        setAutoIdentifiedPattern(edgeResult.pattern);
+        if (edgeResult.patternScale) {
+          setPatternScale(edgeResult.patternScale);
+        }
+      }
+
       // Auto-generate haute-couture name if currently empty or default
       const catLabel =
-        identifiedCat === 'top'
+        identifiedCat === 'one-piece'
+          ? 'Dress'
+          : identifiedCat === 'top'
           ? 'Top'
           : identifiedCat === 'bottom'
           ? 'Trousers'
@@ -192,7 +277,8 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
           : identifiedCat === 'shoes'
           ? 'Shoes'
           : 'Piece';
-      setName(`Tailored ${edgeResult.primaryName} ${catLabel}`);
+      const patternPrefix = edgeResult.pattern && edgeResult.pattern !== 'solid' ? `${edgeResult.pattern} ` : '';
+      setName(`Tailored ${patternPrefix}${edgeResult.primaryName} ${catLabel}`);
 
       showAtelierToast({
         title: 'AI CLASSIFICATION COMPLETE',
@@ -213,6 +299,9 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
     setName(preset.name);
     setCategory(preset.category);
     setAutoIdentifiedCategory(preset.category);
+    setPattern(preset.pattern || 'solid');
+    setPatternScale(preset.patternScale || 'medium');
+    setAutoIdentifiedPattern(preset.pattern || 'solid');
     setSelectedHex(preset.hex);
     setColorName(preset.colorName);
     setImageUrl(preset.imageUrl);
@@ -242,6 +331,8 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       category,
       primaryColor: selectedHex,
       primaryColorName: colorName,
+      pattern,
+      patternScale: pattern !== 'solid' ? patternScale : undefined,
       imageUrl: imageUrl,
       createdAt: Date.now(),
     };
@@ -419,12 +510,95 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
                         isActive && styles.catTextActive,
                       ]}
                     >
-                      {c}
+                      {CATEGORY_LABELS[c] || c}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+
+            {/* Pattern & Print Grammar Selector */}
+            <View style={styles.catHeaderRow}>
+              <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 0, marginTop: 0 }]}>
+                Pattern / Print
+              </Text>
+              {autoIdentifiedPattern && autoIdentifiedPattern !== 'solid' && (
+                <View style={styles.autoIdentifiedTag}>
+                  <Ionicons name="sparkles" size={11} color={colors.accent} />
+                  <Text style={[styles.autoIdentifiedTagText, { color: colors.accent }]}>
+                    AI Print Detected
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.catRow}>
+              {PATTERNS.map((p) => {
+                const isActive = pattern === p.id;
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    activeOpacity={0.7}
+                    onPress={() => setPattern(p.id)}
+                    style={[
+                      styles.catBtn,
+                      {
+                        backgroundColor: isActive ? colors.accent : colors.surfaceRaised,
+                        borderColor: isActive ? colors.accent : colors.surfaceBorder,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.catText,
+                        { color: isActive ? '#141312' : colors.textSecondary },
+                        isActive && styles.catTextActive,
+                      ]}
+                    >
+                      {p.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Pattern Scale (if not solid) */}
+            {pattern !== 'solid' && (
+              <>
+                <Text style={[styles.label, { color: colors.textSecondary, marginTop: 4 }]}>
+                  Pattern Scale
+                </Text>
+                <View style={styles.catRow}>
+                  {SCALES.map((s) => {
+                    const isActive = patternScale === s.id;
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        activeOpacity={0.7}
+                        onPress={() => setPatternScale(s.id)}
+                        style={[
+                          styles.catBtn,
+                          {
+                            backgroundColor: isActive ? colors.accent : colors.surfaceRaised,
+                            borderColor: isActive ? colors.accent : colors.surfaceBorder,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.catText,
+                            { color: isActive ? '#141312' : colors.textSecondary },
+                            isActive && styles.catTextActive,
+                          ]}
+                        >
+                          {s.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
 
             {/* Save to Closet Action */}
             <TouchableOpacity

@@ -5,8 +5,8 @@ import {
   performLiveGarmentCutout,
   LiveCutoutResult,
 } from './garmentSegmenter';
-import { extractGarmentDominantColor, DominantColorResult } from './colorExtractor';
-import { ClothingCategory } from '../types';
+import { ClothingCategory, PatternType, PatternScale } from '../types';
+import { detectPatternFromKeywords } from '../core/patternGrammar';
 import {
   decodeJpegBase64,
   analyzeClothingFromRawPixels,
@@ -16,11 +16,28 @@ import {
   nearestColorName,
 } from './clothingClassifier';
 
+export interface DominantColorResult {
+  primaryHex: string;
+  primaryName: string;
+  hue: number;
+  saturation: number;
+  lightness: number;
+  hsl: { h: number; s: number; l: number };
+  accentHex: string;
+  accentName: string;
+  palette: string[];
+  maxSaturation: number;
+  previewDimension: string;
+  executionTimeMs: number;
+}
+
 export interface ProcessedGarmentEdgeResult {
   primaryHex: string;
   primaryName: string;
   accentHex: string;
   suggestedCategory: ClothingCategory;
+  pattern: PatternType;
+  patternScale: PatternScale;
   cleanliness: CleanlinessAnalysis;
   colorAnalysis: DominantColorResult;
   liveCutout: LiveCutoutResult;
@@ -77,6 +94,7 @@ export class EdgeAIPipeline {
       };
     }
 
+    const patternInfo = detectPatternFromKeywords(hintText);
     const processingTimeMs = Date.now() - startTime;
 
     return {
@@ -84,6 +102,8 @@ export class EdgeAIPipeline {
       primaryName: analysis.primaryName,
       accentHex: '#1A1917',
       suggestedCategory: analysis.suggestedCategory,
+      pattern: patternInfo.pattern,
+      patternScale: patternInfo.scale,
       cleanliness: {
         cleanlinessScore: analysis.isCleanBackground ? 0.95 : 0.65,
         isCleanBackground: analysis.isCleanBackground,

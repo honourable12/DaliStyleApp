@@ -250,7 +250,7 @@ export function getWeatherPriority(weatherCode: string, category: string): numbe
   } else if (weatherCode === 'Cold') {
     if (['sweater', 'coat', 'outerwear', 'hoodie'].some((x) => cat.includes(x))) return 2.5;
   } else if (weatherCode === 'Sunny') {
-    if (['shorts', 't-shirt', 'sandals'].some((x) => cat.includes(x))) return 2.0;
+    if (['shorts', 't-shirt', 'sandals', 'dress', 'one-piece'].some((x) => cat.includes(x))) return 2.0;
   }
   return 1.0;
 }

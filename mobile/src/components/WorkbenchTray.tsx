@@ -10,6 +10,7 @@ import { WardrobeItem } from '../types';
 import { COLORS, RADIUS, SPACING, SHADOWS } from '../theme';
 import { GarmentVisual } from './GarmentVisual';
 import { calculateGarmentHarmony } from '../core/colorTheory';
+import { evaluateEnsemblePatternHarmony } from '../core/patternGrammar';
 
 interface WorkbenchTrayProps {
   items: WardrobeItem[];
@@ -30,6 +31,8 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
 
   const colors = items.map((i) => i.primaryColor);
   const harmony = calculateGarmentHarmony(colors);
+  const patternRes = evaluateEnsemblePatternHarmony(items);
+  const compositeScore = Math.round(harmony.score * 0.65 + patternRes.overallScore * 0.35);
 
   const slots = [0, 1, 2];
 
@@ -49,7 +52,7 @@ export const WorkbenchTray: React.FC<WorkbenchTrayProps> = ({
           </View>
           {items.length >= 2 && (
             <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>{harmony.score}%</Text>
+              <Text style={styles.scoreText}>{compositeScore}%</Text>
             </View>
           )}
         </TouchableOpacity>

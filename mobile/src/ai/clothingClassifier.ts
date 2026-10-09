@@ -41,7 +41,7 @@ export const CATEGORY_GROUPS: Record<SpecificCategory, ClothingCategory> = {
   jeans: 'bottom',
   shorts: 'bottom',
   skirt: 'bottom',
-  dress: 'top',
+  dress: 'one-piece',
   sneakers: 'shoes',
   boots: 'shoes',
   'formal shoes': 'shoes',
@@ -401,6 +401,9 @@ export function inferCategoryFromSilhouette(
     }
 
     // Keyword heuristics
+    if (['dress', 'jumpsuit', 'romper', 'gown', 'overall', 'one-piece'].some((k) => lower.includes(k))) {
+      return { roughCategory: 'dress', canonicalCategory: 'one-piece', confidence: 0.95 };
+    }
     if (['pant', 'trouser', 'jean', 'short', 'skirt', 'cargo', 'chino', 'legging'].some((k) => lower.includes(k))) {
       return { roughCategory: 'trousers', canonicalCategory: 'bottom', confidence: 0.9 };
     }

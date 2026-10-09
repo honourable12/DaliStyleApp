@@ -34,6 +34,8 @@ export const GarmentVisual: React.FC<GarmentVisualProps> = ({
         return 'shirt-outline';
       case 'bottom':
         return 'layers-outline';
+      case 'one-piece':
+        return 'sparkles-outline';
       case 'outerwear':
         return 'shield-outline';
       case 'shoes':

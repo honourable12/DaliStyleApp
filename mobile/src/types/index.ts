@@ -3,7 +3,22 @@ export type ClothingCategory =
   | 'bottom'
   | 'outerwear'
   | 'shoes'
-  | 'accessory';
+  | 'accessory'
+  | 'one-piece'; // dresses, jumpsuits, rompers, overalls
+
+export type PatternType =
+  | 'solid'
+  | 'striped'
+  | 'plaid'
+  | 'floral'
+  | 'polka dot'
+  | 'animal print'
+  | 'geometric'
+  | 'graphic print';
+
+export type PatternScale = 'micro' | 'medium' | 'macro';
+
+export type OutfitTopology = 'two-piece' | 'full-body' | 'co-ord';
 
 export interface WardrobeItem {
   id: string;
@@ -12,7 +27,8 @@ export interface WardrobeItem {
   primaryColor: string; // Hex
   primaryColorName: string;
   accentColor?: string;
-  pattern?: string;
+  pattern?: PatternType;
+  patternScale?: PatternScale;
   imageUrl: string;
   season?: string[];
   cleanlinessScore?: number;
@@ -61,6 +77,7 @@ export interface OutfitRecommendation {
   weatherType: 'Sunny' | 'Cold' | 'Rainy' | 'Clear';
   harmonyType: 'Complementary' | 'Triadic' | 'Monochrome' | 'Analogous' | 'Neutral Base';
   stylingNote: string;
+  topology?: OutfitTopology;
   wornDate?: string;
   savedInLookbook?: boolean;
 }

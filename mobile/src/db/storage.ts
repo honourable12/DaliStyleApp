@@ -34,6 +34,7 @@ const log = (msg: string, err?: unknown) => {
 
 export function normalizeCategory(cat: string): ClothingCategory {
   const c = String(cat || '').toLowerCase();
+  if (['dress', 'jumpsuit', 'romper', 'overall', 'gown', 'one-piece', 'co-ord'].some((k) => c.includes(k))) return 'one-piece';
   if (['top', 'shirt', 't-shirt', 'sweater', 'hoodie', 'blouse'].some((k) => c.includes(k))) return 'top';
   if (['bottom', 'trousers', 'pants', 'jeans', 'shorts', 'skirt'].some((k) => c.includes(k))) return 'bottom';
   if (['outerwear', 'jacket', 'coat', 'blazer', 'cardigan'].some((k) => c.includes(k))) return 'outerwear';

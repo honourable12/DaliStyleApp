@@ -96,8 +96,10 @@ export const ClosetScreen: React.FC<ClosetScreenProps> = ({
     { id: 'all', label: 'All' },
     { id: 'top', label: 'Tops' },
     { id: 'bottom', label: 'Bottoms' },
+    { id: 'one-piece', label: 'Dresses' },
     { id: 'outerwear', label: 'Outer' },
     { id: 'shoes', label: 'Shoes' },
+    { id: 'accessory', label: 'Accs' },
   ];
 
   const filteredItems =
