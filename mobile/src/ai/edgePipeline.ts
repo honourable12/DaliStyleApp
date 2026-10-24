@@ -11,6 +11,7 @@ import {
   decodeJpegBase64,
   analyzeClothingFromRawPixels,
   inferCategoryFromSilhouette,
+  tryAiServiceAnalysis,
   ClothingFastAnalysisResult,
   nearestColorName,
 } from './clothingClassifier';
@@ -60,12 +61,19 @@ export class EdgeAIPipeline {
   ): Promise<ProcessedGarmentEdgeResult> {
     const startTime = Date.now();
 
+
+    const remote = await tryAiServiceAnalysis(imageUri, 3500).catch(() => null);
+    if (remote && remote.confidence >= 0.7) {
+      const liveCutout = await performLiveGarmentCutout(imageUri, platform);
+      return EdgeAIPipeline._wrapRemoteResult(remote, startTime, liveCutout);
+    }
+
     // 1. Execute on-device background removal matte
     const liveCutout = await performLiveGarmentCutout(imageUri, platform);
 
     let analysis: ClothingFastAnalysisResult | null = null;
 
-    // 1. High-precision On-Device Edge Pipeline: Run raw-pixel silhouette, pattern frequency, and KMeans clustering
+    // 2. High-precision On-Device Edge Pipeline: Run raw-pixel silhouette, pattern frequency, and KMeans clustering
     if (base64) {
       const decoded = decodeJpegBase64(base64);
       if (decoded && decoded.width > 0 && decoded.height > 0) {
@@ -73,7 +81,7 @@ export class EdgeAIPipeline {
       }
     }
 
-    // 2. On-Device Silhouette & Geometric Heuristic Fallback
+    // 3. On-Device Silhouette & Geometric Heuristic Fallback
     if (!analysis) {
       const inferred = inferCategoryFromSilhouette(aspectRatio, hintText);
       analysis = {
@@ -117,6 +125,45 @@ export class EdgeAIPipeline {
         accentHex: '#1A1917',
         accentName: 'Charcoal',
         palette: [analysis.primaryColor, '#1A1917'],
+        maxSaturation: 80,
+        previewDimension: '128x128',
+        executionTimeMs: Math.max(1, processingTimeMs),
+      },
+      liveCutout,
+      processingTimeMs,
+    };
+  }
+
+
+  private static _wrapRemoteResult(
+    remote: ClothingFastAnalysisResult,
+    startTime: number,
+    liveCutout: LiveCutoutResult
+  ): ProcessedGarmentEdgeResult {
+    const processingTimeMs = Date.now() - startTime;
+    return {
+      primaryHex: remote.primaryColor,
+      primaryName: remote.primaryName,
+      accentHex: '#1A1917',
+      suggestedCategory: remote.suggestedCategory,
+      pattern: remote.pattern || 'solid',
+      patternScale: 'medium',
+      cleanliness: {
+        cleanlinessScore: remote.isCleanBackground ? 0.95 : 0.65,
+        isCleanBackground: remote.isCleanBackground,
+        backgroundRgb: remote.isCleanBackground ? [245, 245, 245] : [120, 120, 120],
+        isWhiteBackground: remote.isCleanBackground,
+      },
+      colorAnalysis: {
+        primaryHex: remote.primaryColor,
+        primaryName: remote.primaryName,
+        hue: 0,
+        saturation: 0,
+        lightness: 0,
+        hsl: { h: 0, s: 0, l: 0 },
+        accentHex: '#1A1917',
+        accentName: 'Charcoal',
+        palette: [remote.primaryColor, '#1A1917'],
         maxSaturation: 80,
         previewDimension: '128x128',
         executionTimeMs: Math.max(1, processingTimeMs),

@@ -302,6 +302,49 @@ export function analyzeClothingFromRawPixels(
     maxY = Math.floor(h * 0.85);
   }
 
+
+  const sampledGridCells =
+    (Math.floor((h - 1) / step) + 1) * (Math.floor((w - 1) / step) + 1);
+  const fgFraction = foregroundPixels.length / Math.max(1, sampledGridCells);
+  if (fgFraction > 0.85) {
+    minX = Math.floor(w * 0.20);
+    maxX = Math.floor(w * 0.80);
+    minY = Math.floor(h * 0.10);
+    maxY = Math.floor(h * 0.90);
+    // Reset the foreground buffers and re-scan inside the tighter bbox
+    foregroundPixels.length = 0;
+    fgMask.fill(0);
+    for (let y = minY; y <= maxY; y += step) {
+      for (let x = minX; x <= maxX; x += step) {
+        const idx = (y * w + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        // Relaxed threshold inside the known-garment area: 14 (vs 26 outside)
+        const dr = r - avgCornerR;
+        const dg = g - avgCornerG;
+        const db = b - avgCornerB;
+        const diff = Math.sqrt(dr * dr + dg * dg + db * db);
+        // Also exclude pure specular highlights / deep shadows
+        const isSpecular = r > 242 && g > 242 && b > 242;
+        const isShadow = r < 15 && g < 15 && b < 15;
+        if (diff > 14 && !isSpecular && !isShadow) {
+          foregroundPixels.push([r, g, b]);
+          fgMask[y * w + x] = 1;
+        }
+      }
+    }
+    // If even the relaxed center scan found almost nothing, keep the bbox
+    // (color analysis will still run on whatever pixels survived).
+    if (foregroundPixels.length < 50) {
+      // ensure bbox stays valid for downstream slice math
+      minX = Math.max(0, minX);
+      maxX = Math.min(w - 1, maxX);
+      minY = Math.max(0, minY);
+      maxY = Math.min(h - 1, maxY);
+    }
+  }
+
   const garmentWidth = Math.max(1, maxX - minX);
   const garmentHeight = Math.max(1, maxY - minY);
   const garmentAspect = garmentHeight / garmentWidth;
@@ -363,6 +406,12 @@ export function analyzeClothingFromRawPixels(
     const totalFg = Math.max(1, foregroundPixels.length);
     const bottomDensityFrac = (sliceDensities[3] + sliceDensities[4]) / totalFg;
     const topDensityFrac = (sliceDensities[0] + sliceDensities[1]) / totalFg;
+    const hasUnbrokenDrape =
+      sliceDensities[0] > 0 &&
+      sliceDensities[1] > 0 &&
+      sliceDensities[2] > 0 &&
+      sliceDensities[3] > 0 &&
+      sliceDensities[4] > 0;
 
     // Rule A: Footwear (concentrated in bottom slice, or compact horizontal silhouette with ankle collar)
     if (garmentAspect < 0.68 || (sliceDensities[4] / totalFg > 0.65 && topDensityFrac < 0.1)) {
@@ -370,8 +419,10 @@ export function analyzeClothingFromRawPixels(
       suggestedCategory = 'shoes';
       confidence = 0.92;
     }
-    // Rule B: Trousers / Jeans / Shorts (Bipartite split in lower slices)
-    else if (bipartiteSplitRows >= 3) {
+
+    // FIX: require the upper slices (shoulders/torso) to be EMPTY — a real
+    // pair of trousers is waist-down and has no shoulder coverage.
+    else if (bipartiteSplitRows >= 3 && topDensityFrac < 0.15) {
       if (garmentAspect > 1.15) {
         roughCategory = 'trousers';
         suggestedCategory = 'bottom';
@@ -382,17 +433,40 @@ export function analyzeClothingFromRawPixels(
         confidence = 0.90;
       }
     }
-    // Rule C: Full-Body Dress / Gown (Unbroken vertical drape from shoulders through hem, A-line expansion)
+
+    else if (bipartiteSplitRows >= 3 && topDensityFrac > 0.30) {
+      roughCategory = 'dress';
+      suggestedCategory = 'one-piece';
+      confidence = 0.90;
+    }
+
+    // FIX: lower threshold to 1.05, also accept column silhouette, and
+    // gate on bipartiteSplitRows < 2 to exclude trousers/jumpsuits (handled
+    // above).
     else if (
-      garmentAspect > 1.35 &&
+      bipartiteSplitRows < 2 &&
+      garmentAspect > 1.05 &&
       sliceDensities[0] > 0 &&
       sliceDensities[1] > 0 &&
       sliceDensities[3] > 0 &&
-      sliceWidths[4] >= sliceWidths[2] * 0.8
+      (sliceWidths[4] >= sliceWidths[2] * 0.75 || // A-line widening at hem
+        Math.abs(sliceWidths[4] - sliceWidths[2]) /
+          Math.max(1, sliceWidths[2]) <
+          0.18) // OR parallel "column/sheath" sides
     ) {
       roughCategory = 'dress';
       suggestedCategory = 'one-piece';
-      confidence = 0.95;
+      confidence = 0.92;
+    }
+
+    else if (
+      bipartiteSplitRows < 2 &&
+      hasUnbrokenDrape &&
+      garmentAspect > 0.95
+    ) {
+      roughCategory = 'dress';
+      suggestedCategory = 'one-piece';
+      confidence = 0.88;
     }
     // Rule D: Skirt (Starts at waist, Slice 0 & 1 empty, flares downward)
     else if (topDensityFrac < 0.15 && sliceDensities[2] > 0 && sliceWidths[4] >= sliceWidths[2]) {
@@ -401,6 +475,8 @@ export function analyzeClothingFromRawPixels(
       confidence = 0.92;
     }
     // Rule E: Outerwear (Jacket / Coat) vs Tops
+    // Now correctly only fires for garments NOT caught by the dress rules
+    // above — i.e. genuine top-half-only garments with a closed silhouette.
     else if (garmentAspect <= 1.4 && bottomDensityFrac < 0.35) {
       if (garmentAspect > 1.05 || (sliceWidths[0] > 0.85 && sliceWidths[1] > 0.85)) {
         roughCategory = 'jacket';
@@ -481,7 +557,66 @@ export function analyzeClothingFromRawPixels(
       }
     }
 
-    if (vertTransitions > horizTransitions * 2 && vertTransitions >= 5) {
+
+    let localExtrema = 0;
+    let sumSat = 0;
+    let sumSat2 = 0;
+    let satSamples = 0;
+    const extremaThreshold = 35;
+    for (let y = coreY; y < coreEndY; y += step) {
+      for (let x = coreX; x < coreEndX; x += step) {
+        if (!fgMask[y * w + x]) continue;
+        const idx = (y * w + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const l = r * 0.299 + g * 0.587 + b * 0.114;
+        // Local mean over 4-neighbourhood (where neighbours fall in mask)
+        let nSum = 0;
+        let nCount = 0;
+        if (x + step < coreEndX && fgMask[y * w + x + step]) {
+          const i2 = (y * w + x + step) * 4;
+          nSum += data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114;
+          nCount++;
+        }
+        if (x - step >= coreX && fgMask[y * w + x - step]) {
+          const i2 = (y * w + x - step) * 4;
+          nSum += data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114;
+          nCount++;
+        }
+        if (y + step < coreEndY && fgMask[(y + step) * w + x]) {
+          const i2 = ((y + step) * w + x) * 4;
+          nSum += data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114;
+          nCount++;
+        }
+        if (y - step >= coreY && fgMask[(y - step) * w + x]) {
+          const i2 = ((y - step) * w + x) * 4;
+          nSum += data[i2] * 0.299 + data[i2 + 1] * 0.587 + data[i2 + 2] * 0.114;
+          nCount++;
+        }
+        if (nCount > 0 && Math.abs(l - nSum / nCount) > extremaThreshold) {
+          localExtrema++;
+        }
+        // Sample HSV saturation for animal-print disambiguation
+        const [, s] = rgbToHsv(r, g, b);
+        sumSat += s;
+        sumSat2 += s * s;
+        satSamples++;
+      }
+    }
+    const meanSat = satSamples > 0 ? sumSat / satSamples : 0;
+    const varSat = satSamples > 0 ? sumSat2 / satSamples - meanSat * meanSat : 0;
+    const stdDevSat = Math.sqrt(Math.max(0, varSat));
+
+    if (localExtrema > 20 && horizTransitions < 8 && vertTransitions < 8 && stdDevSat < 25) {
+      detectedPattern = 'polka dot';
+      patternConfidence = 0.78;
+    }
+
+    else if (localExtrema > 25 && stdDevL > 30 && stdDevSat > 25) {
+      detectedPattern = 'animal print';
+      patternConfidence = 0.72;
+    } else if (vertTransitions > horizTransitions * 2 && vertTransitions >= 5) {
       detectedPattern = 'striped';
       patternConfidence = 0.90;
     } else if (horizTransitions > vertTransitions * 2 && horizTransitions >= 5) {

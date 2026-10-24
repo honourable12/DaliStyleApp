@@ -175,15 +175,19 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       return;
     }
     try {
+
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
+        aspect: [1, 1],
         quality: 0.85,
         base64: true,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
-        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'camera_garment.jpg', asset.base64);
+
+        await identifyAndProcessPhoto(asset.uri, aspect, undefined, asset.base64);
       }
     } catch (e: any) {
       showAtelierToast({
@@ -205,16 +209,19 @@ export const AddGarmentModal: React.FC<AddGarmentModalProps> = ({
       return;
     }
     try {
+      // Bug #1: Force 1:1 square crop lock (mirror of camera path above).
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
+        aspect: [1, 1],
         quality: 0.85,
         base64: true,
       });
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         const aspect = asset.height && asset.width ? asset.height / asset.width : 1.0;
-        await identifyAndProcessPhoto(asset.uri, aspect, asset.fileName || 'gallery_garment.jpg', asset.base64);
+        // Bug #7: Don't pass filename as hintText (see camera path comment).
+        await identifyAndProcessPhoto(asset.uri, aspect, undefined, asset.base64);
       }
     } catch (e: any) {
       showAtelierToast({
